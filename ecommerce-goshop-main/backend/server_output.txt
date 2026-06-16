@@ -1,0 +1,326 @@
+Server running on port: 3000
+✅ SQL Server connected successfully
+❌ Full error details: StripeInvalidRequestError: No such price: 'price_test123'
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10) {
+  type: 'StripeInvalidRequestError',
+  raw: {
+    code: 'resource_missing',
+    doc_url: 'https://stripe.com/docs/error-codes/resource-missing',
+    message: "No such price: 'price_test123'",
+    param: 'line_items[0][price]',
+    request_log_url: 'https://dashboard.stripe.com/acct_1ThLEORlGHhzwvbr/test/workbench/logs?object=req_7Jq5HdWWoS6aXY',
+    type: 'invalid_request_error',
+    headers: {
+      server: 'nginx',
+      date: 'Sat, 13 Jun 2026 11:33:49 GMT',
+      'content-type': 'application/json',
+      'content-length': '369',
+      connection: 'keep-alive',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+      'access-control-max-age': '300',
+      'cache-control': 'no-cache, no-store',
+      'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+      'idempotency-key': 'stripe-node-retry-12bcbe3f-25f3-4e0a-90ec-e1039f5d04a6',
+      'original-request': 'req_7Jq5HdWWoS6aXY',
+      'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+      'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+      'request-id': 'req_7Jq5HdWWoS6aXY',
+      'stripe-version': '2026-05-27.dahlia',
+      vary: 'Origin',
+      'x-stripe-priority-routing-enabled': 'true',
+      'x-stripe-routing-context-priority-tier': 'api-testmode',
+      'x-wc': '3c3',
+      'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+    },
+    statusCode: 400,
+    requestId: 'req_7Jq5HdWWoS6aXY'
+  },
+  rawType: 'invalid_request_error',
+  code: 'resource_missing',
+  doc_url: 'https://stripe.com/docs/error-codes/resource-missing',
+  param: 'line_items[0][price]',
+  detail: undefined,
+  headers: {
+    server: 'nginx',
+    date: 'Sat, 13 Jun 2026 11:33:49 GMT',
+    'content-type': 'application/json',
+    'content-length': '369',
+    connection: 'keep-alive',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+    'access-control-allow-origin': '*',
+    'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+    'access-control-max-age': '300',
+    'cache-control': 'no-cache, no-store',
+    'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+    'idempotency-key': 'stripe-node-retry-12bcbe3f-25f3-4e0a-90ec-e1039f5d04a6',
+    'original-request': 'req_7Jq5HdWWoS6aXY',
+    'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+    'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+    'request-id': 'req_7Jq5HdWWoS6aXY',
+    'stripe-version': '2026-05-27.dahlia',
+    vary: 'Origin',
+    'x-stripe-priority-routing-enabled': 'true',
+    'x-stripe-routing-context-priority-tier': 'api-testmode',
+    'x-wc': '3c3',
+    'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+  },
+  requestId: 'req_7Jq5HdWWoS6aXY',
+  statusCode: 400,
+  userMessage: undefined,
+  charge: undefined,
+  decline_code: undefined,
+  payment_intent: undefined,
+  payment_method: undefined,
+  payment_method_type: undefined,
+  setup_intent: undefined,
+  source: undefined
+}
+   Error message: No such price: 'price_test123'
+   Stack: Error: No such price: 'price_test123'
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10)
+❌ Full error details: StripeInvalidRequestError: You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10) {
+  type: 'StripeInvalidRequestError',
+  raw: {
+    message: 'You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.',
+    param: 'line_items[0]',
+    request_log_url: 'https://dashboard.stripe.com/acct_1ThLEORlGHhzwvbr/test/workbench/logs?object=req_1cK8DwwMg9FOFK',
+    type: 'invalid_request_error',
+    headers: {
+      server: 'nginx',
+      date: 'Sat, 13 Jun 2026 11:34:06 GMT',
+      'content-type': 'application/json',
+      'content-length': '353',
+      connection: 'keep-alive',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+      'access-control-max-age': '300',
+      'cache-control': 'no-cache, no-store',
+      'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+      'idempotency-key': 'stripe-node-retry-ff20c38b-9ccf-42c6-8c42-9409c9f5ef18',
+      'original-request': 'req_1cK8DwwMg9FOFK',
+      'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+      'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+      'request-id': 'req_1cK8DwwMg9FOFK',
+      'stripe-should-retry': 'false',
+      'stripe-version': '2026-05-27.dahlia',
+      vary: 'Origin',
+      'x-stripe-priority-routing-enabled': 'true',
+      'x-stripe-routing-context-priority-tier': 'api-testmode',
+      'x-wc': '3c3',
+      'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+    },
+    statusCode: 400,
+    requestId: 'req_1cK8DwwMg9FOFK'
+  },
+  rawType: 'invalid_request_error',
+  code: undefined,
+  doc_url: undefined,
+  param: 'line_items[0]',
+  detail: undefined,
+  headers: {
+    server: 'nginx',
+    date: 'Sat, 13 Jun 2026 11:34:06 GMT',
+    'content-type': 'application/json',
+    'content-length': '353',
+    connection: 'keep-alive',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+    'access-control-allow-origin': '*',
+    'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+    'access-control-max-age': '300',
+    'cache-control': 'no-cache, no-store',
+    'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+    'idempotency-key': 'stripe-node-retry-ff20c38b-9ccf-42c6-8c42-9409c9f5ef18',
+    'original-request': 'req_1cK8DwwMg9FOFK',
+    'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+    'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+    'request-id': 'req_1cK8DwwMg9FOFK',
+    'stripe-should-retry': 'false',
+    'stripe-version': '2026-05-27.dahlia',
+    vary: 'Origin',
+    'x-stripe-priority-routing-enabled': 'true',
+    'x-stripe-routing-context-priority-tier': 'api-testmode',
+    'x-wc': '3c3',
+    'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+  },
+  requestId: 'req_1cK8DwwMg9FOFK',
+  statusCode: 400,
+  userMessage: undefined,
+  charge: undefined,
+  decline_code: undefined,
+  payment_intent: undefined,
+  payment_method: undefined,
+  payment_method_type: undefined,
+  setup_intent: undefined,
+  source: undefined
+}
+   Error message: You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.
+   Stack: Error: You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10)
+❌ Full error details: StripeInvalidRequestError: No such price: 'price_test123'
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10) {
+  type: 'StripeInvalidRequestError',
+  raw: {
+    code: 'resource_missing',
+    doc_url: 'https://stripe.com/docs/error-codes/resource-missing',
+    message: "No such price: 'price_test123'",
+    param: 'line_items[0][price]',
+    request_log_url: 'https://dashboard.stripe.com/acct_1ThLEORlGHhzwvbr/test/workbench/logs?object=req_kA87o21DFQYgcp',
+    type: 'invalid_request_error',
+    headers: {
+      server: 'nginx',
+      date: 'Sat, 13 Jun 2026 11:34:34 GMT',
+      'content-type': 'application/json',
+      'content-length': '369',
+      connection: 'keep-alive',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+      'access-control-max-age': '300',
+      'cache-control': 'no-cache, no-store',
+      'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+      'idempotency-key': 'stripe-node-retry-a84779cd-fe33-4118-a569-4e58bc90a1a4',
+      'original-request': 'req_kA87o21DFQYgcp',
+      'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+      'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+      'request-id': 'req_kA87o21DFQYgcp',
+      'stripe-version': '2026-05-27.dahlia',
+      vary: 'Origin',
+      'x-stripe-priority-routing-enabled': 'true',
+      'x-stripe-routing-context-priority-tier': 'api-testmode',
+      'x-wc': '3c3',
+      'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+    },
+    statusCode: 400,
+    requestId: 'req_kA87o21DFQYgcp'
+  },
+  rawType: 'invalid_request_error',
+  code: 'resource_missing',
+  doc_url: 'https://stripe.com/docs/error-codes/resource-missing',
+  param: 'line_items[0][price]',
+  detail: undefined,
+  headers: {
+    server: 'nginx',
+    date: 'Sat, 13 Jun 2026 11:34:34 GMT',
+    'content-type': 'application/json',
+    'content-length': '369',
+    connection: 'keep-alive',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+    'access-control-allow-origin': '*',
+    'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+    'access-control-max-age': '300',
+    'cache-control': 'no-cache, no-store',
+    'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G; report-to csp",
+    'idempotency-key': 'stripe-node-retry-a84779cd-fe33-4118-a569-4e58bc90a1a4',
+    'original-request': 'req_kA87o21DFQYgcp',
+    'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"}],"include_subdomains":true}',
+    'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=W_B8a8uz5QuLGIiTIyEhQhjTnalsraULM26W8275WMrpY7Vly6sNppFyjFzNmkwKpVMTrTnp6VofVw_G&t=1"',
+    'request-id': 'req_kA87o21DFQYgcp',
+    'stripe-version': '2026-05-27.dahlia',
+    vary: 'Origin',
+    'x-stripe-priority-routing-enabled': 'true',
+    'x-stripe-routing-context-priority-tier': 'api-testmode',
+    'x-wc': '3c3',
+    'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+  },
+  requestId: 'req_kA87o21DFQYgcp',
+  statusCode: 400,
+  userMessage: undefined,
+  charge: undefined,
+  decline_code: undefined,
+  payment_intent: undefined,
+  payment_method: undefined,
+  payment_method_type: undefined,
+  setup_intent: undefined,
+  source: undefined
+}
+   Error message: No such price: 'price_test123'
+   Stack: Error: No such price: 'price_test123'
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10)

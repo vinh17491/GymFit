@@ -1,0 +1,371 @@
+
+> server
+> npx nodemon
+
+[33m[nodemon] 2.0.22[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): src\**\*[39m
+[33m[nodemon] watching extensions: ts,js[39m
+[32m[nodemon] starting `npx ts-node ./src/index.ts`[39m
+Server running on port: 3000
+^C[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting child process[39m
+[32m[nodemon] starting `npx ts-node ./src/index.ts`[39m
+Server running on port: 3000
+^C^C✅ SQL Server connected successfully
+❌ Full error details: RequestError: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).
+    at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:411:15)
+    at Connection.emit (node:events:508:28)
+    at Connection.emit (node:domain:489:12)
+    at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+    at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+    at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+    at Readable.emit (node:events:508:28)
+    at Readable.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+  code: 'EREQUEST',
+  originalError: Error: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).
+      at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:409:19)
+      at Connection.emit (node:events:508:28)
+      at Connection.emit (node:domain:489:12)
+      at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+      at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+      at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+      at Readable.emit (node:events:508:28)
+      at Readable.emit (node:domain:489:12)
+      at addChunk (node:internal/streams/readable:563:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 2627,
+      state: 1,
+      class: 14,
+      message: "Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).",
+      serverName: 'DESKTOP-0PI1Q6Q',
+      procName: '',
+      lineNumber: 1
+    }
+  },
+  number: 2627,
+  lineNumber: 1,
+  state: 1,
+  class: 14,
+  serverName: 'DESKTOP-0PI1Q6Q',
+  procName: '',
+  precedingErrors: []
+}
+❌ Full error details: RequestError: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).
+    at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:411:15)
+    at Connection.emit (node:events:508:28)
+    at Connection.emit (node:domain:489:12)
+    at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+    at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+    at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+    at Readable.emit (node:events:508:28)
+    at Readable.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+  code: 'EREQUEST',
+  originalError: Error: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).
+      at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:409:19)
+      at Connection.emit (node:events:508:28)
+      at Connection.emit (node:domain:489:12)
+      at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+      at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+      at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+      at Readable.emit (node:events:508:28)
+      at Readable.emit (node:domain:489:12)
+      at addChunk (node:internal/streams/readable:563:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 2627,
+      state: 1,
+      class: 14,
+      message: "Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjUsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MDU3ODUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTA1OCwiZXhwIjoxNzgxOTUzODU4fQ.6kLKK5azyxiqR0Yr3g3gtKDUQucy4brighkvmetjgUg).",
+      serverName: 'DESKTOP-0PI1Q6Q',
+      procName: '',
+      lineNumber: 1
+    }
+  },
+  number: 2627,
+  lineNumber: 1,
+  state: 1,
+  class: 14,
+  serverName: 'DESKTOP-0PI1Q6Q',
+  procName: '',
+  precedingErrors: []
+}
+❌ Full error details: StripeInvalidRequestError: You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10) {
+  type: 'StripeInvalidRequestError',
+  raw: {
+    message: 'You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.',
+    param: 'line_items[0]',
+    request_log_url: 'https://dashboard.stripe.com/acct_1ThLEORlGHhzwvbr/test/workbench/logs?object=req_mzQVAeQowh06Mx',
+    type: 'invalid_request_error',
+    headers: {
+      server: 'nginx',
+      date: 'Sat, 13 Jun 2026 11:11:00 GMT',
+      'content-type': 'application/json',
+      'content-length': '353',
+      connection: 'keep-alive',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+      'access-control-max-age': '300',
+      'cache-control': 'no-cache, no-store',
+      'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY; report-to csp",
+      'idempotency-key': 'stripe-node-retry-d6007865-9a93-4f75-90f8-6229b8c4b21e',
+      'original-request': 'req_mzQVAeQowh06Mx',
+      'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"}],"include_subdomains":true}',
+      'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"',
+      'request-id': 'req_mzQVAeQowh06Mx',
+      'stripe-should-retry': 'false',
+      'stripe-version': '2026-05-27.dahlia',
+      vary: 'Origin',
+      'x-stripe-priority-routing-enabled': 'true',
+      'x-stripe-routing-context-priority-tier': 'api-testmode',
+      'x-wc': '3c3',
+      'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+    },
+    statusCode: 400,
+    requestId: 'req_mzQVAeQowh06Mx'
+  },
+  rawType: 'invalid_request_error',
+  code: undefined,
+  doc_url: undefined,
+  param: 'line_items[0]',
+  detail: undefined,
+  headers: {
+    server: 'nginx',
+    date: 'Sat, 13 Jun 2026 11:11:00 GMT',
+    'content-type': 'application/json',
+    'content-length': '353',
+    connection: 'keep-alive',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+    'access-control-allow-origin': '*',
+    'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+    'access-control-max-age': '300',
+    'cache-control': 'no-cache, no-store',
+    'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY; report-to csp",
+    'idempotency-key': 'stripe-node-retry-d6007865-9a93-4f75-90f8-6229b8c4b21e',
+    'original-request': 'req_mzQVAeQowh06Mx',
+    'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"}],"include_subdomains":true}',
+    'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"',
+    'request-id': 'req_mzQVAeQowh06Mx',
+    'stripe-should-retry': 'false',
+    'stripe-version': '2026-05-27.dahlia',
+    vary: 'Origin',
+    'x-stripe-priority-routing-enabled': 'true',
+    'x-stripe-routing-context-priority-tier': 'api-testmode',
+    'x-wc': '3c3',
+    'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+  },
+  requestId: 'req_mzQVAeQowh06Mx',
+  statusCode: 400,
+  userMessage: undefined,
+  charge: undefined,
+  decline_code: undefined,
+  payment_intent: undefined,
+  payment_method: undefined,
+  payment_method_type: undefined,
+  setup_intent: undefined,
+  source: undefined
+}
+❌ Full error details: RequestError: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).
+    at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:411:15)
+    at Connection.emit (node:events:508:28)
+    at Connection.emit (node:domain:489:12)
+    at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+    at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+    at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+    at Readable.emit (node:events:508:28)
+    at Readable.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+  code: 'EREQUEST',
+  originalError: Error: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).
+      at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:409:19)
+      at Connection.emit (node:events:508:28)
+      at Connection.emit (node:domain:489:12)
+      at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+      at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+      at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+      at Readable.emit (node:events:508:28)
+      at Readable.emit (node:domain:489:12)
+      at addChunk (node:internal/streams/readable:563:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 2627,
+      state: 1,
+      class: 14,
+      message: "Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).",
+      serverName: 'DESKTOP-0PI1Q6Q',
+      procName: '',
+      lineNumber: 1
+    }
+  },
+  number: 2627,
+  lineNumber: 1,
+  state: 1,
+  class: 14,
+  serverName: 'DESKTOP-0PI1Q6Q',
+  procName: '',
+  precedingErrors: []
+}
+❌ Full error details: RequestError: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).
+    at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:411:15)
+    at Connection.emit (node:events:508:28)
+    at Connection.emit (node:domain:489:12)
+    at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+    at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+    at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+    at Readable.emit (node:events:508:28)
+    at Readable.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+  code: 'EREQUEST',
+  originalError: Error: Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).
+      at handleError (d:\gymfit\ecommerce-goshop-main\backend\node_modules\mssql\lib\tedious\request.js:409:19)
+      at Connection.emit (node:events:508:28)
+      at Connection.emit (node:domain:489:12)
+      at Connection.emit (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\connection.ts:1974:18)
+      at RequestTokenHandler.onErrorMessage (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\handler.ts:386:21)
+      at Readable.<anonymous> (d:\gymfit\ecommerce-goshop-main\backend\node_modules\tedious\src\token\token-stream-parser.ts:23:55)
+      at Readable.emit (node:events:508:28)
+      at Readable.emit (node:domain:489:12)
+      at addChunk (node:internal/streams/readable:563:12)
+      at readableAddChunkPushObjectMode (node:internal/streams/readable:540:3) {
+    info: ErrorMessageToken {
+      name: 'ERROR',
+      handlerName: 'onErrorMessage',
+      number: 2627,
+      state: 1,
+      class: 14,
+      message: "Violation of UNIQUE KEY constraint 'UQ_RefreshTokens_Token'. Cannot insert duplicate key in object 'dbo.RefreshTokens'. The duplicate key value is (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiYXBpdGVzdF8xNzgxMzQ5MTI2NjUyQHRlc3QuY29tIiwicm9sZUlkIjozLCJyb2xlTmFtZSI6Ik1FTUJFUiIsImlhdCI6MTc4MTM0OTEyNywiZXhwIjoxNzgxOTUzOTI3fQ.7vijHUfSodB3dW_5i6ajgpnw57-3hrxzbiubQWJGyws).",
+      serverName: 'DESKTOP-0PI1Q6Q',
+      procName: '',
+      lineNumber: 1
+    }
+  },
+  number: 2627,
+  lineNumber: 1,
+  state: 1,
+  class: 14,
+  serverName: 'DESKTOP-0PI1Q6Q',
+  procName: '',
+  precedingErrors: []
+}
+❌ Full error details: StripeInvalidRequestError: You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.
+    at generateV1Error (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\Error.ts:23:12)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\RequestSender.ts:205:38
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+Originating from:
+    at SessionResource._makeRequest (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\StripeResource.ts:98:27)
+    at SessionResource.create (d:\gymfit\ecommerce-goshop-main\backend\node_modules\stripe\src\resources\Checkout\Sessions.ts:138:17)
+    at createCheckoutSession (d:\gymfit\ecommerce-goshop-main\backend\src\controllers\checkout.ts:24:52)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:144:13)
+    at Route.dispatch (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\route.js:114:3)
+    at Layer.handle [as handle_request] (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\layer.js:95:5)
+    at d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:284:15
+    at router.process_params (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:346:12)
+    at next (d:\gymfit\ecommerce-goshop-main\backend\node_modules\express\lib\router\index.js:280:10) {
+  type: 'StripeInvalidRequestError',
+  raw: {
+    message: 'You specified `payment` mode but passed a recurring price. Either switch to `subscription` mode or use only one-time prices.',
+    param: 'line_items[0]',
+    request_log_url: 'https://dashboard.stripe.com/acct_1ThLEORlGHhzwvbr/test/workbench/logs?object=req_V6mgQ3K5SsGtbH',
+    type: 'invalid_request_error',
+    headers: {
+      server: 'nginx',
+      date: 'Sat, 13 Jun 2026 11:12:09 GMT',
+      'content-type': 'application/json',
+      'content-length': '353',
+      connection: 'keep-alive',
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+      'access-control-max-age': '300',
+      'cache-control': 'no-cache, no-store',
+      'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY; report-to csp",
+      'idempotency-key': 'stripe-node-retry-84cc7c7b-3de7-42ff-aa2d-72ccf1d7a097',
+      'original-request': 'req_V6mgQ3K5SsGtbH',
+      'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"}],"include_subdomains":true}',
+      'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"',
+      'request-id': 'req_V6mgQ3K5SsGtbH',
+      'stripe-should-retry': 'false',
+      'stripe-version': '2026-05-27.dahlia',
+      vary: 'Origin',
+      'x-stripe-priority-routing-enabled': 'true',
+      'x-stripe-routing-context-priority-tier': 'api-testmode',
+      'x-wc': '3c3',
+      'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+    },
+    statusCode: 400,
+    requestId: 'req_V6mgQ3K5SsGtbH'
+  },
+  rawType: 'invalid_request_error',
+  code: undefined,
+  doc_url: undefined,
+  param: 'line_items[0]',
+  detail: undefined,
+  headers: {
+    server: 'nginx',
+    date: 'Sat, 13 Jun 2026 11:12:09 GMT',
+    'content-type': 'application/json',
+    'content-length': '353',
+    connection: 'keep-alive',
+    'access-control-allow-credentials': 'true',
+    'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+    'access-control-allow-origin': '*',
+    'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+    'access-control-max-age': '300',
+    'cache-control': 'no-cache, no-store',
+    'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY; report-to csp",
+    'idempotency-key': 'stripe-node-retry-84cc7c7b-3de7-42ff-aa2d-72ccf1d7a097',
+    'original-request': 'req_V6mgQ3K5SsGtbH',
+    'report-to': '{"group":"csp","max_age":8640,"endpoints":[{"url":"https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"}],"include_subdomains":true}',
+    'reporting-endpoints': 'csp="https://q.stripe.com/csp-report-v2?q=FIaUD7HlFG7xkAhXDiHYhsSwWLe-JFkSY7MXmkZ16SDxMBt_f2AMIxlM4m1tJEzBNDh8pBOIkT-oKqIY&t=1"',
+    'request-id': 'req_V6mgQ3K5SsGtbH',
+    'stripe-should-retry': 'false',
+    'stripe-version': '2026-05-27.dahlia',
+    vary: 'Origin',
+    'x-stripe-priority-routing-enabled': 'true',
+    'x-stripe-routing-context-priority-tier': 'api-testmode',
+    'x-wc': '3c3',
+    'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+  },
+  requestId: 'req_V6mgQ3K5SsGtbH',
+  statusCode: 400,
+  userMessage: undefined,
+  charge: undefined,
+  decline_code: undefined,
+  payment_intent: undefined,
+  payment_method: undefined,
+  payment_method_type: undefined,
+  setup_intent: undefined,
+  source: undefined
+}
