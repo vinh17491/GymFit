@@ -4,6 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useGetOrdersByUserQuery } from "../api/getOrdersByUser";
 import { OrderPreview } from "./OrderPreview";
 import { MdOutlineRemoveShoppingCart } from "react-icons/md";
+import { IconWrapper } from "../../../components/Elements/IconWrapper";
 
 export const Orders = () => {
     const { token, isAdmin, currentUser } = useAuth();
@@ -24,7 +25,7 @@ export const Orders = () => {
                 <OrderPreview key={order.id} {...order} />
             ));
         }
-        return ;
+        return null;
 
     }, [ordersAdmin, ordersUser]);
 
@@ -43,7 +44,7 @@ export const Orders = () => {
         <>
             <h3 className="font-semibold text-xl sm:text-3xl mt-4 p-5">Manage Orders</h3>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                <MdOutlineRemoveShoppingCart className="w-16 h-16" />
+                <IconWrapper icon={MdOutlineRemoveShoppingCart} className="w-16 h-16" />
                 <h4 className="text-xl font-semibold mt-2">No purchases yet...</h4>
             </div>
         </>

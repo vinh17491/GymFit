@@ -2,6 +2,7 @@ import Navbar from "../../../components/Elements/Navbar";
 import { useState } from "react";
 import { BiSolidShoppingBags, BiSolidUser } from "react-icons/bi";
 import { TbTruckDelivery } from "react-icons/tb";
+import { IconWrapper } from "../../../components/Elements/IconWrapper";
 import { AdminProducts } from "../../products/components/AdminProducts";
 import Profile from "../../users/components/Profile";
 import { useAuth } from "../../../context/AuthContext";
@@ -26,7 +27,7 @@ export const Dashboard = () => {
                         }`}
                         onClick={() => setSelectedTab(0)}
                     >
-                        <BiSolidShoppingBags className="inline-block mr-1" />
+                        <IconWrapper icon={BiSolidShoppingBags} className="inline-block mr-1" />
                         <span>Plans</span>
                     </li>)}
                     <li
@@ -37,7 +38,7 @@ export const Dashboard = () => {
                         }`}
                         onClick={() => setSelectedTab(1)}
                     >
-                        <TbTruckDelivery className="inline-block mr-1" />
+                        <IconWrapper icon={TbTruckDelivery} className="inline-block mr-1" />
                         <span>Orders</span>
                     </li>
                     <li
@@ -49,7 +50,7 @@ export const Dashboard = () => {
                         onClick={() => setSelectedTab(2)}
                         data-cy="profile-btn"
                     >
-                        <BiSolidUser className="inline-block mr-1" />
+                        <IconWrapper icon={BiSolidUser} className="inline-block mr-1" />
                         <span>Profile</span>
                     </li>
                 </ul>
