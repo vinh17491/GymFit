@@ -77,11 +77,25 @@ export const getMemberDashboard = async (req: Request, res: Response, next: Next
       dietPlans = [];
     }
 
+    // Health profile
+    let healthProfile = null;
+    try {
+      const healthResult = await pool.request()
+        .input("userId", userId)
+        .query("SELECT * FROM HealthProfiles WHERE UserId=@userId");
+      if (healthResult.recordset.length > 0) {
+        healthProfile = healthResult.recordset[0];
+      }
+    } catch {
+      healthProfile = null;
+    }
+
     res.status(200).json({
       memberships: membershipsResult.recordset,
       bookings: bookingsResult.recordset,
       savedWorkouts: savedWorkoutsResult.recordset,
       dietPlans,
+      healthProfile
     });
   } catch (error) {
     next({ message: "Unable to fetch member dashboard", error });

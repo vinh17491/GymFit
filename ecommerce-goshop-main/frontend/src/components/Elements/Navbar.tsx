@@ -51,6 +51,9 @@ const Navbar = () => {
                     <li className="transition-colors hover:text-white ml-4">
                         <Link to="/blogs">Blog</Link>
                     </li>
+                    <li className="transition-colors hover:text-white ml-4">
+                        <Link to="/health">Health Tools</Link>
+                    </li>
                     {currentUser && (
                         <>
                             <li className="transition-colors hover:text-white ml-4">

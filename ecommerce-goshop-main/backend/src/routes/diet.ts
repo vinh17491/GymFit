@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { verifyRolesMiddleware } from "../middleware/verifyRolesMiddleware";
+import { validateIdParam, requireBody, sanitizeBody, validatePagination } from "../middleware/validate";
 import {
   getAllDietPlans,
   getDietPlanById,
@@ -12,14 +13,14 @@ import {
 const router = Router();
 
 // Public routes
-router.get("/", getAllDietPlans);
-router.get("/:id", getDietPlanById);
+router.get("/", validatePagination, getAllDietPlans);
+router.get("/:id", validateIdParam("id"), getDietPlanById);
 
 // Protected routes
-router.post("/", authMiddleware, verifyRolesMiddleware(["ADMIN", "COACH"]), createDietPlan);
+router.post("/", authMiddleware, verifyRolesMiddleware(["ADMIN", "COACH"]), sanitizeBody, requireBody("title"), createDietPlan);
 
 // Save/unsave routes
-router.post("/:id/save", authMiddleware, saveDietPlan);
-router.delete("/:id/save", authMiddleware, unsaveDietPlan);
+router.post("/:id/save", authMiddleware, validateIdParam("id"), saveDietPlan);
+router.delete("/:id/save", authMiddleware, validateIdParam("id"), unsaveDietPlan);
 
 export default router;

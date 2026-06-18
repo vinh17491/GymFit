@@ -18,6 +18,14 @@ import blogRoutes from "./routes/blog";
 import dashboardRoutes from "./routes/dashboard";
 import notificationRoutes from "./routes/notification";
 import dietRoutes from "./routes/diet";
+import healthRoutes from "./routes/health";
+import communityRoutes from "./routes/community";
+import videoRoutes from "./routes/video";
+import chatRoutes from "./routes/chat";
+import coachStudentsRoutes from "./routes/coachStudents";
+import creditsRoutes from "./routes/credits";
+import aiRoutes from "./routes/ai";
+import logbookRoutes from "./routes/logbook";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -52,6 +60,14 @@ app.use("/blogs", blogRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/diet", dietRoutes);
+app.use("/health", healthRoutes);
+app.use("/community", communityRoutes);
+app.use("/videos", videoRoutes);
+app.use("/chat", chatRoutes);
+app.use("/coach-students", coachStudentsRoutes);
+app.use("/credits", creditsRoutes);
+app.use("/ai", aiRoutes);
+app.use("/logbook", logbookRoutes);
 
 app.use(errorMiddleware);
 

@@ -956,6 +956,398 @@ BEGIN
 END
 GO
 
+-- ============================================================
+-- V2: HealthProfiles - BMI, body fat, health goals
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[HealthProfiles]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[HealthProfiles] (
+        [Id]              INT            IDENTITY(1,1) NOT NULL,
+        [UserId]          INT            NOT NULL,
+        [Gender]          NVARCHAR(10)   NOT NULL,
+        [DateOfBirth]     DATE           NULL,
+        [HeightCm]        DECIMAL(5,2)   NULL,
+        [WeightKg]        DECIMAL(5,2)   NULL,
+        [NeckCm]          DECIMAL(5,2)   NULL,
+        [WaistCm]         DECIMAL(5,2)   NULL,
+        [HipCm]           DECIMAL(5,2)   NULL,
+        [FitnessGoal]     NVARCHAR(50)   NULL,
+        [ActivityLevel]   NVARCHAR(30)   NULL,
+        [UpdatedAt]       DATETIME2      NOT NULL CONSTRAINT [DF_HealthProfiles_UpdatedAt] DEFAULT GETUTCDATE(),
+        [CreatedAt]       DATETIME2      NOT NULL CONSTRAINT [DF_HealthProfiles_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_HealthProfiles] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [UQ_HealthProfiles_UserId] UNIQUE ([UserId]),
+        CONSTRAINT [FK_HealthProfiles_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE,
+        CONSTRAINT [CK_HealthProfiles_Gender] CHECK ([Gender] IN ('MALE', 'FEMALE'))
+    );
+END
+GO
+
+-- ============================================================
+-- V2: FreeTrials - 14-day trial management
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[FreeTrials]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[FreeTrials] (
+        [Id]         INT       IDENTITY(1,1) NOT NULL,
+        [UserId]     INT       NOT NULL,
+        [StartDate]  DATE      NOT NULL,
+        [EndDate]    DATE      NOT NULL,
+        [IsActive]   BIT       NOT NULL CONSTRAINT [DF_FreeTrials_IsActive] DEFAULT 1,
+        [CreatedAt]  DATETIME2 NOT NULL CONSTRAINT [DF_FreeTrials_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_FreeTrials] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [UQ_FreeTrials_UserId] UNIQUE ([UserId]),
+        CONSTRAINT [FK_FreeTrials_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE
+    );
+END
+GO
+
+-- ============================================================
+-- V2: ProgressLogs - Member body measurements tracking
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProgressLogs]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[ProgressLogs] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [LogDate]     DATE           NOT NULL,
+        [WeightKg]    DECIMAL(5,2)   NULL,
+        [BodyFatPct]  DECIMAL(4,2)   NULL,
+        [MuscleMassKg] DECIMAL(5,2)  NULL,
+        [ChestCm]     DECIMAL(5,2)   NULL,
+        [WaistCm]     DECIMAL(5,2)   NULL,
+        [HipCm]       DECIMAL(5,2)   NULL,
+        [ArmCm]       DECIMAL(5,2)   NULL,
+        [ThighCm]     DECIMAL(5,2)   NULL,
+        [Notes]       NVARCHAR(500)  NULL,
+        [PhotoUrl]    NVARCHAR(500)  NULL,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_ProgressLogs_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_ProgressLogs] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_ProgressLogs_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE
+    );
+END
+GO
+
+-- ============================================================
+-- V2: WorkoutLogs - Workout logbook (actual sessions)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[WorkoutLogs]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[WorkoutLogs] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [ProgramId]   INT            NULL,
+        [LogDate]     DATE           NOT NULL,
+        [DurationMin] INT            NULL,
+        [Notes]       NVARCHAR(500)  NULL,
+        [Rating]      TINYINT        NULL,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_WorkoutLogs_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_WorkoutLogs] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_WorkoutLogs_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_WorkoutLogs_ProgramId] FOREIGN KEY ([ProgramId]) REFERENCES [dbo].[WorkoutPrograms]([Id]),
+        CONSTRAINT [CK_WorkoutLogs_Rating] CHECK ([Rating] IS NULL OR ([Rating] >= 1 AND [Rating] <= 5))
+    );
+END
+GO
+
+-- ============================================================
+-- V2: WorkoutLogExercises
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[WorkoutLogExercises]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[WorkoutLogExercises] (
+        [Id]           INT            IDENTITY(1,1) NOT NULL,
+        [LogId]        INT            NOT NULL,
+        [ExerciseName] NVARCHAR(200)  NOT NULL,
+        [SetNumber]    INT            NOT NULL,
+        [Reps]         INT            NULL,
+        [WeightKg]     DECIMAL(6,2)   NULL,
+        [DurationSec]  INT            NULL,
+        [Notes]        NVARCHAR(200)  NULL,
+        [CreatedAt]    DATETIME2      NOT NULL CONSTRAINT [DF_WLE_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_WorkoutLogExercises] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_WLE_LogId] FOREIGN KEY ([LogId]) REFERENCES [dbo].[WorkoutLogs]([Id]) ON DELETE CASCADE
+    );
+END
+GO
+
+-- ============================================================
+-- V2: FoodDatabase
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[FoodDatabase]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[FoodDatabase] (
+        [Id]            INT            IDENTITY(1,1) NOT NULL,
+        [Name]          NVARCHAR(200)  NOT NULL,
+        [Category]      NVARCHAR(100)  NULL,
+        [ServingSize]   DECIMAL(8,2)   NOT NULL CONSTRAINT [DF_FoodDB_ServingSize] DEFAULT 100,
+        [Calories]      DECIMAL(8,2)   NOT NULL,
+        [ProteinG]      DECIMAL(6,2)   NULL,
+        [CarbsG]        DECIMAL(6,2)   NULL,
+        [FatG]          DECIMAL(6,2)   NULL,
+        [FiberG]        DECIMAL(6,2)   NULL,
+        [IsCustom]      BIT            NOT NULL CONSTRAINT [DF_FoodDB_IsCustom] DEFAULT 0,
+        [CreatedBy]     INT            NULL,
+        [CreatedAt]     DATETIME2      NOT NULL CONSTRAINT [DF_FoodDB_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_FoodDatabase] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_FoodDB_CreatedBy] FOREIGN KEY ([CreatedBy]) REFERENCES [dbo].[Users]([Id])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: MealLogs
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[MealLogs]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[MealLogs] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [LogDate]     DATE           NOT NULL,
+        [MealType]    NVARCHAR(20)   NOT NULL,
+        [FoodId]      INT            NULL,
+        [FoodName]    NVARCHAR(200)  NOT NULL,
+        [ServingSize] DECIMAL(8,2)   NOT NULL,
+        [Calories]    DECIMAL(8,2)   NOT NULL,
+        [ProteinG]    DECIMAL(6,2)   NULL,
+        [CarbsG]      DECIMAL(6,2)   NULL,
+        [FatG]        DECIMAL(6,2)   NULL,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_MealLogs_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_MealLogs] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_MealLogs_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_MealLogs_FoodId] FOREIGN KEY ([FoodId]) REFERENCES [dbo].[FoodDatabase]([Id]),
+        CONSTRAINT [CK_MealLogs_MealType] CHECK ([MealType] IN ('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'))
+    );
+END
+GO
+
+-- ============================================================
+-- V2: CoachStudentAssignments
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CoachStudentAssignments]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[CoachStudentAssignments] (
+        [Id]          INT       IDENTITY(1,1) NOT NULL,
+        [CoachId]     INT       NOT NULL,
+        [StudentId]   INT       NOT NULL,
+        [WorkoutPlanId] INT     NULL,
+        [DietPlanId]  INT       NULL,
+        [Notes]       NVARCHAR(500) NULL,
+        [IsActive]    BIT       NOT NULL CONSTRAINT [DF_CSA_IsActive] DEFAULT 1,
+        [AssignedAt]  DATETIME2 NOT NULL CONSTRAINT [DF_CSA_AssignedAt] DEFAULT GETUTCDATE(),
+        [UpdatedAt]   DATETIME2 NOT NULL CONSTRAINT [DF_CSA_UpdatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_CoachStudentAssignments] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [UQ_CSA_CoachStudent] UNIQUE ([CoachId], [StudentId]),
+        CONSTRAINT [FK_CSA_CoachId] FOREIGN KEY ([CoachId]) REFERENCES [dbo].[Coaches]([Id]),
+        CONSTRAINT [FK_CSA_StudentId] FOREIGN KEY ([StudentId]) REFERENCES [dbo].[Users]([Id]),
+        CONSTRAINT [FK_CSA_WorkoutPlanId] FOREIGN KEY ([WorkoutPlanId]) REFERENCES [dbo].[WorkoutPrograms]([Id]),
+        CONSTRAINT [FK_CSA_DietPlanId] FOREIGN KEY ([DietPlanId]) REFERENCES [dbo].[DietPlans]([Id])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: QAPosts
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[QAPosts]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[QAPosts] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [Title]       NVARCHAR(300)  NOT NULL,
+        [Content]     NVARCHAR(MAX)  NOT NULL,
+        [Tags]        NVARCHAR(300)  NULL,
+        [IsPinned]    BIT            NOT NULL CONSTRAINT [DF_QAPosts_IsPinned] DEFAULT 0,
+        [IsVerified]  BIT            NOT NULL CONSTRAINT [DF_QAPosts_IsVerified] DEFAULT 0,
+        [ViewCount]   INT            NOT NULL CONSTRAINT [DF_QAPosts_ViewCount] DEFAULT 0,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_QAPosts_CreatedAt] DEFAULT GETUTCDATE(),
+        [UpdatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_QAPosts_UpdatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_QAPosts] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_QAPosts_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: QAAnswers
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[QAAnswers]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[QAAnswers] (
+        [Id]           INT            IDENTITY(1,1) NOT NULL,
+        [PostId]       INT            NOT NULL,
+        [UserId]       INT            NOT NULL,
+        [Content]      NVARCHAR(MAX)  NOT NULL,
+        [IsAccepted]   BIT            NOT NULL CONSTRAINT [DF_QAAnswers_IsAccepted] DEFAULT 0,
+        [IsVerified]   BIT            NOT NULL CONSTRAINT [DF_QAAnswers_IsVerified] DEFAULT 0,
+        [Upvotes]      INT            NOT NULL CONSTRAINT [DF_QAAnswers_Upvotes] DEFAULT 0,
+        [CreatedAt]    DATETIME2      NOT NULL CONSTRAINT [DF_QAAnswers_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_QAAnswers] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_QAAnswers_PostId] FOREIGN KEY ([PostId]) REFERENCES [dbo].[QAPosts]([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_QAAnswers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: Videos
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Videos]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[Videos] (
+        [Id]           INT            IDENTITY(1,1) NOT NULL,
+        [Title]        NVARCHAR(300)  NOT NULL,
+        [Description]  NVARCHAR(MAX)  NULL,
+        [VideoUrl]     NVARCHAR(500)  NOT NULL,
+        [ThumbnailUrl] NVARCHAR(500)  NULL,
+        [DurationSec]  INT            NULL,
+        [Category]     NVARCHAR(100)  NULL,
+        [Difficulty]   NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Videos_Difficulty] DEFAULT 'BEGINNER',
+        [IsPremium]    BIT            NOT NULL CONSTRAINT [DF_Videos_IsPremium] DEFAULT 0,
+        [UploadedBy]   INT            NOT NULL,
+        [ViewCount]    INT            NOT NULL CONSTRAINT [DF_Videos_ViewCount] DEFAULT 0,
+        [IsActive]     BIT            NOT NULL CONSTRAINT [DF_Videos_IsActive] DEFAULT 1,
+        [CreatedAt]    DATETIME2      NOT NULL CONSTRAINT [DF_Videos_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_Videos] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_Videos_UploadedBy] FOREIGN KEY ([UploadedBy]) REFERENCES [dbo].[Users]([Id]),
+        CONSTRAINT [CK_Videos_Difficulty] CHECK ([Difficulty] IN ('BEGINNER', 'INTERMEDIATE', 'ADVANCED'))
+    );
+END
+GO
+
+-- ============================================================
+-- V2: ChatConversations
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ChatConversations]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[ChatConversations] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [CoachId]     INT            NOT NULL,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_ChatConv_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_ChatConversations] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_ChatConv_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]),
+        CONSTRAINT [FK_ChatConv_CoachId] FOREIGN KEY ([CoachId]) REFERENCES [dbo].[Users]([Id]),
+        CONSTRAINT [UQ_ChatConv_UserCoach] UNIQUE ([UserId], [CoachId])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: ChatMessages
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ChatMessages]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[ChatMessages] (
+        [Id]             INT            IDENTITY(1,1) NOT NULL,
+        [ConversationId] INT            NOT NULL,
+        [SenderId]       INT            NOT NULL,
+        [ReceiverId]     INT            NOT NULL,
+        [Content]        NVARCHAR(2000) NOT NULL,
+        [IsRead]         BIT            NOT NULL CONSTRAINT [DF_ChatMessages_IsRead] DEFAULT 0,
+        [CreatedAt]      DATETIME2      NOT NULL CONSTRAINT [DF_ChatMessages_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_ChatMessages] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_ChatMsg_ConversationId] FOREIGN KEY ([ConversationId]) REFERENCES [dbo].[ChatConversations]([Id]),
+        CONSTRAINT [FK_ChatMessages_SenderId] FOREIGN KEY ([SenderId]) REFERENCES [dbo].[Users]([Id]),
+        CONSTRAINT [FK_ChatMessages_ReceiverId] FOREIGN KEY ([ReceiverId]) REFERENCES [dbo].[Users]([Id])
+    );
+END
+GO
+
+-- ============================================================
+-- V2: Credits
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Credits]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[Credits] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [Balance]     INT            NOT NULL CONSTRAINT [DF_Credits_Balance] DEFAULT 0,
+        [UpdatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_Credits_UpdatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_Credits] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [UQ_Credits_UserId] UNIQUE ([UserId]),
+        CONSTRAINT [FK_Credits_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE
+    );
+END
+GO
+
+-- ============================================================
+-- V2: CreditTransactions
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CreditTransactions]') AND type = N'U')
+BEGIN
+    CREATE TABLE [dbo].[CreditTransactions] (
+        [Id]          INT            IDENTITY(1,1) NOT NULL,
+        [UserId]      INT            NOT NULL,
+        [Amount]      INT            NOT NULL,
+        [Type]        NVARCHAR(50)   NOT NULL,
+        [Description] NVARCHAR(200)  NULL,
+        [CreatedAt]   DATETIME2      NOT NULL CONSTRAINT [DF_CreditTx_CreatedAt] DEFAULT GETUTCDATE(),
+        CONSTRAINT [PK_CreditTransactions] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_CreditTx_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]) ON DELETE CASCADE
+    );
+END
+GO
+
+-- ============================================================
+-- V2: Indexes
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_HealthProfiles_UserId' AND object_id = OBJECT_ID(N'[dbo].[HealthProfiles]'))
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_HealthProfiles_UserId] ON [dbo].[HealthProfiles] ([UserId]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_ProgressLogs_UserId_Date' AND object_id = OBJECT_ID(N'[dbo].[ProgressLogs]'))
+    CREATE NONCLUSTERED INDEX [IX_ProgressLogs_UserId_Date] ON [dbo].[ProgressLogs] ([UserId], [LogDate] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_WorkoutLogs_UserId_Date' AND object_id = OBJECT_ID(N'[dbo].[WorkoutLogs]'))
+    CREATE NONCLUSTERED INDEX [IX_WorkoutLogs_UserId_Date] ON [dbo].[WorkoutLogs] ([UserId], [LogDate] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_MealLogs_UserId_Date' AND object_id = OBJECT_ID(N'[dbo].[MealLogs]'))
+    CREATE NONCLUSTERED INDEX [IX_MealLogs_UserId_Date] ON [dbo].[MealLogs] ([UserId], [LogDate] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_QAPosts_UserId' AND object_id = OBJECT_ID(N'[dbo].[QAPosts]'))
+    CREATE NONCLUSTERED INDEX [IX_QAPosts_UserId] ON [dbo].[QAPosts] ([UserId]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_QAAnswers_PostId' AND object_id = OBJECT_ID(N'[dbo].[QAAnswers]'))
+    CREATE NONCLUSTERED INDEX [IX_QAAnswers_PostId] ON [dbo].[QAAnswers] ([PostId]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_ChatMessages_Sender_Receiver' AND object_id = OBJECT_ID(N'[dbo].[ChatMessages]'))
+    CREATE NONCLUSTERED INDEX [IX_ChatMessages_Sender_Receiver] ON [dbo].[ChatMessages] ([SenderId], [ReceiverId]) INCLUDE ([CreatedAt]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Videos_Category' AND object_id = OBJECT_ID(N'[dbo].[Videos]'))
+    CREATE NONCLUSTERED INDEX [IX_Videos_Category] ON [dbo].[Videos] ([Category]) INCLUDE ([IsActive], [IsPremium]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_CSA_CoachId' AND object_id = OBJECT_ID(N'[dbo].[CoachStudentAssignments]'))
+    CREATE NONCLUSTERED INDEX [IX_CSA_CoachId] ON [dbo].[CoachStudentAssignments] ([CoachId]) INCLUDE ([IsActive]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_FoodDatabase_Name' AND object_id = OBJECT_ID(N'[dbo].[FoodDatabase]'))
+    CREATE NONCLUSTERED INDEX [IX_FoodDatabase_Name] ON [dbo].[FoodDatabase] ([Name]);
+GO
+
+-- ============================================================
+-- V2: Seed Food Database
+-- ============================================================
+IF NOT EXISTS (SELECT 1 FROM [dbo].[FoodDatabase])
+BEGIN
+    INSERT INTO [dbo].[FoodDatabase] ([Name],[Category],[ServingSize],[Calories],[ProteinG],[CarbsG],[FatG],[FiberG],[IsCustom])
+    VALUES
+        (N'Cơm trắng', N'Ngũ cốc', 100, 130, 2.7, 28.2, 0.3, 0.4, 0),
+        (N'Ức gà luộc', N'Thịt', 100, 165, 31.0, 0.0, 3.6, 0.0, 0),
+        (N'Trứng gà luộc', N'Trứng', 100, 155, 13.0, 1.1, 10.6, 0.0, 0),
+        (N'Cá hồi nướng', N'Hải sản', 100, 206, 20.0, 0.0, 13.0, 0.0, 0),
+        (N'Rau muống xào', N'Rau', 100, 25, 2.6, 3.5, 0.4, 2.0, 0),
+        (N'Chuối', N'Trái cây', 100, 89, 1.1, 23.0, 0.3, 2.6, 0),
+        (N'Sữa tươi', N'Sữa', 100, 61, 3.2, 4.8, 3.3, 0.0, 0),
+        (N'Đậu phụ', N'Đậu', 100, 76, 8.0, 1.9, 4.8, 0.3, 0),
+        (N'Khoai lang', N'Củ', 100, 86, 1.6, 20.1, 0.1, 3.0, 0),
+        (N'Bơ đậu phộng', N'Hạt', 100, 588, 25.0, 20.0, 50.0, 6.0, 0),
+        (N'Yến mạch', N'Ngũ cốc', 100, 389, 16.9, 66.3, 6.9, 10.6, 0),
+        (N'Thịt bò nạc', N'Thịt', 100, 250, 26.0, 0.0, 15.0, 0.0, 0),
+        (N'Tôm luộc', N'Hải sản', 100, 99, 24.0, 0.2, 0.3, 0.0, 0),
+        (N'Táo', N'Trái cây', 100, 52, 0.3, 14.0, 0.2, 2.4, 0),
+        (N'Sữa chua không đường', N'Sữa', 100, 59, 10.0, 3.6, 0.4, 0.0, 0);
+END
+GO
+
 PRINT '============================================================';
 PRINT 'GymFit SQL Server Database Script - Completed Successfully!';
 PRINT '============================================================';
@@ -963,7 +1355,9 @@ PRINT '';
 PRINT 'Database: GymFit';
 PRINT 'Collation: SQL_Latin1_General_CP1_CI_AS';
 PRINT '';
-PRINT 'Tables Created:';
+PRINT 'V1 Tables + V2 Tables';
+PRINT '';
+PRINT 'V1 Tables:';
 PRINT '  1. Roles';
 PRINT '  2. Users';
 PRINT '  3. RefreshTokens';
@@ -987,4 +1381,21 @@ PRINT ' 20. Blogs';
 PRINT ' 21. BlogComments';
 PRINT ' 22. BlogLikes';
 PRINT ' 23. Reviews';
+PRINT '';
+PRINT 'V2 Tables (New Features):';
+PRINT ' 24. HealthProfiles';
+PRINT ' 25. FreeTrials';
+PRINT ' 26. ProgressLogs';
+PRINT ' 27. WorkoutLogs';
+PRINT ' 28. WorkoutLogExercises';
+PRINT ' 29. FoodDatabase';
+PRINT ' 30. MealLogs';
+PRINT ' 31. CoachStudentAssignments';
+PRINT ' 32. QAPosts';
+PRINT ' 33. QAAnswers';
+PRINT ' 34. Videos';
+PRINT ' 35. ChatConversations';
+PRINT ' 36. ChatMessages';
+PRINT ' 37. Credits';
+PRINT ' 38. CreditTransactions';
 GO

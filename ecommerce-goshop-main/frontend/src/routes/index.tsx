@@ -9,6 +9,12 @@ import { DietRoutes } from "../features/diet";
 import { BlogRoutes } from "../features/blog";
 import { NotificationRoutes } from "../features/notification";
 import { AdminDashboard, CoachDashboard, MemberDashboard } from "../features/dashboard";
+import { HealthRoutes } from "../features/health";
+import { ChatRoutes } from "../features/chat";
+import { CommunityRoutes } from "../features/community";
+import { VideoRoutes } from "../features/video";
+import { CreditsRoutes } from "../features/credits/routes";
+import { AIRoutes } from "../features/ai/routes";
 
 export const AppRoutes = () => {
     return (
@@ -22,6 +28,12 @@ export const AppRoutes = () => {
                 <Route path="diet/*" element={<DietRoutes />} />
                 <Route path="blogs/*" element={<BlogRoutes />} />
                 <Route path="notifications/*" element={<NotificationRoutes />} />
+                <Route path="health/*" element={<HealthRoutes />} />
+                <Route path="chat/*" element={<ChatRoutes />} />
+                <Route path="community/*" element={<CommunityRoutes />} />
+                <Route path="videos/*" element={<VideoRoutes />} />
+                <Route path="credits/*" element={<CreditsRoutes />} />
+                <Route path="ai/*" element={<AIRoutes />} />
             </Route>
 
             <Route element={<ProtectedRoute />}>

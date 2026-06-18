@@ -1,0 +1,1 @@
+export { VideoRoutes } from './routes';
