@@ -23,7 +23,7 @@ export type ProductFormType = yup.InferType<typeof productValidationSchema>;
 
 const ProductForm = (props: Props) => {
     const { register, handleSubmit, formState: { errors },control, setValue } = useForm<ProductFormType>({
-        resolver: yupResolver(productValidationSchema),
+        resolver: yupResolver(productValidationSchema) as any,
         defaultValues: {
             category: props.categoryName, 
             ...props.product

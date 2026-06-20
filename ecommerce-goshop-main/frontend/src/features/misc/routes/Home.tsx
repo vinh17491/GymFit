@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
@@ -35,7 +35,7 @@ const coaches = [
 const plans = [
   {
     name: "Basic", price: "299,000", period: "/month",
-    features: ["Gym access (6AM–10PM)", "Locker & shower", "1 fitness assessment", "Mobile app access"],
+    features: ["Gym access (6AMâ€“10PM)", "Locker & shower", "1 fitness assessment", "Mobile app access"],
     cta: "Start Free Trial", popular: false,
   },
   {
@@ -109,7 +109,7 @@ const Header = () => {
               Try Free <FaArrowRight className="text-xs" />
             </Link>
             <button className="lg:hidden text-white text-2xl" onClick={() => setMenuOpen(!menuOpen)}>
-              {menuOpen ? "✕" : "☰"}
+              {menuOpen ? "âœ•" : "â˜°"}
             </button>
           </div>
         </div>
@@ -171,7 +171,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          AI-powered workouts, personalized nutrition, expert coaches — all from home.
+          AI-powered workouts, personalized nutrition, expert coaches â€” all from home.
           Transform your body without stepping into a crowded gym.
         </motion.p>
 
@@ -238,7 +238,7 @@ const About = () => {
           </motion.h2>
           <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-3xl mx-auto mt-6 leading-relaxed">
             IRONPHYSIQUE was born from a simple belief: <strong className="text-white">everyone deserves world-class training</strong>.
-            We combine AI technology with human expertise to bring you personalized fitness that adapts to your life — not the other way around.
+            We combine AI technology with human expertise to bring you personalized fitness that adapts to your life â€” not the other way around.
           </motion.p>
         </motion.div>
 
@@ -283,7 +283,7 @@ const Services = () => {
             WORLD-CLASS <span className="text-cyan">AMENITIES</span>
           </motion.h2>
           <motion.p variants={fadeUp} className="text-gray-400 text-lg max-w-2xl mx-auto mt-6">
-            Everything you need to train, recover, and thrive — under one roof.
+            Everything you need to train, recover, and thrive â€” under one roof.
           </motion.p>
         </motion.div>
 
@@ -530,7 +530,7 @@ const FinalCTA = () => {
           </h2>
           <p className="text-gray-400 text-xl max-w-2xl mx-auto mb-10">
             Join thousands of members who transformed their lives from home.
-            Start your 14-day free trial today — no commitment, no risk.
+            Start your 14-day free trial today â€” no commitment, no risk.
           </p>
           <Link
             to="/register"
@@ -569,9 +569,9 @@ const Footer = () => {
           <div>
             <h4 className="text-white font-bold mb-4 uppercase tracking-wider text-sm">Hours</h4>
             <ul className="space-y-2 text-gray-500 text-sm">
-              <li>Mon–Fri: 5AM – 11PM</li>
-              <li>Sat: 6AM – 10PM</li>
-              <li>Sun: 7AM – 8PM</li>
+              <li>Monâ€“Fri: 5AM â€“ 11PM</li>
+              <li>Sat: 6AM â€“ 10PM</li>
+              <li>Sun: 7AM â€“ 8PM</li>
               <li className="text-cyan font-medium">Open 365 days</li>
             </ul>
           </div>
@@ -586,7 +586,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-dark-surface pt-8 text-center text-gray-600 text-xs uppercase tracking-wider">
-          © 2026 IRONPHYSIQUE. All rights reserved.
+          Â© 2026 IRONPHYSIQUE. All rights reserved.
         </div>
       </div>
     </footer>

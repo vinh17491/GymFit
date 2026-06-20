@@ -2,8 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
+    "moduleResolution": "node10",
     "declaration": true,
     "sourceMap": true,
     "esModuleInterop": true,

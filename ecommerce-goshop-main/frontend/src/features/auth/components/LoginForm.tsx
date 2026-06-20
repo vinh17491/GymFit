@@ -23,8 +23,8 @@ type LoginForm = yup.InferType<typeof loginValidationSchema>;
 
 const LoginForm = () => {
     const navigate = useNavigate();
-    const { register, handleSubmit, formState: { errors }, setValue } = useForm<LoginForm>({
-        resolver: yupResolver(loginValidationSchema),
+    const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+        resolver: yupResolver(loginValidationSchema) as any,
     });
 
     const { signIn, signInWithGoogle } = useAuth();
@@ -59,11 +59,6 @@ const LoginForm = () => {
         toast.error("Google sign in was cancelled or failed");
     };
 
-    const handleDemoAccount = () => {
-        setValue("email", "bobsmith@gmail.com");
-        setValue("password", "Password@123");
-    };
-    
     return (
         <>
             <form className="w-full relative" onSubmit={handleSubmit(handleLogin)}>
@@ -105,20 +100,13 @@ const LoginForm = () => {
                 <div className="mb-10 text-right">
                     <Link
                         className="text-sm font-semibold transition-colors hover:text-primary"
-                        to="/signup"
+                        to="/auth/forgot-password"
                     >
             Forgot Password?
                     </Link>
                 </div>
                 <button className="w-full font-semibold text-sm bg-dark text-white transition hover:bg-opacity-90 rounded-xl py-3 px-4 mb-2">
           Sign In
-                </button>
-                <button 
-                    type="button"
-                    className="w-full font-semibold text-sm bg-gray-100 text-dark transition-colors hover:bg-gray-200 rounded-xl py-3 px-4"
-                    onClick={handleDemoAccount}
-                >
-                    Use Demo Account
                 </button>
             </form>
 

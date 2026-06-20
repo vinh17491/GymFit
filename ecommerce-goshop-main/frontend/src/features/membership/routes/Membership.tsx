@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useGetPlans } from "../api/getPlans";
 import { usePurchasePlan } from "../api/purchasePlan";
 import { useAuth } from "../../../context/AuthContext";
@@ -10,6 +11,7 @@ const Membership = () => {
     const { currentUser } = useAuth();
     const { data: plans, isLoading } = useGetPlans();
     const { mutateAsync: purchase, isLoading: purchasing } = usePurchasePlan();
+    const [purchasingId, setPurchasingId] = useState<number | null>(null);
 
     const handlePurchase = async (planId: number) => {
         if (!currentUser) {
@@ -17,6 +19,7 @@ const Membership = () => {
             return;
         }
         try {
+            setPurchasingId(planId);
             const result = await purchase(planId);
             if (result?.url) {
                 window.location.href = result.url;
@@ -25,6 +28,8 @@ const Membership = () => {
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || "Purchase failed");
+        } finally {
+            setPurchasingId(null);
         }
     };
 
@@ -61,10 +66,10 @@ const Membership = () => {
                                 </ul>
                                 <button
                                     onClick={() => handlePurchase(plan.id)}
-                                    disabled={purchasing}
+                                    disabled={purchasingId !== null}
                                     className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50"
                                 >
-                                    {purchasing ? "Processing..." : "Get Started"}
+                                    {purchasingId === plan.id ? "Processing..." : "Get Started"}
                                 </button>
                             </div>
                         </div>

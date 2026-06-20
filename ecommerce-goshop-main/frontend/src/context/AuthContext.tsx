@@ -20,6 +20,7 @@ interface IAuthContext {
   isCoach: boolean | undefined;
   isMember: boolean | undefined;
   token: string;
+  isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (data: IRegisterCredentials) => Promise<void>;
   signInWithGoogle: (credential: string) => Promise<void>;
@@ -32,6 +33,7 @@ const AuthContext = createContext<IAuthContext>({
     isAdmin: undefined,
     isCoach: undefined,
     isMember: undefined,
+    isLoading: true,
     signIn: async () => {},
     signUp: async () => {},
     signInWithGoogle: async () => {},
@@ -113,6 +115,7 @@ export const AuthProvider = ({ children } : Props) => {
         isCoach,
         isMember,
         token,
+        isLoading,
         signIn,
         signUp,
         signInWithGoogle,

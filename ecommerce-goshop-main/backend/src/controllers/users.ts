@@ -19,6 +19,13 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = Number(req.params.id);
+    const requestUserId = (req as any).userId;
+    const requestRole = (req as any).roleName;
+    
+    // IDOR Protection: Users can only update their own profile, ADMIN can update anyone
+    if (requestUserId !== userId && requestRole !== "ADMIN") {
+      return res.status(403).json({ message: "You can only update your own profile" });
+    }
     const pool = await getPool();
 
     const existing = await pool.request()

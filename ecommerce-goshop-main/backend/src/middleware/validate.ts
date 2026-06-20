@@ -16,11 +16,11 @@ export function requireBody(...fields: string[]) {
     };
 }
 
-// Validate UUID param
+// Validate ID param (integer)
 export function validateIdParam(paramName: string = "id") {
     return (req: Request, res: Response, next: NextFunction) => {
         const val = req.params[paramName];
-        if (!val || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val)) {
+        if (!val || !/^[0-9]+$/.test(val)) {
             return sendError(res, 400, `Invalid ${paramName}`, paramName);
         }
         next();

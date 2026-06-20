@@ -1,12 +1,20 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+    root: __dirname,
     envDir: "../",
+    appType: 'spa',
     server: {
+        host: '0.0.0.0',
         port: 5115,
         strictPort: false,
+    },
+    build: {
+        outDir: path.resolve(__dirname, "dist"),
     },
     plugins: [
         react(),

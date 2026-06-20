@@ -1,6 +1,7 @@
 import sql, { config as SqlConfig } from "mssql";
 import dotenv from "dotenv";
 import path from "path";
+import { logger } from "./logger";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -15,9 +16,10 @@ const sqlConfig: SqlConfig = {
     trustServerCertificate: true,
   },
   pool: {
-    max: 10,
-    min: 0,
+    max: Number(process.env.DB_POOL_MAX) || 50,
+    min: Number(process.env.DB_POOL_MIN) || 5,
     idleTimeoutMillis: 30000,
+    acquireTimeoutMillis: 30000,
   },
 };
 
@@ -26,7 +28,13 @@ let pool: sql.ConnectionPool | null = null;
 export async function getPool(): Promise<sql.ConnectionPool> {
   if (pool) return pool;
   pool = await sql.connect(sqlConfig);
-  console.log("✅ SQL Server connected successfully");
+  logger.info("SQL Server connected successfully", {
+    server: sqlConfig.server,
+    database: sqlConfig.database,
+    port: sqlConfig.port,
+    poolMin: sqlConfig.pool?.min,
+    poolMax: sqlConfig.pool?.max,
+  });
   return pool;
 }
 
@@ -35,12 +43,23 @@ export async function closePool(): Promise<void> {
     if (pool) {
       await pool.close();
       pool = null;
-      console.log("🔒 SQL Server connection closed");
+      logger.info("SQL Server connection closed");
     }
   } catch (error) {
-    console.error("❌ Error closing SQL Server connection:", error);
+    logger.error("Error closing SQL Server connection:", error);
     throw error;
   }
+}
+
+/** Returns pool statistics for health checks */
+export function getPoolStats(): { connected: boolean; size?: number; available?: number; pending?: number } {
+  if (!pool) return { connected: false };
+  return {
+    connected: true,
+    size: pool.size,
+    available: pool.available,
+    pending: pool.pending,
+  };
 }
 
 export default sql;

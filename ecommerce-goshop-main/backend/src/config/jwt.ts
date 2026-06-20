@@ -3,8 +3,14 @@ dotenv.config({ path: "../.env" });
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET || "gymfit-jwt-secret-dev";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "gymfit-refresh-secret-dev";
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  console.error("[FATAL] JWT_SECRET and JWT_REFRESH_SECRET must be set in environment variables");
+  if (process.env.NODE_ENV === "production") {
+    process.exit(1);
+  }
+}
+const JWT_SECRET = process.env.JWT_SECRET || "gymfit-jwt-secret-dev-only";
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "gymfit-refresh-secret-dev-only";
 
 export interface TokenPayload {
   userId: number;

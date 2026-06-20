@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { communityApi } from '../api/communityApi';
 import { Link } from 'react-router-dom';
 
@@ -40,7 +41,8 @@ export const CommunityList = () => {
 };
 
 export const CommunityDetail = () => {
-  const id = window.location.pathname.split('/').pop() || '';
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = routeId || '';
   const [post, setPost] = useState<any>(null);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(true);

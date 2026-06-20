@@ -1,9 +1,10 @@
-import { useForm } from "react-hook-form";
+﻿import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useEffect } from "react";
 import { useGetHealthProfile, useUpsertHealthProfile, HealthProfileData } from "../api/healthApi";
 import { toast } from "react-toastify";
+import { PageSkeleton } from "../../../components/Elements/LoadingSkeleton";
 
 const schema = yup.object().shape({
   Gender: yup.string().oneOf(["MALE", "FEMALE"]).required("Gender is required"),
@@ -59,7 +60,7 @@ export const HealthProfileForm = () => {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <PageSkeleton rows={6} />;
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-6">

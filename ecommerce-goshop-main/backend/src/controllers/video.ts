@@ -36,6 +36,12 @@ export const createVideo = async (req: Request, res: Response, next: NextFunctio
   try {
     const userId = (req as AuthRequest).userId!;
     const { title, description, videoUrl, thumbnailUrl, category, durationSec, difficulty, isPremium } = req.body;
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+    if (videoUrl && !videoUrl.startsWith('http')) {
+      return res.status(400).json({ message: "Invalid video URL" });
+    }
     const pool = await getPool();
     const result = await pool.request()
       .input("uploadedBy", userId)

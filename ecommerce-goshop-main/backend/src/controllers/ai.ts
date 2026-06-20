@@ -67,6 +67,21 @@ export const generateMealPlan = async (req: Request, res: Response, next: NextFu
   } catch (err) { next(err); }
 };
 
+
+export const getHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const pool = await getPool();
+    const userId = (req as any).userId;
+    const result = await pool.request()
+      .input('UserId', userId)
+      .query('SELECT TOP 20 * FROM AIHistory WHERE UserId = @UserId ORDER BY CreatedAt DESC');
+    res.json(result.recordset);
+  } catch (err) {
+    // If AIHistory table doesn't exist, return empty array
+    res.json([]);
+  }
+};
+
 export const getMusicRecommendations = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const pool = await getPool();

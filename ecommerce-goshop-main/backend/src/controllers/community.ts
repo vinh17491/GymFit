@@ -7,10 +7,17 @@ export const createCommunityPost = async (req: Request, res: Response, next: Nex
   try {
     const userId = (req as AuthRequest).userId!;
     const { title, content, tags } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ message: "Title and content are required" });
+    }
+    if (title.length > 300 || content.length > 10000) {
+      return res.status(400).json({ message: "Title max 300 chars, content max 10000 chars" });
+    }
     const pool = await getPool();
     const result = await pool.request()
       .input("userId", userId)
-      .input("title", title)
+      .input("title", title.trim())
+      .input("content", content.trim())
       .input("content", content)
       .input("tags", tags || null)
       .query(`INSERT INTO QAPosts (UserId,Title,Content,Tags) OUTPUT INSERTED.* VALUES (@userId,@title,@content,@tags)`);
@@ -84,6 +91,12 @@ export const createAnswer = async (req: Request, res: Response, next: NextFuncti
   try {
     const userId = (req as AuthRequest).userId!;
     const { content } = req.body;
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: "Content is required" });
+    }
+    if (content.length > 5000) {
+      return res.status(400).json({ message: "Content max 5000 chars" });
+    }
     const pool = await getPool();
     const result = await pool.request()
       .input("postId", req.params.postId)
@@ -113,12 +126,12 @@ export const acceptAnswer = async (req: Request, res: Response, next: NextFuncti
       .query(`SELECT a.*, p.UserId as PostAuthorId FROM QAAnswers a JOIN QAPosts p ON a.PostId = p.Id WHERE a.Id = @id`);
     if (!answer.recordset[0]) return res.status(404).json({ message: "Answer not found" });
     if (answer.recordset[0].PostAuthorId !== userId) return res.status(403).json({ message: "Only post author can accept" });
-    await pool.request().input("id", req.params.id)
-      .query(`UPDATE QAAnswers SET IsAccepted = 0 WHERE PostId = ${answer.recordset[0].PostId}`);
+    await pool.request().input("postId", answer.recordset[0].PostId)
+      .query(`UPDATE QAAnswers SET IsAccepted = 0 WHERE PostId = @postId`);
     const result = await pool.request().input("id", req.params.id)
       .query(`UPDATE QAAnswers SET IsAccepted = 1 OUTPUT INSERTED.* WHERE Id = @id`);
-    await pool.request().input("id", req.params.id)
-      .query(`UPDATE QAPosts SET IsVerified = 1 WHERE Id = ${answer.recordset[0].PostId}`);
+    await pool.request().input("postId", answer.recordset[0].PostId)
+      .query(`UPDATE QAPosts SET IsVerified = 1 WHERE Id = @postId`);
     res.json(result.recordset[0]);
   } catch (err) { next(err); }
 };

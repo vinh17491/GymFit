@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { videoApi } from '../api/videoApi';
 import { Link } from 'react-router-dom';
 
@@ -53,14 +54,14 @@ export const VideoList = () => {
 };
 
 export const VideoDetail = () => {
-  const id = window.location.pathname.split('/').pop() || '';
+  const { id: routeId } = useParams<{ id: string }>();
+  const id = routeId || '';
   const [video, setVideo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     videoApi.getVideo(id).then(setVideo).finally(() => setLoading(false));
-    videoApi.incrementViews(id).catch(() => {});
-  }, [id]);
+      }, [id]);
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (!video) return <div className="p-8 text-center">Video not found</div>;

@@ -45,7 +45,7 @@ export class LogbookController {
                 .input('Carbs', sql.Decimal(5, 2), carbs)
                 .input('Fat', sql.Decimal(5, 2), fat)
                 .query(`
-                    INSERT INTO NutritionLogs (UserId, MealType, FoodName, Calories, Protein, Carbs, Fat, LogDate)
+                    INSERT INTO MealLogs (UserId, MealType, FoodName, Calories, Protein, Carbs, Fat, LogDate)
                     VALUES (@UserId, @MealType, @FoodName, @Calories, @Protein, @Carbs, @Fat, GETUTCDATE())
                 `);
 
@@ -66,7 +66,7 @@ export class LogbookController {
             
             const nutritionLogs = await pool.request()
                 .input('UserId', sql.Int, userId)
-                .query('SELECT TOP 50 * FROM NutritionLogs WHERE UserId = @UserId ORDER BY LogDate DESC');
+                .query('SELECT TOP 50 * FROM MealLogs WHERE UserId = @UserId ORDER BY LogDate DESC');
 
             res.json({
                 workouts: workoutLogs.recordset,

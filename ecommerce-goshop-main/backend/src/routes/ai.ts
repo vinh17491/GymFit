@@ -5,6 +5,7 @@ import * as aiCtrl from "../controllers/ai";
 
 const router = Router();
 
+router.get("/history", authMiddleware, aiCtrl.getHistory);
 router.post("/generate-workout", authMiddleware, requireBody("fitnessLevel", "goal"), aiCtrl.generateWorkout);
 router.post("/generate-meal-plan", authMiddleware, requireBody("dietaryPreference", "calories"), aiCtrl.generateMealPlan);
 router.get("/music-recommendations", authMiddleware, validatePagination, aiCtrl.getMusicRecommendations);

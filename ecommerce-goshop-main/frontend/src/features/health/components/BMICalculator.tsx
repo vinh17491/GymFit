@@ -16,6 +16,21 @@ export const BMICalculator = () => {
             return;
         }
 
+        const h = parseFloat(height);
+        const w = parseFloat(weight);
+        if (isNaN(h) || isNaN(w)) {
+            setError("Please enter valid numeric values");
+            return;
+        }
+        if (h < 50 || h > 300) {
+            setError("Height must be between 50 and 300 cm");
+            return;
+        }
+        if (w < 10 || w > 500) {
+            setError("Weight must be between 10 and 500 kg");
+            return;
+        }
+
         try {
             const data = await calcMutation.mutateAsync({
                 HeightCm: parseFloat(height),
@@ -35,6 +50,7 @@ export const BMICalculator = () => {
                     <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
                     <input
                         type="number"
+                        min="1"
                         value={height}
                         onChange={(e) => setHeight(e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"
@@ -45,6 +61,7 @@ export const BMICalculator = () => {
                     <label className="block text-sm font-medium text-gray-700">Weight (kg)</label>
                     <input
                         type="number"
+                        min="1"
                         value={weight}
                         onChange={(e) => setWeight(e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"
