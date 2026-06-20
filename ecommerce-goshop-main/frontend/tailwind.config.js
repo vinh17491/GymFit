@@ -53,7 +53,6 @@ export default {
                 "showcase": "url('/src/assets/images/Home/showcase.webp')",
                 "newArrivals": "url('/src/assets/images/Home/new-arrivals-section.webp')",
                 "discounts": "url('/src/assets/images/Home/discounts-section.webp')",
-                "hero-gym": "linear-gradient(135deg, rgba(10,10,10,0.85) 0%, rgba(10,10,10,0.4) 100%), url('/src/assets/images/Home/hero-bg.webp')",
                 "cta-gradient": "linear-gradient(135deg, #00FFD1 0%, #00CCA7 100%)",
             },
             backgroundColor: {

@@ -1,7 +1,7 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -11,7 +11,7 @@ const api = axios.create({
 // Request interceptor: attach auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,7 +28,7 @@ api.interceptors.response.use(
 
     // Auto-logout on 401
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
+      localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       if (window.location.pathname !== "/auth/login") {
         window.location.href = "/auth/login";

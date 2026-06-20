@@ -17,4 +17,7 @@ router.post("/posts/:postId/answers", authMiddleware, validateIdParam("postId"),
 router.post("/answers/:answerId/upvote", authMiddleware, validateIdParam("answerId"), communityCtrl.upvoteAnswer);
 router.post("/answers/:answerId/accept", authMiddleware, validateIdParam("answerId"), communityCtrl.acceptAnswer);
 
+
+router.post("/posts/:id/like", authMiddleware, validateIdParam("id"), communityCtrl.likePost);
+
 export default router;

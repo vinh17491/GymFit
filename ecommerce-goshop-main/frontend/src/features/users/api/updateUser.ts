@@ -8,7 +8,7 @@ interface IUpdateResult {
 }
 
 const updateUser = async (userId: string, data: FormData, token: string): Promise<IUpdateResult> => {
-    return api.patch(`/users/update/${userId}`, data, {
+    return api.patch(`/users/${userId}`, data, {
         headers: {
             "Content-Type": "multipart/form-data",
             "Authorization": `Bearer ${token}`

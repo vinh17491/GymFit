@@ -135,3 +135,14 @@ export const acceptAnswer = async (req: Request, res: Response, next: NextFuncti
     res.json(result.recordset[0]);
   } catch (err) { next(err); }
 };
+
+export const likePost = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("id", req.params.id)
+      .query(`UPDATE QAPosts SET Likes = ISNULL(Likes, 0) + 1 OUTPUT INSERTED.* WHERE Id = @id`);
+    if (!result.recordset[0]) return res.status(404).json({ message: "Post not found" });
+    res.json(result.recordset[0]);
+  } catch (err) { next(err); }
+};

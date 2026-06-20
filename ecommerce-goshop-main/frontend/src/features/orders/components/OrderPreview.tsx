@@ -45,7 +45,7 @@ export const OrderPreview = (props: IOrder) => {
                         <tbody>
                             {props.items.map((item) => (
                                 <tr
-                                    key={props.id + item}
+                                    key={`${props.id}-${item.product.id}`}
                                     className="transition duration-300 ease-in-out hover:bg-neutral-100"
                                 >
                                     <td className="flex items-center px-4 py-3">

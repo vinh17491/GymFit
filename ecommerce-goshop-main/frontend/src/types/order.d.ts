@@ -4,7 +4,7 @@ interface IOrderItem {
 }
 
 interface IOrder {
-    id: int;
+    id: number;
     amount: number;
     userId: string;
     items: {
