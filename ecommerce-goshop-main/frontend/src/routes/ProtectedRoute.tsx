@@ -1,5 +1,6 @@
 import { Navigate, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Layout from "../components/Layout";
 
 const LoadingScreen = () => (
     <div className="flex items-center justify-center min-h-screen">
@@ -16,7 +17,7 @@ export const ProtectedRoute = () => {
     }
 
     return currentUser ? (
-        <Outlet />
+        <Layout />
     ) : (
         <Navigate to="/auth/login" state={{ from: location }} replace />
     );
