@@ -6,8 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-toastify";
 import { Spinner } from "../../../components/Elements/Spinner";
 import { useState } from "react";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth, googleProvider } from "../../../app/firebase";
+import { GoogleLogin } from "@react-oauth/google";
 
 const loginValidationSchema = yup.object({
     email: yup
@@ -20,7 +19,6 @@ const loginValidationSchema = yup.object({
         .matches(/^\S*$/, "Password cannot contain spaces"),
 });
 type LoginForm = yup.InferType<typeof loginValidationSchema>;
-
 
 const LoginForm = () => {
     const navigate = useNavigate();

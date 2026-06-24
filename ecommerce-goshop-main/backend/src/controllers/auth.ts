@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { getPool } from "../config/database";
 import { signAccessToken, signRefreshToken, TokenPayload } from "../config/jwt";
 import { OAuth2Client } from "google-auth-library";
+import GOOGLE_CLIENT_ID from "../config/google";
 import dotenv from "dotenv";
 
 dotenv.config();
