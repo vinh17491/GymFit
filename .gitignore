@@ -20,3 +20,4 @@ cypress.config.ts
 # Old audit reports (stale)
 AUDIT_REPORT.md
 FINAL_REPORT.md
+FINAL_AUDIT_REPORT.md
