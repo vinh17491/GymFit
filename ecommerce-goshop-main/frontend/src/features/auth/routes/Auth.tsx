@@ -4,7 +4,7 @@ import LoginForm from "../components/LoginForm";
 
 const Auth = () => {
     const location = useLocation();
-    const isLogin = location.pathname.split("/auth")[1] === "/login";
+    const isLogin = location.pathname.endsWith("/login") || location.pathname.match(/\/auth\/login/);
 
     return (
         <div className="w-full bg-auth bg-cover bg-center">

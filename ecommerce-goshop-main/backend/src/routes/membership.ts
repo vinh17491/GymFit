@@ -22,9 +22,9 @@ router.get("/plans/:id", getPlanById);
 
 // Member routes (require auth + MEMBER role only)
 router.post("/purchase", authMiddleware, verifyRolesMiddleware(["MEMBER"]), purchaseMembership);
-router.get("/my", authMiddleware, getMyMembership);
-router.get("/history", authMiddleware, getMembershipHistory);
-router.post("/:id/cancel", authMiddleware, cancelMembership);
+router.get("/my", authMiddleware, verifyRolesMiddleware(["MEMBER"]), getMyMembership);
+router.get("/history", authMiddleware, verifyRolesMiddleware(["MEMBER"]), getMembershipHistory);
+router.post("/:id/cancel", authMiddleware, verifyRolesMiddleware(["MEMBER"]), cancelMembership);
 
 // Admin routes
 router.post("/admin/plans", authMiddleware, verifyRolesMiddleware(["ADMIN"]), createPlan);

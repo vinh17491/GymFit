@@ -9,8 +9,8 @@ if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
     process.exit(1);
   }
 }
-const JWT_SECRET = process.env.JWT_SECRET || "gymfit-jwt-secret-dev-only";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "gymfit-refresh-secret-dev-only";
+const JWT_SECRET: string = process.env.JWT_SECRET!;
+const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET!;
 
 export interface TokenPayload {
   userId: number;

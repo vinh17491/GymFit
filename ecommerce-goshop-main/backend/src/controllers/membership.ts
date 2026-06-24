@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { getPool } from "../config/database";
-import stripe from "../config/stripe";
+import { BANK_INFO } from "../config/bank";
 
 // GET /membership/plans - Get all active plans (public)
 export const getAllPlans = async (_req: Request, res: Response, next: NextFunction) => {
@@ -30,7 +30,7 @@ export const getPlanById = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-// POST /membership/purchase - Create Stripe Checkout Session for membership
+// POST /membership/purchase — tạo membership + QR thanh toán
 export const purchaseMembership = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
@@ -62,41 +62,53 @@ export const purchaseMembership = async (req: Request, res: Response, next: Next
     }
 
     const plan = planResult.recordset[0];
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + Number(plan.DurationDays));
 
-    // Create Stripe Checkout Session with VND currency
-    const session = await stripe.checkout.sessions.create({
-      success_url: (process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173") + "/membership/success?id={CHECKOUT_SESSION_ID}",
-      cancel_url: (process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173") + "/membership/cancel",
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "vnd",
-            product_data: {
-              name: plan.Name,
-              description: plan.Description || "",
-            },
-            unit_amount: Number(plan.Price),
-          },
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        customerId: String(userId),
-        paymentType: "membership",
-        planId: String(plan.Id),
-        planName: plan.Name,
-        durationDays: String(plan.DurationDays),
-        planPrice: String(plan.Price),
-      },
-    });
+    // Insert Membership (PENDING until payment confirmed)
+    const membershipResult = await pool.request()
+      .input("userId", Number(userId))
+      .input("planId", Number(planId))
+      .input("startDate", startDate.toISOString().slice(0, 10))
+      .input("endDate", endDate.toISOString().slice(0, 10))
+      .input("status", "PENDING")
+      .query(`
+        INSERT INTO Memberships (UserId, PlanId, StartDate, EndDate, Status, CreatedAt)
+        OUTPUT INSERTED.*
+        VALUES (@userId, @planId, @startDate, @endDate, @status, GETUTCDATE())
+      `);
+
+    const membership = membershipResult.recordset[0];
+
+    // Insert Payment
+    const paymentResult = await pool.request()
+      .input("userId", Number(userId))
+      .input("amount", Number(plan.Price))
+      .input("currency", "VND")
+      .input("paymentMethod", "BANK_TRANSFER")
+      .input("status", "PENDING")
+      .input("paymentType", "MEMBERSHIP")
+      .query(`
+        INSERT INTO Payments (UserId, Amount, Currency, PaymentMethod, Status, PaymentType, CreatedAt, UpdatedAt)
+        OUTPUT INSERTED.*
+        VALUES (@userId, @amount, @currency, @paymentMethod, @status, @paymentType, GETUTCDATE(), GETUTCDATE())
+      `);
 
     res.status(201).json({
-      sessionId: session.id,
-      checkoutUrl: session.url,
+      membership,
+      payment: paymentResult.recordset[0],
+      qrInfo: {
+        bankName: BANK_INFO.bankName,
+        accountNumber: BANK_INFO.accountNumber,
+        accountHolder: BANK_INFO.accountHolder,
+        amount: Number(plan.Price),
+        content: `GYMFIT-MEM-${membership.Id}`,
+        qrImageUrl: BANK_INFO.qrImageUrl,
+      },
     });
   } catch (error) {
-    next({ message: "Unable to create checkout session", error });
+    next({ message: "Unable to purchase membership", error });
   }
 };
 
@@ -132,7 +144,7 @@ export const getMembershipHistory = async (req: Request, res: Response, next: Ne
       .query(`
         SELECT p.*, mp.Name AS PlanName
         FROM Payments p
-        LEFT JOIN Memberships m ON p.StripeSessionId = m.StripePaymentId
+        LEFT JOIN Memberships m ON m.UserId = p.UserId
         LEFT JOIN MembershipPlans mp ON m.PlanId = mp.Id
         WHERE p.UserId = @userId AND p.PaymentType = 'MEMBERSHIP'
         ORDER BY p.CreatedAt DESC

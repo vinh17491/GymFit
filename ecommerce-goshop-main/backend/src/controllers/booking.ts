@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
 import { getPool } from "../config/database";
-import stripe from "../config/stripe";
+import { BANK_INFO } from "../config/bank";
 
-// POST /bookings - Create Stripe Checkout Session for booking
+// POST /bookings - Create booking with QR payment
 export const createBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const memberId = req.userId!;
@@ -35,43 +35,53 @@ export const createBooking = async (req: Request, res: Response, next: NextFunct
       return res.status(400).json({ message: "Coach hourly rate is not set" });
     }
 
-    // Create Stripe Checkout Session with VND currency
-    const session = await stripe.checkout.sessions.create({
-      success_url: (process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173") + "/bookings/success?id={CHECKOUT_SESSION_ID}",
-      cancel_url: (process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL : "http://localhost:5173") + "/bookings/cancel",
-      mode: "payment",
-      line_items: [
-        {
-          price_data: {
-            currency: "vnd",
-            product_data: {
-              name: "Personal Training Session",
-              description: `Booking with Coach (${schedule.StartTime} - ${schedule.EndTime}) on ${bookingDate}`,
-            },
-            unit_amount: hourlyRate,
-          },
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        paymentType: "booking",
-        memberId: String(memberId),
-        coachId: String(coachId),
-        scheduleId: String(scheduleId),
-        bookingDate: bookingDate,
-        startTime: schedule.StartTime,
-        endTime: schedule.EndTime,
-        hourlyRate: String(hourlyRate),
-        notes: notes || "",
-      },
-    });
+    // Insert Booking (PENDING until payment)
+    const bookingResult = await pool.request()
+      .input("memberId", Number(memberId))
+      .input("coachId", Number(coachId))
+      .input("scheduleId", Number(scheduleId))
+      .input("bookingDate", bookingDate)
+      .input("startTime", schedule.StartTime)
+      .input("endTime", schedule.EndTime)
+      .input("status", "PENDING")
+      .input("notes", notes || null)
+      .input("amount", hourlyRate)
+      .query(`
+        INSERT INTO Bookings (MemberId, CoachId, ScheduleId, BookingDate, StartTime, EndTime, Status, Notes, Amount, CreatedAt)
+        OUTPUT INSERTED.*
+        VALUES (@memberId, @coachId, @scheduleId, @bookingDate, @startTime, @endTime, @status, @notes, @amount, GETUTCDATE())
+      `);
+
+    const booking = bookingResult.recordset[0];
+
+    // Insert Payment
+    const paymentResult = await pool.request()
+      .input("userId", Number(memberId))
+      .input("amount", hourlyRate)
+      .input("currency", "VND")
+      .input("paymentMethod", "BANK_TRANSFER")
+      .input("status", "PENDING")
+      .input("paymentType", "BOOKING")
+      .query(`
+        INSERT INTO Payments (UserId, Amount, Currency, PaymentMethod, Status, PaymentType, CreatedAt, UpdatedAt)
+        OUTPUT INSERTED.*
+        VALUES (@userId, @amount, @currency, @paymentMethod, @status, @paymentType, GETUTCDATE(), GETUTCDATE())
+      `);
 
     res.status(201).json({
-      sessionId: session.id,
-      checkoutUrl: session.url,
+      booking,
+      payment: paymentResult.recordset[0],
+      qrInfo: {
+        bankName: BANK_INFO.bankName,
+        accountNumber: BANK_INFO.accountNumber,
+        accountHolder: BANK_INFO.accountHolder,
+        amount: hourlyRate,
+        content: `GYMFIT-BK-${booking.Id}`,
+        qrImageUrl: BANK_INFO.qrImageUrl,
+      },
     });
   } catch (error) {
-    next({ message: "Unable to create booking checkout session", error });
+    next({ message: "Unable to create booking", error });
   }
 };
 
@@ -113,7 +123,13 @@ export const getBookingHistory = async (req: Request, res: Response, next: NextF
         JOIN Coaches c ON b.CoachId = c.Id
         JOIN Users u ON c.UserId = u.Id
         JOIN CoachSchedules cs ON b.ScheduleId = cs.Id
-        LEFT JOIN Payments p ON b.StripePaymentId = p.StripeSessionId
+        OUTER APPLY (
+          SELECT TOP 1 Amount, Currency, Status
+          FROM Payments
+          WHERE UserId = b.MemberId AND PaymentType = 'BOOKING'
+            AND CreatedAt >= b.CreatedAt
+          ORDER BY CreatedAt DESC
+        ) p
         WHERE b.MemberId = @memberId
         ORDER BY b.CreatedAt DESC
       `);

@@ -22,7 +22,7 @@ export const ChatConversations = () => {
                         >
                             <div className="flex items-start gap-4">
                                 <img
-                                    src={conv.CoachAvatar || "/avatar-default.png"}
+                                    src={conv.CoachAvatar || "/default-avatar.webp"}
                                     alt={conv.CoachName}
                                     className="w-12 h-12 rounded-full"
                                 />

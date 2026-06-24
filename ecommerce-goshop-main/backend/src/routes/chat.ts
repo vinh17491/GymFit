@@ -8,7 +8,7 @@ const router = Router();
 router.get("/conversations", authMiddleware, validatePagination, chatCtrl.getConversations);
 router.get("/conversations/:id/messages", authMiddleware, validateIdParam("id"), validatePagination, chatCtrl.getMessages);
 router.post("/conversations/:id/messages", authMiddleware, validateIdParam("id"), requireBody("content"), chatCtrl.sendMessage);
-router.post("/conversations", authMiddleware, requireBody("participantId"), chatCtrl.getOrCreateConversation);
+router.post("/conversations", authMiddleware, requireBody("coachId"), chatCtrl.getOrCreateConversation);
 router.put("/conversations/:id/read", authMiddleware, validateIdParam("id"), chatCtrl.markAsRead);
 router.get("/unread-count", authMiddleware, chatCtrl.getUnreadCount);
 

@@ -5,6 +5,7 @@ import ForgotPasswordForm from "../components/ForgotPasswordForm";
 export const AuthRoutes = () => {
     return (
         <Routes>
+            <Route index element={<Auth />} />
             <Route path="signup" element={<Auth />} />
             <Route path="login" element={<Auth />} />
             <Route path="forgot-password" element={<ForgotPasswordForm />} />

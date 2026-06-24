@@ -1,9 +1,3 @@
-import { Stripe, loadStripe } from "@stripe/stripe-js";
-
-let stripePromise: Promise<Stripe | null>;
-export const getStripe = () => {
-    if (!stripePromise) {
-        stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-    }
-    return stripePromise;
-};
+// Stripe đã được thay thế bằng QR thanh toán Techcombank.
+// Giữ file để tránh lỗi import, export ra null.
+export const getStripe = () => null;

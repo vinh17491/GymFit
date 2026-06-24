@@ -3,9 +3,18 @@ import { getPool } from "../config/database";
 
 export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const requestUserId = (req as any).userId;
+    const requestRole = (req as any).roleName;
+    const targetId = Number(req.params.id);
+
+    // IDOR Protection: own profile or ADMIN only
+    if (requestUserId !== targetId && requestRole !== "ADMIN") {
+      return res.status(403).json({ message: "You can only view your own profile" });
+    }
+
     const pool = await getPool();
     const result = await pool.request()
-      .input("id", Number(req.params.id))
+      .input("id", targetId)
       .query("SELECT Id, Email, FullName, Phone, Avatar, RoleId, IsActive, CreatedAt FROM Users WHERE Id = @id");
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -70,9 +79,21 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const pool = await getPool();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.request()
+      .query("SELECT COUNT(*) AS Total FROM Users");
+    const total = countResult.recordset[0].Total;
+
     const result = await pool.request()
-      .query("SELECT Id, Email, FullName, Phone, Avatar, RoleId, IsActive, CreatedAt FROM Users ORDER BY CreatedAt DESC");
-    res.status(200).json(result.recordset);
+      .input("offset", offset)
+      .input("limit", limit)
+      .query(`SELECT Id, Email, FullName, Phone, Avatar, RoleId, IsActive, CreatedAt 
+              FROM Users ORDER BY CreatedAt DESC 
+              OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`);
+    res.status(200).json({ data: result.recordset, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     next({ message: "Unable to fetch users", error });
   }

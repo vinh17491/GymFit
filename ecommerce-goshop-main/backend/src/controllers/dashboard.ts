@@ -3,6 +3,40 @@ import { getPool } from "../config/database";
 
 type AuthRequest = Request & { userId?: number; roleName?: string; roleId?: number };
 
+export const getWorkoutLogs = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as AuthRequest).userId!;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("userId", userId)
+      .query(`SELECT wp.*, ws.CompletedAt, ws.Id as SessionId
+              FROM WorkoutSessions ws
+              JOIN WorkoutPrograms wp ON ws.ProgramId = wp.Id
+              WHERE ws.UserId = @userId AND CAST(ws.CompletedAt AS DATE) = CAST(GETDATE() AS DATE)
+              ORDER BY ws.CompletedAt DESC`);
+    res.status(200).json(result.recordset);
+  } catch (error) {
+    // table may not exist — return empty
+    res.status(200).json([]);
+  }
+};
+
+export const getDietLogs = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as AuthRequest).userId!;
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("userId", userId)
+      .query(`SELECT * FROM DietLogs
+              WHERE UserId = @userId AND CAST(LoggedAt AS DATE) = CAST(GETDATE() AS DATE)
+              ORDER BY LoggedAt DESC`);
+    res.status(200).json(result.recordset);
+  } catch (error) {
+    // table may not exist — return empty
+    res.status(200).json([]);
+  }
+};
+
 // ======================== ADMIN DASHBOARD ========================
 
 export const getAdminDashboard = async (_req: Request, res: Response, next: NextFunction) => {
@@ -26,8 +60,8 @@ export const getAdminDashboard = async (_req: Request, res: Response, next: Next
       pool.request().query("SELECT COUNT(*) activeMemberships FROM Memberships WHERE Status='ACTIVE'"),
       pool.request().query("SELECT COUNT(*) totalBookings FROM Bookings"),
       pool.request().query("SELECT COUNT(*) completedBookings FROM Bookings WHERE Status='COMPLETED'"),
-      pool.request().query("SELECT ISNULL(SUM(Amount),0) totalRevenue FROM Payments WHERE Status='COMPLETED'"),
-      pool.request().query("SELECT FORMAT(CreatedAt,'yyyy-MM') month, SUM(Amount) revenue FROM Payments WHERE Status='COMPLETED' GROUP BY FORMAT(CreatedAt,'yyyy-MM') ORDER BY month"),
+      pool.request().query("SELECT ISNULL(SUM(Amount),0) totalRevenue FROM Payments WHERE Status='SUCCEEDED'"),
+      pool.request().query("SELECT FORMAT(CreatedAt,'yyyy-MM') month, SUM(Amount) revenue FROM Payments WHERE Status='SUCCEEDED' GROUP BY FORMAT(CreatedAt,'yyyy-MM') ORDER BY month"),
       pool.request().query("SELECT TOP 5 mp.Name planName, COUNT(*) total FROM Memberships m JOIN MembershipPlans mp ON m.PlanId = mp.Id GROUP BY mp.Name ORDER BY total DESC"),
     ]);
 
@@ -137,7 +171,7 @@ export const getCoachDashboard = async (req: Request, res: Response, next: NextF
         .query("SELECT COUNT(*) completedBookings FROM Bookings WHERE CoachId=@coachId AND Status='COMPLETED'"),
       pool.request()
         .input("coachId", coachId)
-        .query("SELECT ISNULL(SUM(p.Amount),0) monthlyRevenue FROM Payments p JOIN Bookings b ON p.StripeSessionId = b.StripePaymentId WHERE b.CoachId=@coachId AND p.Status='COMPLETED'"),
+        .query("SELECT ISNULL(SUM(p.Amount),0) monthlyRevenue FROM Payments p JOIN Bookings b ON p.UserId = b.MemberId AND p.PaymentType='BOOKING' WHERE b.CoachId=@coachId AND p.Status='SUCCEEDED'"),
     ]);
 
     res.status(200).json({

@@ -15,6 +15,24 @@ export const getAllOrders = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+export const getOrderById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("id", Number(req.params.id))
+      .query(`SELECT o.*, u.FullName AS UserName, u.Email AS UserEmail 
+              FROM Orders o 
+              JOIN Users u ON o.UserId = u.Id 
+              WHERE o.Id = @id`);
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.status(200).json(result.recordset[0]);
+  } catch (error) {
+    next({ message: "Unable to fetch order", error });
+  }
+};
+
 export const getOrdersByUserId = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const pool = await getPool();

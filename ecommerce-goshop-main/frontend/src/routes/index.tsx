@@ -5,6 +5,7 @@ import { PageSkeleton } from "../components/Elements/LoadingSkeleton";
 
 // Lazy-loaded feature routes
 const Home = lazy(() => import("../features/misc/routes/Home").then(m => ({ default: m.Home })));
+const Contact = lazy(() => import("../features/misc/routes/Contact").then(m => ({ default: m.Contact })));
 const NotFound = lazy(() => import("../features/misc/routes/NotFound").then(m => ({ default: m.NotFound })));
 const AuthRoutes = lazy(() => import("../features/auth").then(m => ({ default: m.AuthRoutes })));
 const MembershipRoutes = lazy(() => import("../features/membership/routes").then(m => ({ default: m.MembershipRoutes })));
@@ -38,8 +39,11 @@ export const AppRoutes = () => {
             <Routes>
                 <Route path="/">
                     <Route index element={<Home />} />
+                    <Route path="contact" element={<Contact />} />
                     <Route element={<AuthRoute />}>
                         <Route path="auth/*" element={<AuthRoutes />} />
+                        <Route path="register" element={<AuthRoutes />} />
+                        <Route path="login" element={<AuthRoutes />} />
                     </Route>
                     <Route element={<ProtectedRoute />}>
                         <Route path="membership/*" element={<MembershipRoutes />} />

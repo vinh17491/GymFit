@@ -1,17 +1,27 @@
 import { NextFunction, Request, Response } from "express";
 import { getPool } from "../config/database";
-import stripe from "../config/stripe";
 
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const pool = await getPool();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const offset = (page - 1) * limit;
+
+    const countResult = await pool.request()
+      .query("SELECT COUNT(*) AS Total FROM Supplements WHERE IsActive = 1");
+    const total = countResult.recordset[0].Total;
+
     const result = await pool.request()
+      .input("offset", offset)
+      .input("limit", limit)
       .query(`SELECT s.*, sc.Name AS CategoryName 
               FROM Supplements s 
               LEFT JOIN SupplementCategories sc ON s.CategoryId = sc.Id 
               WHERE s.IsActive = 1 
-              ORDER BY s.CreatedAt DESC`);
-    res.status(200).json(result.recordset);
+              ORDER BY s.CreatedAt DESC
+              OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`);
+    res.status(200).json({ data: result.recordset, total, page, totalPages: Math.ceil(total / limit) });
   } catch (error) {
     next({ message: "Unable to fetch products", error });
   }
@@ -57,6 +67,10 @@ export const searchForProducts = async (req: Request, res: Response, next: NextF
     if (!searchQuery) {
       return res.status(400).json({ message: "Search query is required" });
     }
+    // Limit search length to prevent DoS
+    if (typeof searchQuery !== "string" || searchQuery.length > 200) {
+      return res.status(400).json({ message: "Search query must be under 200 characters" });
+    }
     const pool = await getPool();
     const result = await pool.request()
       .input("search", `%${searchQuery}%`)
@@ -80,19 +94,6 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
 
     const image = (req as Request & { image?: string }).image || null;
 
-    // Create Stripe product + price
-    const stripeProduct = await stripe.products.create({
-      name,
-      description: description || "",
-      default_price_data: {
-        currency: "usd",
-        unit_amount: Math.round(Number(price) * 100),
-      },
-      images: image ? [image] : [],
-    });
-
-    const stripePriceId = stripeProduct.default_price as string;
-
     const pool = await getPool();
     const result = await pool.request()
       .input("name", name)
@@ -104,12 +105,10 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       .input("brand", brand || null)
       .input("weight", weight || null)
       .input("flavor", flavor || null)
-      .input("stripePriceId", stripePriceId)
-      .input("stripeProductId", stripeProduct.id)
       .query(`
-        INSERT INTO Supplements (Name, Description, Price, StockQuantity, Image, CategoryId, Brand, Weight, Flavor, StripePriceId, StripeProductId)
+        INSERT INTO Supplements (Name, Description, Price, StockQuantity, Image, CategoryId, Brand, Weight, Flavor)
         OUTPUT INSERTED.*
-        VALUES (@name, @description, @price, @stockQuantity, @image, @categoryId, @brand, @weight, @flavor, @stripePriceId, @stripeProductId)
+        VALUES (@name, @description, @price, @stockQuantity, @image, @categoryId, @brand, @weight, @flavor)
       `);
 
     res.status(201).json(result.recordset[0]);
@@ -142,22 +141,6 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     const flavor = req.body.flavor ?? product.Flavor;
     const categoryId = req.body.categoryId !== undefined ? Number(req.body.categoryId) : product.CategoryId;
 
-    // Deactivate old Stripe product
-    await stripe.products.update(product.StripeProductId, { active: false });
-
-    // Create new Stripe product
-    const newStripeProduct = await stripe.products.create({
-      name,
-      description: description || "",
-      default_price_data: {
-        currency: "usd",
-        unit_amount: Math.round(Number(price) * 100),
-      },
-      images: image ? [image] : [],
-    });
-
-    const newPriceId = newStripeProduct.default_price as string;
-
     const result = await pool.request()
       .input("id", productId)
       .input("name", name)
@@ -169,13 +152,11 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       .input("brand", brand)
       .input("weight", weight)
       .input("flavor", flavor)
-      .input("stripePriceId", newPriceId)
-      .input("stripeProductId", newStripeProduct.id)
       .query(`
         UPDATE Supplements 
         SET Name = @name, Description = @description, Price = @price, StockQuantity = @stockQuantity,
             Image = @image, CategoryId = @categoryId, Brand = @brand, Weight = @weight, Flavor = @flavor,
-            StripePriceId = @stripePriceId, StripeProductId = @stripeProductId, UpdatedAt = GETUTCDATE()
+            UpdatedAt = GETUTCDATE()
         OUTPUT INSERTED.*
         WHERE Id = @id
       `);
@@ -193,17 +174,12 @@ export const deleteProduct = async (req: Request, res: Response, next: NextFunct
 
     const existing = await pool.request()
       .input("id", productId)
-      .query("SELECT StripeProductId FROM Supplements WHERE Id = @id");
+      .query("SELECT Id FROM Supplements WHERE Id = @id");
     if (existing.recordset.length === 0) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const { StripeProductId } = existing.recordset[0];
-
-    // Deactivate in Stripe
-    await stripe.products.update(StripeProductId, { active: false });
-
-    // Soft delete in DB
+    // Soft delete
     await pool.request()
       .input("id", productId)
       .query("UPDATE Supplements SET IsActive = 0, UpdatedAt = GETUTCDATE() WHERE Id = @id");

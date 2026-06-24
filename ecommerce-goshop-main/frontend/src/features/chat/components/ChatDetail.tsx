@@ -46,7 +46,7 @@ export const ChatDetail = () => {
                     messages.map((msg) => (
                         <div key={msg.Id} className="flex items-start gap-3">
                             <img
-                                src={msg.Avatar || "/avatar-default.png"}
+                                src={msg.Avatar || "/default-avatar.webp"}
                                 alt={msg.FullName}
                                 className="w-8 h-8 rounded-full"
                             />

@@ -122,13 +122,12 @@ BEGIN
         [PlanId]           INT            NOT NULL,
         [StartDate]        DATE           NOT NULL,
         [EndDate]          DATE           NOT NULL,
-        [Status]           NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Memberships_Status] DEFAULT 'ACTIVE',
-        [StripePaymentId]  NVARCHAR(255)  NULL,
+        [Status]           NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Memberships_Status] DEFAULT 'PENDING',
         [CreatedAt]        DATETIME2      NOT NULL CONSTRAINT [DF_Memberships_CreatedAt] DEFAULT GETUTCDATE(),
         CONSTRAINT [PK_Memberships] PRIMARY KEY CLUSTERED ([Id]),
         CONSTRAINT [FK_Memberships_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]),
         CONSTRAINT [FK_Memberships_PlanId] FOREIGN KEY ([PlanId]) REFERENCES [dbo].[MembershipPlans]([Id]),
-        CONSTRAINT [CK_Memberships_Status] CHECK ([Status] IN ('ACTIVE', 'EXPIRED', 'CANCELLED'))
+        CONSTRAINT [CK_Memberships_Status] CHECK ([Status] IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED'))
     );
 END
 GO
@@ -191,9 +190,9 @@ BEGIN
         [BookingDate]      DATE           NOT NULL,
         [StartTime]        TIME(0)        NOT NULL,
         [EndTime]          TIME(0)        NOT NULL,
-        [Status]           NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Bookings_Status] DEFAULT 'CONFIRMED',
+        [Status]           NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Bookings_Status] DEFAULT 'PENDING',
         [Notes]            NVARCHAR(500)  NULL,
-        [StripePaymentId]  NVARCHAR(255)  NULL,
+        [Amount]           DECIMAL(10,2)  NULL,
         [CreatedAt]        DATETIME2      NOT NULL CONSTRAINT [DF_Bookings_CreatedAt] DEFAULT GETUTCDATE(),
         [UpdatedAt]        DATETIME2      NOT NULL CONSTRAINT [DF_Bookings_UpdatedAt] DEFAULT GETUTCDATE(),
         CONSTRAINT [PK_Bookings] PRIMARY KEY CLUSTERED ([Id]),
@@ -237,14 +236,12 @@ BEGIN
         [StockQuantity]   INT            NOT NULL CONSTRAINT [DF_Supplements_StockQuantity] DEFAULT 0,
         [Image]           NVARCHAR(500)  NULL,
         [CategoryId]      INT            NULL,
+        [SalesCount]      INT            NOT NULL CONSTRAINT [DF_Supplements_SalesCount] DEFAULT 0,
         [Brand]           NVARCHAR(100)  NULL,
         [Weight]          NVARCHAR(50)   NULL,
         [Flavor]          NVARCHAR(100)  NULL,
-        [StripePriceId]   NVARCHAR(255)  NULL,
-        [StripeProductId] NVARCHAR(255)  NULL,
         [IsActive]        BIT            NOT NULL CONSTRAINT [DF_Supplements_IsActive] DEFAULT 1,
         [CreatedAt]       DATETIME2      NOT NULL CONSTRAINT [DF_Supplements_CreatedAt] DEFAULT GETUTCDATE(),
-        [UpdatedAt]       DATETIME2      NOT NULL CONSTRAINT [DF_Supplements_UpdatedAt] DEFAULT GETUTCDATE(),
         CONSTRAINT [PK_Supplements] PRIMARY KEY CLUSTERED ([Id]),
         CONSTRAINT [FK_Supplements_CategoryId] FOREIGN KEY ([CategoryId]) REFERENCES [dbo].[SupplementCategories]([Id])
     );
@@ -264,11 +261,9 @@ BEGIN
         [ShippingAddress]  NVARCHAR(500)  NULL,
         [Phone]            NVARCHAR(20)   NULL,
         [Notes]            NVARCHAR(500)  NULL,
-        [StripeSessionId]  NVARCHAR(255)  NULL,
         [CreatedAt]        DATETIME2      NOT NULL CONSTRAINT [DF_Orders_CreatedAt] DEFAULT GETUTCDATE(),
         [UpdatedAt]        DATETIME2      NOT NULL CONSTRAINT [DF_Orders_UpdatedAt] DEFAULT GETUTCDATE(),
         CONSTRAINT [PK_Orders] PRIMARY KEY CLUSTERED ([Id]),
-        CONSTRAINT [UQ_Orders_StripeSessionId] UNIQUE ([StripeSessionId]),
         CONSTRAINT [FK_Orders_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]),
         CONSTRAINT [CK_Orders_Status] CHECK ([Status] IN ('PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED'))
     );
@@ -305,16 +300,13 @@ BEGIN
         [OrderId]               INT            NULL,
         [UserId]                INT            NOT NULL,
         [Amount]                DECIMAL(10,2)  NOT NULL,
-        [Currency]              NVARCHAR(3)    NOT NULL CONSTRAINT [DF_Payments_Currency] DEFAULT 'USD',
+        [Currency]              NVARCHAR(3)    NOT NULL CONSTRAINT [DF_Payments_Currency] DEFAULT 'VND',
         [PaymentMethod]         NVARCHAR(50)   NULL,
-        [StripePaymentIntentId] NVARCHAR(255)  NULL,
-        [StripeSessionId]       NVARCHAR(255)  NULL,
         [Status]                NVARCHAR(20)   NOT NULL CONSTRAINT [DF_Payments_Status] DEFAULT 'PENDING',
         [PaymentType]           NVARCHAR(20)   NOT NULL,
         [CreatedAt]             DATETIME2      NOT NULL CONSTRAINT [DF_Payments_CreatedAt] DEFAULT GETUTCDATE(),
         [UpdatedAt]             DATETIME2      NOT NULL CONSTRAINT [DF_Payments_UpdatedAt] DEFAULT GETUTCDATE(),
         CONSTRAINT [PK_Payments] PRIMARY KEY CLUSTERED ([Id]),
-        CONSTRAINT [UQ_Payments_StripePaymentIntentId] UNIQUE ([StripePaymentIntentId]),
         CONSTRAINT [FK_Payments_OrderId] FOREIGN KEY ([OrderId]) REFERENCES [dbo].[Orders]([Id]),
         CONSTRAINT [FK_Payments_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users]([Id]),
         CONSTRAINT [CK_Payments_Status] CHECK ([Status] IN ('PENDING', 'SUCCEEDED', 'FAILED', 'REFUNDED')),

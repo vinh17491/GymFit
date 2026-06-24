@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useGetCoachById, useGetCoachSchedules, useCreateBooking } from "../index";
 import { useAuth } from "../../../context/AuthContext";
 import { Spinner } from "../../../components/Elements/Spinner";
@@ -12,6 +12,7 @@ const CoachDetail = () => {
     const { data: coach, isLoading } = useGetCoachById(id!);
     const { data: schedules, isLoading: schedulesLoading } = useGetCoachSchedules(id!);
     const { mutateAsync: bookSession, isLoading: booking } = useCreateBooking();
+    const navigate = useNavigate();
     const [confirmSchedule, setConfirmSchedule] = useState<any>(null);
 
     const handleBook = async (scheduleId: number) => {
@@ -20,9 +21,12 @@ const CoachDetail = () => {
             return;
         }
         try {
-            await bookSession({ coachId: parseInt(id!), scheduleId });
-            toast.success("Booking confirmed!");
+            const result = await bookSession({ coachId: parseInt(id!), scheduleId });
             setConfirmSchedule(null);
+            // Navigate to payment page
+            navigate(`/checkout/order/${result.booking.Id}`, {
+                state: { qrInfo: result.qrInfo, order: { Id: result.booking.Id, TotalAmount: result.payment.Amount } },
+            });
         } catch (err: any) {
             toast.error(err?.response?.data?.message || "Booking failed");
         }

@@ -18,7 +18,6 @@ export const createCommunityPost = async (req: Request, res: Response, next: Nex
       .input("userId", userId)
       .input("title", title.trim())
       .input("content", content.trim())
-      .input("content", content)
       .input("tags", tags || null)
       .query(`INSERT INTO QAPosts (UserId,Title,Content,Tags) OUTPUT INSERTED.* VALUES (@userId,@title,@content,@tags)`);
     res.status(201).json(result.recordset[0]);
