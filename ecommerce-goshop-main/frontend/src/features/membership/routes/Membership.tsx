@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useGetPlans } from "../api/getPlans";
 import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -20,7 +20,7 @@ const Membership = () => {
     }
     try {
       setPurchasingId(planId);
-      const { default: { api } } = await import("../../../app/api");
+      const { api } = await import("../../../app/api");
       const { data } = await api.post("/api/payment/membership/purchase", { planId });
       navigate(`/checkout/order/${data.membership.Id}`, {
         state: { qrInfo: data.qrInfo, order: { Id: data.membership.Id, TotalAmount: data.payment.Amount } },

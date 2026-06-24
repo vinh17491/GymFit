@@ -1,4 +1,4 @@
-﻿import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { getPool } from "../config/database";
 import { signAccessToken, signRefreshToken, TokenPayload } from "../config/jwt";
@@ -241,5 +241,27 @@ export const registerWithGoogle = async (req: Request, res: Response, next: Next
     });
   } catch (error) {
     next({ message: "Unable to authenticate with Google", error });
+  }
+};
+
+export const getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authReq = req as Request & { userId?: number };
+    const userId = authReq.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const pool = await getPool();
+    const result = await pool.request()
+      .input("userId", userId)
+      .query("SELECT u.Id, u.Email, u.FullName, u.Avatar, u.Phone, u.RoleId, r.Name AS RoleName FROM Users u JOIN Roles r ON u.RoleId = r.Id WHERE u.Id = @userId AND u.IsActive = 1");
+
+    if (result.recordset.length === 0) return res.status(404).json({ message: "User not found" });
+
+    const user = result.recordset[0];
+    res.status(200).json({
+      user: { id: user.Id, email: user.Email, fullName: user.FullName, avatar: user.Avatar, phone: user.Phone, role: user.RoleName },
+    });
+  } catch (error) {
+    next({ message: "Unable to get current user", error });
   }
 };

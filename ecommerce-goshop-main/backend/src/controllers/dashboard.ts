@@ -16,7 +16,7 @@ export const getWorkoutLogs = async (req: Request, res: Response, next: NextFunc
               ORDER BY ws.CompletedAt DESC`);
     res.status(200).json(result.recordset);
   } catch (error) {
-    // table may not exist — return empty
+    // table may not exist â€” return empty
     res.status(200).json([]);
   }
 };
@@ -32,7 +32,7 @@ export const getDietLogs = async (req: Request, res: Response, next: NextFunctio
               ORDER BY LoggedAt DESC`);
     res.status(200).json(result.recordset);
   } catch (error) {
-    // table may not exist — return empty
+    // table may not exist â€” return empty
     res.status(200).json([]);
   }
 };
@@ -100,7 +100,7 @@ export const getMemberDashboard = async (req: Request, res: Response, next: Next
       .input("userId", userId)
       .query("SELECT wp.* FROM WorkoutProgramSaves s JOIN WorkoutPrograms wp ON s.ProgramId = wp.Id WHERE s.UserId=@userId");
 
-    // DietPlans may not exist — catch gracefully
+    // DietPlans may not exist â€” catch gracefully
     let dietPlans: unknown[] = [];
     try {
       const dietResult = await pool.request()
@@ -182,5 +182,40 @@ export const getCoachDashboard = async (req: Request, res: Response, next: NextF
     });
   } catch (error) {
     next({ message: "Unable to fetch coach dashboard", error });
+  }
+};
+// GET /dashboard — redirect based on role
+export const getDashboard = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authReq = req as AuthRequest;
+    const roleName = authReq.roleName;
+    const userId = authReq.userId;
+
+    const pool = await getPool();
+
+    if (roleName === "ADMIN") {
+      const memberships = await pool.request().query("SELECT COUNT(*) AS Total FROM Memberships WHERE Status = 'ACTIVE'");
+      const users = await pool.request().query("SELECT COUNT(*) AS Total FROM Users WHERE IsActive = 1");
+      const revenue = await pool.request().query("SELECT ISNULL(SUM(Amount), 0) AS Total FROM Payments WHERE Status = 'SUCCEEDED'");
+      const bookings = await pool.request().query("SELECT COUNT(*) AS Total FROM Bookings WHERE Status = 'CONFIRMED'");
+      return res.json({ role: "ADMIN", stats: { memberships: memberships.recordset[0].Total, users: users.recordset[0].Total, revenue: revenue.recordset[0].Total, bookings: bookings.recordset[0].Total } });
+    }
+
+    if (roleName === "COACH") {
+      const coachResult = await pool.request().input("userId", userId).query("SELECT Id FROM Coaches WHERE UserId = @userId");
+      if (coachResult.recordset.length === 0) return res.json({ role: "COACH", students: [], bookings: [] });
+      const coachId = coachResult.recordset[0].Id;
+      const students = await pool.request().input("coachId", coachId).query("SELECT u.Id, u.FullName, u.Email, u.Avatar FROM CoachStudentAssignments csa JOIN Users u ON csa.StudentId = u.Id WHERE csa.CoachId = @coachId");
+      const bookings = await pool.request().input("coachId", coachId).query("SELECT b.*, u.FullName AS MemberName FROM Bookings b JOIN Users u ON b.MemberId = u.Id WHERE b.CoachId = @coachId ORDER BY b.CreatedAt DESC");
+      return res.json({ role: "COACH", students: students.recordset, bookings: bookings.recordset });
+    }
+
+    // MEMBER
+    const workouts = await pool.request().input("userId", userId).query("SELECT COUNT(*) AS Total FROM WorkoutLogs WHERE UserId = @userId AND CAST(LogDate AS DATE) = CAST(GETUTCDATE() AS DATE)");
+    const calories = await pool.request().input("userId", userId).query("SELECT ISNULL(SUM(Calories), 0) AS Total FROM MealLogs WHERE UserId = @userId AND CAST(LogDate AS DATE) = CAST(GETUTCDATE() AS DATE)");
+    const membership = await pool.request().input("userId", userId).query("SELECT TOP 1 m.*, mp.Name AS PlanName FROM Memberships m JOIN MembershipPlans mp ON m.PlanId = mp.Id WHERE m.UserId = @userId ORDER BY m.CreatedAt DESC");
+    res.json({ role: "MEMBER", stats: { workoutsToday: workouts.recordset[0].Total, caloriesToday: calories.recordset[0].Total, membership: membership.recordset[0] || null } });
+  } catch (error) {
+    next({ message: "Unable to get dashboard", error });
   }
 };

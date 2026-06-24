@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/authMiddleware";
 import { verifyRolesMiddleware } from "../middleware/verifyRolesMiddleware";
-import { getAdminDashboard, getMemberDashboard, getCoachDashboard, getWorkoutLogs, getDietLogs } from "../controllers/dashboard";
+import { getAdminDashboard, getMemberDashboard, getCoachDashboard, getWorkoutLogs, getDietLogs, getDashboard } from "../controllers/dashboard";
 
 const router = Router();
 
+router.get("/", authMiddleware, getDashboard);
 router.get("/workout-logs", authMiddleware, getWorkoutLogs);
 router.get("/diet-logs", authMiddleware, getDietLogs);
 router.get("/admin", authMiddleware, verifyRolesMiddleware(["ADMIN"]), getAdminDashboard);

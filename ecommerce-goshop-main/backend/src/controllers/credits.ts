@@ -108,3 +108,17 @@ export const getRewardsCatalog = async (_req: Request, res: Response, next: Next
     res.json(result.recordset);
   } catch (err) { next(err); }
 };
+// GET /credits — overview (redirect to balance)
+export const getCreditOverview = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as Request & { userId?: number }).userId!;
+  const pool = await getPool();
+  try {
+    let result = await pool.request().input("userId", userId).query("SELECT * FROM Credits WHERE UserId = @userId");
+    if (result.recordset.length === 0) {
+      await pool.request().input("userId", userId).query("INSERT INTO Credits (UserId, Balance) VALUES (@userId, 0)");
+      return res.json({ userId, balance: 0, transactions: [] });
+    }
+    const txns = await pool.request().input("userId", userId).query("SELECT TOP 10 * FROM CreditTransactions WHERE UserId = @userId ORDER BY CreatedAt DESC");
+    res.json({ userId: result.recordset[0].UserId, balance: result.recordset[0].Balance, transactions: txns.recordset });
+  } catch (err) { next(err); }
+};

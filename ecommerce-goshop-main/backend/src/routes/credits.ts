@@ -6,6 +6,7 @@ import * as creditsCtrl from "../controllers/credits";
 
 const router = Router();
 
+router.get("/", authMiddleware, creditsCtrl.getCreditOverview);
 router.get("/balance", authMiddleware, creditsCtrl.getCreditBalance);
 router.get("/history", authMiddleware, validatePagination, creditsCtrl.getCreditTransactions);
 router.get("/rewards", authMiddleware, validatePagination, creditsCtrl.getRewardsCatalog);
