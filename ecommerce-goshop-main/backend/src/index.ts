@@ -1,12 +1,12 @@
-import express from "express";
+﻿import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
-dotenv.config({ path: require("path").resolve(__dirname, "../../.env") });
+dotenv.config({ path: require("path").resolve(__dirname, "../.env") });
 
 // --- Validate critical env vars at startup ---
-const requiredEnvVars = ["JWT_SECRET", "DB_USER", "DB_PASSWORD", "DB_SERVER", "DB_NAME"];
+const requiredEnvVars = ["JWT_SECRET", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_NAME"];
 const missing = requiredEnvVars.filter((v) => !process.env[v]);
 if (missing.length > 0) {
     console.error(`FATAL: Missing required environment variables: ${missing.join(", ")}`);
