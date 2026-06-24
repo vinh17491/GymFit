@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./assets/styles/styles.css";
@@ -11,8 +11,6 @@ import { PersistGate } from "redux-persist/integration/react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AxiosError } from "axios";
-import { GOOGLE_CLIENT_ID } from "./config/google";
-import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const queryClient = new QueryClient({
     queryCache: new QueryCache({
@@ -31,20 +29,13 @@ const queryClient = new QueryClient({
     }),
 });
 
-const GoogleWrapper = ({ children }: { children: React.ReactNode }) =>
-    GOOGLE_CLIENT_ID
-        ? <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{children}</GoogleOAuthProvider>
-        : <>{children}</>;
-
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
         <BrowserRouter>
             <QueryClientProvider client={queryClient}>
                 <Provider store={store}>
                     <PersistGate loading={null} persistor={persistor}>
-                        <GoogleWrapper>
-                            <App />
-                        </GoogleWrapper>
+                        <App />
                     </PersistGate>
                 </Provider>
             </QueryClientProvider>
