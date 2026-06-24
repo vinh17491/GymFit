@@ -11,3 +11,12 @@ logs/
 uploads/
 coverage/
 .tmp/
+# Old test scaffolding (not part of project)
+tests-e2e/
+cypress/
+*.cy.ts
+cypress.config.ts
+
+# Old audit reports (stale)
+AUDIT_REPORT.md
+FINAL_REPORT.md
