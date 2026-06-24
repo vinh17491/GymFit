@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -24,7 +24,6 @@ import categoryRoutes from "./routes/category";
 import membershipRoutes from "./routes/membership";
 import coachRoutes from "./routes/coach";
 import bookingRoutes from "./routes/booking";
-import { webhook } from "./controllers/webhook";
 import workoutRoutes from "./routes/workout";
 import blogRoutes from "./routes/blog";
 import dashboardRoutes from "./routes/dashboard";
@@ -38,6 +37,7 @@ import coachStudentsRoutes from "./routes/coachStudents";
 import creditsRoutes from "./routes/credits";
 import aiRoutes from "./routes/ai";
 import logbookRoutes from "./routes/logbook";
+import paymentRoutes from "./routes/payment";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -50,13 +50,13 @@ app.use(helmet());
 // --- CORS ---
 const allowedOrigins = [
     "http://localhost:5173",
+    "http://localhost:5115",
     "http://localhost:4173",
     process.env.FRONTEND_URL || "",
 ].filter(Boolean);
 
 const corsOptions: cors.CorsOptions = {
     origin: (origin, callback) => {
-        // Allow requests with no origin only in development
         if ((!origin && process.env.NODE_ENV !== "production") || (origin && allowedOrigins.includes(origin))) {
             callback(null, true);
         } else {
@@ -71,7 +71,7 @@ app.use(cors(corsOptions));
 
 // --- Rate limiting ---
 const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 200,
     standardHeaders: true,
     legacyHeaders: false,
@@ -87,7 +87,7 @@ const authLimiter = rateLimit({
     message: { error: "Too many auth attempts, please try again later." },
 });
 
-// --- Health check (before auth middleware) ---
+// --- Health check ---
 app.get("/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -98,9 +98,6 @@ cloudinary.config({
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-
-// --- Webhook needs raw body, must come before json parser ---
-app.post("/webhook", express.raw({ type: "application/json" }), webhook);
 
 // --- Body parsers ---
 app.use(express.json({ limit: "1mb" }));
@@ -132,22 +129,26 @@ app.use("/coach-students", coachStudentsRoutes);
 app.use("/credits", creditsRoutes);
 app.use("/ai", aiRoutes);
 app.use("/logbook", logbookRoutes);
+app.use("/api/payment", paymentRoutes);
 
-// --- Error handler (must be last) ---
+// --- 404 handler ---
+app.all("*", (_req: Request, res: Response, _next: NextFunction) => {
+    res.status(404).json({ message: "Route not found" });
+});
+
+// --- Error handler ---
 app.use(errorMiddleware);
 
 const server = app.listen({ address: "0.0.0.0", port: Number(PORT) }, () => {
     logger.info(`Server running on port: ${PORT}`);
 });
 
-// --- Graceful shutdown ---
 const shutdown = (signal: string) => {
     logger.info(`${signal} received. Shutting down gracefully...`);
     server.close(() => {
         logger.info("HTTP server closed.");
         process.exit(0);
     });
-    // Force exit after 10s
     setTimeout(() => {
         logger.error("Forced shutdown after timeout.");
         process.exit(1);

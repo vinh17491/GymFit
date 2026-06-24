@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- GymFit V2 - SQL Server Database Script
 -- Target: Microsoft SQL Server 2019+
 -- Collation: SQL_Latin1_General_CP1_CI_AS
@@ -659,9 +659,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Orders_Status' AND object_id = OBJECT_ID(N'[dbo].[Orders]'))
     CREATE NONCLUSTERED INDEX [IX_Orders_Status] ON [dbo].[Orders] ([Status]);
 GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Orders_StripeSessionId' AND object_id = OBJECT_ID(N'[dbo].[Orders]'))
-    CREATE UNIQUE NONCLUSTERED INDEX [IX_Orders_StripeSessionId] ON [dbo].[Orders] ([StripeSessionId]) WHERE [StripeSessionId] IS NOT NULL;
-GO
+
 
 -- OrderItems
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_OrderItems_OrderId' AND object_id = OBJECT_ID(N'[dbo].[OrderItems]'))
@@ -675,9 +673,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Payments_UserId' AND object_id = OBJECT_ID(N'[dbo].[Payments]'))
     CREATE NONCLUSTERED INDEX [IX_Payments_UserId] ON [dbo].[Payments] ([UserId]);
 GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Payments_StripePaymentIntentId' AND object_id = OBJECT_ID(N'[dbo].[Payments]'))
-    CREATE UNIQUE NONCLUSTERED INDEX [IX_Payments_StripePaymentIntentId] ON [dbo].[Payments] ([StripePaymentIntentId]) WHERE [StripePaymentIntentId] IS NOT NULL;
-GO
+
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = N'IX_Payments_Status' AND object_id = OBJECT_ID(N'[dbo].[Payments]'))
     CREATE NONCLUSTERED INDEX [IX_Payments_Status] ON [dbo].[Payments] ([Status]);
 GO
@@ -815,7 +811,7 @@ GO
 -- Supplements
 IF NOT EXISTS (SELECT 1 FROM [dbo].[Supplements])
 BEGIN
-    INSERT INTO [dbo].[Supplements] ([Name], [Description], [Price], [StockQuantity], [Image], [CategoryId], [Brand], [Weight], [Flavor], [StripePriceId], [StripeProductId], [IsActive])
+    INSERT INTO [dbo].[Supplements] ([Name], [Description], [Price], [StockQuantity], [Image], [CategoryId], [Brand], [Weight], [Flavor], [IsActive])
     VALUES
         (
             N'Whey Gold Standard 100%',
@@ -1322,21 +1318,21 @@ IF NOT EXISTS (SELECT 1 FROM [dbo].[FoodDatabase])
 BEGIN
     INSERT INTO [dbo].[FoodDatabase] ([Name],[Category],[ServingSize],[Calories],[ProteinG],[CarbsG],[FatG],[FiberG],[IsCustom])
     VALUES
-        (N'Cơm trắng', N'Ngũ cốc', 100, 130, 2.7, 28.2, 0.3, 0.4, 0),
-        (N'Ức gà luộc', N'Thịt', 100, 165, 31.0, 0.0, 3.6, 0.0, 0),
-        (N'Trứng gà luộc', N'Trứng', 100, 155, 13.0, 1.1, 10.6, 0.0, 0),
-        (N'Cá hồi nướng', N'Hải sản', 100, 206, 20.0, 0.0, 13.0, 0.0, 0),
-        (N'Rau muống xào', N'Rau', 100, 25, 2.6, 3.5, 0.4, 2.0, 0),
-        (N'Chuối', N'Trái cây', 100, 89, 1.1, 23.0, 0.3, 2.6, 0),
-        (N'Sữa tươi', N'Sữa', 100, 61, 3.2, 4.8, 3.3, 0.0, 0),
-        (N'Đậu phụ', N'Đậu', 100, 76, 8.0, 1.9, 4.8, 0.3, 0),
-        (N'Khoai lang', N'Củ', 100, 86, 1.6, 20.1, 0.1, 3.0, 0),
-        (N'Bơ đậu phộng', N'Hạt', 100, 588, 25.0, 20.0, 50.0, 6.0, 0),
-        (N'Yến mạch', N'Ngũ cốc', 100, 389, 16.9, 66.3, 6.9, 10.6, 0),
-        (N'Thịt bò nạc', N'Thịt', 100, 250, 26.0, 0.0, 15.0, 0.0, 0),
-        (N'Tôm luộc', N'Hải sản', 100, 99, 24.0, 0.2, 0.3, 0.0, 0),
-        (N'Táo', N'Trái cây', 100, 52, 0.3, 14.0, 0.2, 2.4, 0),
-        (N'Sữa chua không đường', N'Sữa', 100, 59, 10.0, 3.6, 0.4, 0.0, 0);
+        (N'CÆ¡m tráº¯ng', N'NgÅ© cá»‘c', 100, 130, 2.7, 28.2, 0.3, 0.4, 0),
+        (N'á»¨c gÃ  luá»™c', N'Thá»‹t', 100, 165, 31.0, 0.0, 3.6, 0.0, 0),
+        (N'Trá»©ng gÃ  luá»™c', N'Trá»©ng', 100, 155, 13.0, 1.1, 10.6, 0.0, 0),
+        (N'CÃ¡ há»“i nÆ°á»›ng', N'Háº£i sáº£n', 100, 206, 20.0, 0.0, 13.0, 0.0, 0),
+        (N'Rau muá»‘ng xÃ o', N'Rau', 100, 25, 2.6, 3.5, 0.4, 2.0, 0),
+        (N'Chuá»‘i', N'TrÃ¡i cÃ¢y', 100, 89, 1.1, 23.0, 0.3, 2.6, 0),
+        (N'Sá»¯a tÆ°Æ¡i', N'Sá»¯a', 100, 61, 3.2, 4.8, 3.3, 0.0, 0),
+        (N'Äáº­u phá»¥', N'Äáº­u', 100, 76, 8.0, 1.9, 4.8, 0.3, 0),
+        (N'Khoai lang', N'Cá»§', 100, 86, 1.6, 20.1, 0.1, 3.0, 0),
+        (N'BÆ¡ Ä‘áº­u phá»™ng', N'Háº¡t', 100, 588, 25.0, 20.0, 50.0, 6.0, 0),
+        (N'Yáº¿n máº¡ch', N'NgÅ© cá»‘c', 100, 389, 16.9, 66.3, 6.9, 10.6, 0),
+        (N'Thá»‹t bÃ² náº¡c', N'Thá»‹t', 100, 250, 26.0, 0.0, 15.0, 0.0, 0),
+        (N'TÃ´m luá»™c', N'Háº£i sáº£n', 100, 99, 24.0, 0.2, 0.3, 0.0, 0),
+        (N'TÃ¡o', N'TrÃ¡i cÃ¢y', 100, 52, 0.3, 14.0, 0.2, 2.4, 0),
+        (N'Sá»¯a chua khÃ´ng Ä‘Æ°á»ng', N'Sá»¯a', 100, 59, 10.0, 3.6, 0.4, 0.0, 0);
 END
 GO
 

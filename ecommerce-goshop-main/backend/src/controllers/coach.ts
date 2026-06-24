@@ -1,6 +1,5 @@
-import { NextFunction, Request, Response } from "express";
+﻿import { NextFunction, Request, Response } from "express";
 import { getPool } from "../config/database";
-import stripe from "../config/stripe";
 
 // GET /coaches - List all available coaches (public)
 export const getAllCoaches = async (_req: Request, res: Response, next: NextFunction) => {

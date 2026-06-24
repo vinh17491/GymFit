@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+﻿import { Link, useNavigate } from "react-router-dom";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useForm } from "react-hook-form";
@@ -6,6 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { toast } from "react-toastify";
 import { Spinner } from "../../../components/Elements/Spinner";
 import { useState } from "react";
+import { GOOGLE_CLIENT_ID } from "../../../config/google";
 import { GoogleLogin } from "@react-oauth/google";
 
 const loginValidationSchema = yup.object({

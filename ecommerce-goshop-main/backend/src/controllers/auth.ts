@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+﻿import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { getPool } from "../config/database";
 import { signAccessToken, signRefreshToken, TokenPayload } from "../config/jwt";
@@ -6,7 +6,7 @@ import { OAuth2Client } from "google-auth-library";
 import dotenv from "dotenv";
 
 dotenv.config();
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || "210524482098-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com");
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {

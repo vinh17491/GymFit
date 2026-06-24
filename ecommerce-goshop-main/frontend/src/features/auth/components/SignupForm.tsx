@@ -1,10 +1,11 @@
-import { useForm } from "react-hook-form";
+﻿import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { Spinner } from "../../../components/Elements/Spinner";
 import { useState } from "react";
+import { GOOGLE_CLIENT_ID } from "../../../config/google";
 import { GoogleLogin } from "@react-oauth/google";
 import { toast } from "react-toastify";
 
