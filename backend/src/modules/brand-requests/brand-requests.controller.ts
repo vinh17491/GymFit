@@ -1,0 +1,9 @@
+import { NextFunction,Request,Response } from 'express';
+import { brandRequestsService } from './brand-requests.service';
+export const listSeller=async(req:Request,res:Response,next:NextFunction)=>{try{const r=await brandRequestsService.listSeller(req.user!.userId,req.query as any);res.json({success:true,data:r.items,pagination:{page:r.page,limit:r.limit,total:r.total,pages:Math.ceil(r.total/r.limit)}});}catch(e){next(e);}};
+export const detailSeller=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await brandRequestsService.detailSeller(req.user!.userId,Number(req.params.requestId))});}catch(e){next(e);}};
+export const createSeller=async(req:Request,res:Response,next:NextFunction)=>{try{res.status(201).json({success:true,data:await brandRequestsService.create(req.user!.userId,req.body)});}catch(e){next(e);}};
+export const listAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{const filters={...req.query,status:req.query.status??'PENDING'} as any;const r=await brandRequestsService.listAdmin(filters);res.json({success:true,data:r.items,pagination:{page:r.page,limit:r.limit,total:r.total,pages:Math.ceil(r.total/r.limit)}});}catch(e){next(e);}};
+export const detailAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await brandRequestsService.detailAdmin(Number(req.params.requestId))});}catch(e){next(e);}};
+export const approveAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await brandRequestsService.approve(Number(req.params.requestId),req.user!.userId)});}catch(e){next(e);}};
+export const rejectAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await brandRequestsService.reject(Number(req.params.requestId),req.user!.userId,req.body.reason)});}catch(e){next(e);}};

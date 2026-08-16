@@ -1,0 +1,993 @@
+# MASTER TASK — GYMFIT COACH2 FINAL CLOSURE 100%
+## TỰ ĐỘNG THỰC THI TOÀN BỘ PHASE — KHÔNG HỎI XÁC NHẬN LẶT VẶT
+
+Repository mục tiêu: vinh17491/GymFit
+Nhánh bắt buộc: coach2
+
+MỤC TIÊU:
+Đóng toàn bộ khoảng trống còn lại sau 30 phase Coach trước đó, đưa phần Coach từ trạng thái gần hoàn thiện lên trạng thái có thể xác nhận 100% về code, nghiệp vụ, dữ liệu, bảo mật, kiểm thử và khả năng chạy thực tế.
+
+======================================================================
+A. QUYỀN THỰC THI VÀ NGUYÊN TẮC KHÔNG HỎI LẠI
+======================================================================
+
+Người dùng đã yêu cầu thực hiện trọn gói nhiệm vụ này.
+
+Trong phạm vi repository và nhiệm vụ này, hãy TỰ THỰC HIỆN mà KHÔNG hỏi lại các câu kiểu:
+- Tôi có được sửa file này không?
+- Tôi có được chạy npm ci/build/test không?
+- Tôi có được tạo migration additive mới không?
+- Tôi có được tạo database disposable để kiểm thử không?
+- Tôi có được tạo local commit không?
+- Tôi có được tiếp tục phase tiếp theo không?
+
+Prompt này là sự cho phép rõ ràng cho các thao tác KHÔNG PHÁ HỦY cần thiết trong scope.
+
+Tự động được phép:
+- đọc source;
+- sửa source đúng scope;
+- tạo file source mới đúng scope;
+- tạo migration additive mới;
+- tạo acceptance test;
+- tạo database kiểm thử tạm có tên rõ ràng;
+- chạy npm ci/build/lint/typecheck/test;
+- chạy browser QA;
+- cập nhật docs;
+- tạo local commit theo phase khi an toàn;
+- tự sửa lỗi do phase hiện tại tạo ra;
+- tự chuyển sang phase kế tiếp khi PASS.
+
+KHÔNG hỏi xác nhận giữa các phase.
+
+Nếu phase PASS → tự sang phase kế tiếp.
+Nếu fail do lỗi code thuộc scope → tự sửa, chạy lại, tiếp tục.
+Chỉ dừng khi có blocker an toàn thật:
+
+1. Sai branch.
+2. Working tree có thay đổi người dùng có nguy cơ bị ghi đè và không thể tách an toàn.
+3. Không xác định chắc database target.
+4. Migration checksum mismatch.
+5. Migration đang dở, trạng thái không xác định.
+6. Cần DROP/TRUNCATE/rewrite dữ liệu canonical.
+7. Thiếu secret/credential bắt buộc.
+8. Tool/hệ điều hành bắt buộc confirmation mà không thể tự động hóa.
+9. Cần sửa Marketplace/Seller hoặc migration 0100–0111 để ép Coach PASS.
+10. Có lỗi kiến trúc nghiêm trọng không thể giải quyết an toàn trong scope.
+
+Không được tìm cách vượt cơ chế bảo mật của hệ điều hành/Codex/nền tảng.
+Nếu hệ thống bắt buộc hiện hộp xác nhận thì tuân theo cơ chế đó; không giả vờ đã được cấp quyền.
+Nhưng cũng không được hỏi lại các quyền đã được prompt này cấp khi tool hiện tại đã có quyền.
+
+======================================================================
+B. SCOPE GUARD
+======================================================================
+
+ĐƯỢC PHÉP sửa:
+
+BACKEND
+- backend/src/modules/coaches/**
+- backend/src/modules/bookings/**
+- backend/src/modules/coach-workspace/**
+- backend/src/modules/member-workout/**
+- backend/src/modules/plans/**
+- backend/src/modules/notifications/**
+- backend/src/modules/admin-coaches/**
+- backend/src/modules/admin-exercises/**
+- backend/src/modules/admin-workouts/**
+- backend/src/scripts/coach-*
+- backend/src/scripts/admin-coach-*
+- backend/src/utils/coachBooking.ts
+- backend/src/utils/timezone.ts
+- backend/src/middleware/errorHandler.ts
+- backend/src/app.ts
+- backend/package.json nếu cần thêm acceptance script
+
+FRONTEND
+- frontend/src/pages/coaches/**
+- frontend/src/pages/booking/**
+- frontend/src/pages/appointments/**
+- frontend/src/pages/workouts/**
+- frontend/src/pages/membership/**
+- frontend/src/pages/notifications/**
+- frontend/src/pages/auth/LoginPage.tsx
+- frontend/src/pages/auth/RegisterPage.tsx
+- frontend/src/pages/admin/coaches/**
+- frontend/src/pages/admin/exercises/**
+- frontend/src/pages/admin/workouts/**
+- frontend/src/services/coaches.ts
+- frontend/src/services/bookings.ts
+- frontend/src/services/plans.ts
+- frontend/src/services/notifications.ts
+- frontend/src/services/coachWorkspaceApi.ts
+- frontend/src/services/memberWorkoutApi.ts
+- frontend/src/auth/**
+- frontend/src/types/**
+- frontend/src/App.tsx
+
+DATABASE
+- đọc migration 0010–0016;
+- không rewrite migration đã có;
+- được tạo migration additive 0017+;
+- được tạo database kiểm thử tạm.
+
+DOC
+- docs/coach/**
+
+CẤM thay đổi nghiệp vụ:
+- Seller;
+- Marketplace;
+- Product Marketplace;
+- Cart Marketplace;
+- Order Marketplace;
+- Refund Marketplace;
+- Complaint Marketplace;
+- Settlement;
+- Seller Finance;
+- Shop;
+- Brand Request.
+
+TUYỆT ĐỐI KHÔNG SỬA migration 0100–0111.
+
+Không:
+- git reset --hard
+- git clean -fd
+- git restore .
+- git checkout -- .
+- force push
+- rewrite lịch sử
+- xóa database canonical
+- TRUNCATE
+- sửa checksum migration đã apply
+- sửa SchemaMigrations để giả PASS
+- mock production
+- hardcode IDs
+- AI/chat/video call/payroll
+- mở rộng ngoài closure
+
+======================================================================
+C. CƠ CHẾ THỰC THI
+======================================================================
+
+Thực hiện tuần tự C00 → C21.
+KHÔNG dừng chờ user duyệt giữa các phase.
+
+Mỗi phase:
+1. Đọc source.
+2. Xác minh lỗi còn tồn tại hay đã sửa.
+3. Nếu đã đúng → VERIFIED_NO_CHANGE.
+4. Nếu còn lỗi → sửa tối thiểu.
+5. Chạy test.
+6. Chạy git diff --check.
+7. Cập nhật docs/coach/COACH2_FINAL_CLOSURE_PROGRESS.md.
+8. Nếu PASS → local commit nhỏ nếu an toàn → tự sang phase tiếp.
+9. Nếu fail do code → tự sửa → test lại.
+10. Chỉ BLOCKED theo phần A.
+
+======================================================================
+C00 — BASELINE VÀ KHÓA NHÁNH
+======================================================================
+
+Chạy:
+git branch --show-current
+git status --short
+git log -10 --oneline
+git diff --check
+
+Branch bắt buộc: coach2.
+
+Đọc:
+docs/coach/COACH_PHASE_STATE.json
+docs/coach/COACH_COMPLETION_PROGRESS.md
+docs/coach/COACH_COMPLETION_FINAL_HANDOVER.md
+docs/coach/COACH_COMPLETION_TEST_MATRIX.md
+docs/coach/COACH_DATABASE_DEPLOYMENT.md
+docs/coach/COACH_KNOWN_LIMITATIONS.md
+
+Tạo:
+docs/coach/COACH2_FINAL_CLOSURE_PROGRESS.md
+
+Ghi:
+- branch;
+- HEAD;
+- working tree;
+- trạng thái 30 phase cũ;
+- migration status;
+- closure gaps xác nhận;
+- closure gaps giả thuyết;
+- scope exclusions.
+
+Không sửa production code trong C00.
+PASS → C01.
+
+======================================================================
+C01 — SOURCE RE-AUDIT
+======================================================================
+
+Rà:
+1. Membership public còn fake yearly/trial/payment copy?
+2. Login còn mất pending Plan?
+3. Program Exercise API có reject repsMin > repsMax?
+4. Booking có snapshot mode/location?
+5. Schedule response có outcome rõ?
+6. Priority booking entitlement contract?
+7. Canonical 0011–0016 pending?
+8. Docs branch context?
+
+Phân loại:
+CONFIRMED_GAP
+ALREADY_FIXED
+SPEC_ONLY
+DEPLOYMENT_ONLY
+NOT_REQUIRED
+
+Không sửa production ở phase này trừ docs audit.
+PASS → C02.
+
+======================================================================
+C02 — MEMBERSHIP PUBLIC UI TRUNG THỰC
+======================================================================
+
+Audit MembershipPlans.tsx.
+
+Nếu còn:
+- Monthly/Yearly giả;
+- Save 20%;
+- plan.price * 12 * 0.8;
+- Start Free Trial;
+- 7-day trial;
+- PayPal/card copy không có backend;
+- next billing cycle sai;
+
+thì sửa.
+
+Giao diện phải đúng:
+Chọn Plan → simulated pending payment → confirm → Membership active.
+
+Không thêm Stripe/PayPal/trial/yearly billing.
+Dùng price/duration backend thật.
+FAQ phải đúng backend.
+
+Test:
+frontend tsc + build.
+PASS → C03.
+
+======================================================================
+C03 — PENDING PLAN REDIRECT SAU LOGIN
+======================================================================
+
+Audit:
+MembershipPlans.tsx
+RegisterPage.tsx
+LoginPage.tsx
+services/plans.ts
+
+Bảo đảm:
+Guest chọn Plan → lưu PENDING_PLAN_STORAGE_KEY → Register hoặc Login → nếu role member → /membership/checkout?plan_id=<id>.
+
+Test:
+1. Plan → Register → success.
+2. Plan → Register → Login → success.
+3. Member normal login không pending.
+4. Coach stale pending.
+5. Admin stale pending.
+6. Seller stale pending.
+7. Không open redirect.
+
+Role khác không vào Member checkout.
+Không xóa pending Plan quá sớm.
+tsc/build.
+PASS → C04.
+
+======================================================================
+C04 — PROGRAM EXERCISE VALIDATION
+======================================================================
+
+Audit:
+coach-workspace.routes.ts
+coach-workspace.service.ts
+errorHandler.ts
+
+Yêu cầu:
+- targetRepsMin <= targetRepsMax.
+- ít nhất reps hoặc duration.
+- targetSets hợp lệ.
+- targetWeight hợp lệ.
+- duration hợp lệ.
+- rest hợp lệ.
+- Draft-only mutation.
+- active Exercise khi add.
+
+Nếu repsMin > repsMax:
+HTTP 400, không generic 500.
+
+Ưu tiên Zod refine/superRefine.
+Thêm test.
+PASS → C05.
+
+======================================================================
+C05 — THIẾT KẾ BOOKING SLOT SNAPSHOT
+======================================================================
+
+Đọc schema Bookings + Availability + API trước.
+
+Chốt snapshot tối thiểu:
+- session_mode
+- location
+
+Không cần snapshot toàn Availability rule.
+Không tin mode/location client.
+Nguồn authoritative = Availability slot backend.
+
+Nếu thiếu schema → chuẩn bị migration additive.
+Ghi:
+docs/coach/ADR_BOOKING_SLOT_SNAPSHOT.md
+PASS → C06.
+
+======================================================================
+C06 — MIGRATION BOOKING SNAPSHOT
+======================================================================
+
+Nếu thiếu schema:
+tạo migration số tiếp theo, dự kiến 0017_coach_booking_slot_snapshot.sql.
+
+Columns:
+session_mode NVARCHAR(20) NULL
+location NVARCHAR(255) NULL
+
+Constraint:
+session_mode NULL hoặc ONLINE/IN_PERSON/BOTH.
+
+Migration:
+- additive;
+- idempotent theo convention;
+- legacy NULL an toàn;
+- không đoán dữ liệu cũ;
+- không thêm index nếu không cần.
+
+Chạy trên disposable DB.
+Rerun migration verification.
+Không apply canonical ở C06.
+PASS → C07.
+
+======================================================================
+C07 — BACKEND BOOKING SNAPSHOT AUTHORITATIVE
+======================================================================
+
+Audit:
+coach-availability.service.ts
+bookings.controller.ts
+bookings.routes.ts
+DTO/types
+
+Create booking:
+JWT Member
+→ active Membership
+→ entitlement
+→ quota
+→ Coach active
+→ Availability authoritative
+→ authoritative slot
+→ Coach conflict
+→ Member conflict
+→ snapshot session_mode/location
+→ insert
+→ notification
+→ commit.
+
+Không tin client mode/location.
+Spoof phải bị ignore/reject.
+Legacy NULL đọc được.
+
+Test:
+- ONLINE saved.
+- IN_PERSON saved.
+- location saved.
+- availability đổi sau nhưng booking cũ giữ snapshot.
+- spoof không override.
+- concurrency không regression.
+
+PASS → C08.
+
+======================================================================
+C08 — FRONTEND APPOINTMENT MODE/LOCATION
+======================================================================
+
+Audit:
+CoachBooking
+Member Appointment list/detail
+Coach Appointment list/detail
+services/bookings
+
+Sau booking, Appointment phải hiển thị snapshot mode/location từ Booking.
+Legacy NULL fallback, không crash.
+Không lấy profile hiện tại để giả snapshot lịch cũ.
+Responsive.
+tsc/build.
+PASS → C09.
+
+======================================================================
+C09 — SCHEDULE GENERATION RESPONSE
+======================================================================
+
+Không thay algorithm week nếu đang đúng.
+
+Giữ:
+programWeek = floor((scheduledDate - assignment.startDate)/7)+1.
+
+Giữ bounds:
+requestedFrom, assignment start, timezone today, assignment end, program duration.
+
+Bổ sung response:
+inserted
+skippedExisting
+skippedOutsideAssignment
+skippedOutsideProgram
+effectiveFromDate
+effectiveToDate
+
+Có thể giữ legacy fields cho compatibility.
+
+Test:
+first generation;
+duplicate;
+mid-program;
+outside assignment;
+outside program;
+timezone;
+concurrency.
+
+PASS → C10.
+
+======================================================================
+C10 — PRIORITY BOOKING ENTITLEMENT CONTRACT
+======================================================================
+
+Không tạo priority booking flow.
+
+Đọc Master Prompt cũ + ADR + 0012 + Plan API.
+
+Nếu COACH_PRIORITY_BOOKING chỉ là placeholder:
+- document deferred/not consumed;
+hoặc
+- add structured key default false.
+
+Không:
+- reserve slot;
+- Elite priority;
+- đổi ordering;
+- queue mới.
+
+Nếu schema cần change:
+migration additive số tiếp theo.
+Không rewrite 0012.
+
+PASS → C11.
+
+======================================================================
+C11 — DOCUMENT BRANCH CLARIFICATION
+======================================================================
+
+Không rewrite lịch sử.
+30 phase chạy coach1 là đúng lịch sử.
+Closure/release hiện coach2.
+
+Final docs ghi rõ:
+Execution branch: coach1
+Closure/Release branch: coach2
+
+Không thay toàn bộ coach1 thành coach2 giả tạo.
+PASS → C12.
+
+======================================================================
+C12 — FINAL CLOSURE ACCEPTANCE HARNESS
+======================================================================
+
+Tạo:
+backend/src/scripts/coach-final-closure-acceptance.ts
+npm script:
+acceptance:coach-final-closure
+
+Disposable DB có guard tên rõ.
+
+Test:
+MEMBERSHIP:
+- pending không active;
+- confirm active;
+- upgrade/downgrade.
+
+PROGRAM:
+- repsMin > repsMax → 400.
+
+BOOKING:
+- authoritative mode/location;
+- spoof blocked/ignored;
+- snapshot immutable;
+- same-slot concurrency.
+
+SCHEDULE:
+- outcome response;
+- idempotent;
+- mid-program.
+
+ENTITLEMENT:
+- Starter;
+- Pro;
+- Elite;
+- priority contract không đổi behavior.
+
+Cleanup DB.
+PASS → C13.
+
+======================================================================
+C13 — PRE-DEPLOYMENT BUILD GATE
+======================================================================
+
+Backend:
+cd backend
+npm ci
+npm run build
+npm run lint
+
+Frontend:
+cd frontend
+npm ci
+npx tsc --noEmit
+npm run build
+
+git diff --check
+
+Không sang deployment nếu build/type/lint error hoặc migration acceptance fail.
+Warnings existing chỉ document.
+PASS → C14.
+
+======================================================================
+C14 — CANONICAL DATABASE PRE-FLIGHT
+======================================================================
+
+Xác định:
+- server;
+- database;
+- environment;
+- branch;
+- migration status;
+- checksum.
+
+Không in secret.
+
+Nếu database rõ ràng là intended GYMFIT canonical/dev database theo cấu hình hiện tại:
+prompt này cho phép apply các Coach migration additive đã kiểm thử.
+
+Nếu production thật hoặc target không chắc:
+BLOCKED_DATABASE_TARGET_UNCERTAIN.
+
+Checksum mismatch:
+BLOCKED_MIGRATION_CHECKSUM.
+
+Nếu runner bắt buộc kéo unrelated migration ngoài boundary:
+BLOCKED_MIGRATION_BOUNDARY.
+
+Không hack/bypass.
+Không DROP/TRUNCATE.
+PASS → C15.
+
+======================================================================
+C15 — APPLY APPROVED COACH MIGRATIONS
+======================================================================
+
+Chỉ khi C14 an toàn.
+
+Apply bằng migration runner chính thống:
+0011
+0012
+0013
+0014
+0015
+0016
+0017+ nếu closure tạo.
+
+Không rewrite history.
+Không copy-paste SQL thủ công nếu runner dùng được.
+
+Sau apply:
+migration status;
+pending;
+checksum mismatch;
+migration running.
+
+Expected:
+Coach pending = 0
+checksum mismatch = 0.
+
+Nếu fail:
+không sửa SchemaMigrations để che.
+Forward-fix additive nếu an toàn.
+PASS → C16.
+
+======================================================================
+C16 — POST-DEPLOYMENT SCHEMA VERIFY
+======================================================================
+
+Verify:
+CoachProfiles
+CoachAvailabilityRules
+CoachAvailabilityExceptions
+PlanEntitlements
+CoachMemberContexts
+Notifications columns
+WorkoutProgram version columns
+performance indexes
+Booking snapshot columns
+priority contract nếu có.
+
+Kiểm tra FK/unique/check/index.
+
+Không mutate business data ngoài controlled fixture.
+PASS → C17.
+
+======================================================================
+C17 — FULL BACKEND REGRESSION
+======================================================================
+
+Chạy:
+npm run test:coach-booking-unit
+npm run acceptance:coach-role
+npm run acceptance:coach-member-e2e
+npm run acceptance:admin-coach
+npm run acceptance:coach-booking
+npm run acceptance:coach-booking-quota
+npm run acceptance:coach-membership
+npm run acceptance:coach-entitlement
+npm run acceptance:coach-member-context
+npm run acceptance:coach-notifications
+npm run acceptance:coach-program-versioning
+npm run acceptance:coach-completion-security
+npm run acceptance:coach-performance
+npm run acceptance:coach-final-closure
+
+Dùng disposable DB khi cần.
+Không sửa test để ép PASS.
+Product bug → tự sửa đúng scope → rerun.
+PASS → C18.
+
+======================================================================
+C18 — SECURITY + CONCURRENCY FINAL
+======================================================================
+
+Verify:
+Guest public/private.
+Member own booking/workout/session/progress.
+Member entitlement.
+Member spoof member/mode/location bị chặn.
+
+Coach A không đọc Coach B:
+Programs
+Availability
+Members
+Context
+Assignments
+Schedules
+Sessions
+Notifications.
+
+Admin đúng policy.
+
+Concurrency:
+same Coach slot;
+Member overlap;
+quota cuối;
+assignment transition;
+schedule generation;
+session start/complete;
+notification dedup;
+version clone/publish.
+
+PASS → C19.
+
+======================================================================
+C19 — BROWSER QA
+======================================================================
+
+Viewports:
+375x812
+768x1024
+1440x900
+
+Roles:
+Guest
+Starter Member
+Pro Member
+Elite Member
+Coach
+Admin
+
+Guest:
+Membership truthful;
+choose Plan;
+Register/Login continuation;
+Coach list/detail.
+
+Member:
+Membership;
+pending payment;
+confirm;
+quota;
+availability;
+booking;
+Appointment mode/location;
+Workout;
+Session;
+Progress;
+Notifications.
+
+Coach:
+Dashboard;
+Profile;
+Availability;
+Appointments;
+Programs;
+Builder;
+Version;
+Members;
+Context;
+Assignment;
+Schedule;
+Session;
+Progress;
+Attention;
+Notifications.
+
+Admin:
+Coach management;
+Coach detail;
+Exercises;
+Workout governance.
+
+Kiểm tra:
+overflow;
+blank;
+loading;
+error;
+retry;
+409;
+disabled;
+focus;
+keyboard;
+console.
+
+Không sửa UI ngoài scope chỉ để làm đẹp.
+PASS → C20.
+
+======================================================================
+C20 — PERFORMANCE REGRESSION
+======================================================================
+
+Bảo toàn Phase 28:
+Coach member query bounded;
+Booking server filtered;
+Availability indexed;
+Schedule indexed;
+Notifications indexed;
+Entitlement SQL-side;
+Pagination;
+AbortController/stale request cancellation.
+
+Không thêm index mù.
+Rerun performance acceptance.
+PASS → C21.
+
+======================================================================
+C21 — FINAL AUDIT + CLEANUP + HANDOVER 100%
+======================================================================
+
+Chạy:
+git status --short
+git diff --check
+git log --oneline
+
+Kiểm tra:
+- không Marketplace/Seller accidental diff;
+- không 0100–0111 modified;
+- không secret;
+- không .env;
+- không node_modules;
+- không disposable DB artifact;
+- không temp proxy production;
+- không test credential.
+
+Tạo:
+docs/coach/COACH2_FINAL_100_PERCENT_HANDOVER.md
+docs/coach/COACH2_FINAL_TEST_MATRIX.md
+
+State:
+executionBranch: coach1
+releaseBranch: coach2
+closureStatus: PASS
+lastCompletedClosurePhase: C21
+canonicalDatabaseCoachMigrationsPending: []
+blocker: null
+safeToDevelopMoreCoach: false
+
+Chỉ dùng:
+COACH_MODULE_100_PERCENT_COMPLETE
+nếu mọi gate PASS.
+
+Nếu canonical chưa deploy:
+COACH_SOURCE_COMPLETE_DEPLOYMENT_PENDING
+
+Nếu browser chưa PASS:
+COACH_FINAL_BROWSER_ACCEPTANCE_PENDING
+
+Nếu critical fail:
+COACH_FINAL_CLOSURE_BLOCKED
+
+======================================================================
+D. COMMIT
+======================================================================
+
+Có thể local commit sau từng nhóm PASS.
+Không push.
+Không git add .
+Stage explicit paths.
+Không commit chung thay đổi người dùng.
+
+======================================================================
+E. TỰ SỬA LỖI
+======================================================================
+
+Nếu build/test fail:
+1. Xác định lỗi.
+2. Nếu đúng scope → tự sửa.
+3. Rerun.
+4. PASS mới đi tiếp.
+5. Không hỏi "có muốn tôi sửa không?".
+
+Lỗi ngoài scope:
+ghi evidence, không sửa Marketplace/Seller.
+
+Harness bug:
+được sửa harness nhưng không được giảm assertion để che product bug.
+
+======================================================================
+F. PROGRESS
+======================================================================
+
+Sau mỗi phase cập nhật COACH2_FINAL_CLOSURE_PROGRESS.md:
+
+## CXX — Tên
+Status: PASS | VERIFIED_NO_CHANGE | BLOCKED
+Confirmed issue:
+Changes:
+Tests:
+Database:
+Security:
+Commit:
+Next:
+
+Không dừng chat sau mỗi phase.
+Tự tiếp tục.
+
+======================================================================
+G. FINAL OUTPUT
+======================================================================
+
+# COACH2 FINAL CLOSURE REPORT
+
+FINAL VERDICT:
+BRANCH:
+START COMMIT:
+END COMMIT:
+
+PHASE RESULTS:
+C00:
+C01:
+C02:
+C03:
+C04:
+C05:
+C06:
+C07:
+C08:
+C09:
+C10:
+C11:
+C12:
+C13:
+C14:
+C15:
+C16:
+C17:
+C18:
+C19:
+C20:
+C21:
+
+DATABASE:
+target:
+0010:
+0011:
+0012:
+0013:
+0014:
+0015:
+0016:
+0017+:
+pending Coach migrations:
+checksum mismatches:
+migration running:
+
+BACKEND:
+npm ci:
+build:
+lint:
+
+FRONTEND:
+npm ci:
+tsc:
+build:
+
+ACCEPTANCE:
+coach-booking-unit:
+coach-role:
+coach-member-e2e:
+admin-coach:
+coach-booking:
+coach-booking-quota:
+coach-membership:
+coach-entitlement:
+coach-member-context:
+coach-notifications:
+coach-program-versioning:
+coach-completion-security:
+coach-performance:
+coach-final-closure:
+
+BROWSER:
+Guest:
+Starter Member:
+Pro Member:
+Elite Member:
+Coach:
+Admin:
+375x812:
+768x1024:
+1440x900:
+console:
+
+SECURITY:
+RBAC:
+IDOR:
+identity spoof:
+mode/location spoof:
+concurrency:
+immutable snapshot:
+
+SCOPE:
+Marketplace backend changed:
+Seller backend changed:
+migrations 0100–0111 changed:
+
+FILES CHANGED:
+MIGRATIONS CREATED:
+COMMITS:
+KNOWN NON-BLOCKING WARNINGS:
+REMAINING BLOCKERS:
+
+SAFE TO CALL COACH 100%:
+YES | NO
+
+Nếu YES:
+FINAL VERDICT = COACH_MODULE_100_PERCENT_COMPLETE
+
+Nếu NO:
+nêu blocker chính xác.
+
+======================================================================
+H. BẮT ĐẦU
+======================================================================
+
+Bắt đầu ngay C00 và tự động chạy liên tục C00 → C21.
+
+Không hỏi xác nhận lặp lại cho thao tác thông thường đã được prompt cho phép.
+Không dừng hỏi "có tiếp tục không?".
+Tự tiếp tục khi PASS.
+Chỉ dừng nếu gặp blocker an toàn thật ở phần A.

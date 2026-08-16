@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate, authorize } from '../../middleware/auth';
+import { UserRole } from '../../types';
+import { getDashboard, getRevenueTrend, getMembershipSales, getConversionFunnel } from './revenue.controller';
+const router = Router();
+router.get('/dashboard', authenticate, authorize(UserRole.ADMIN), getDashboard);
+router.get('/trend', authenticate, authorize(UserRole.ADMIN), getRevenueTrend);
+router.get('/membership-sales', authenticate, authorize(UserRole.ADMIN), getMembershipSales);
+router.get('/conversion-funnel', authenticate, authorize(UserRole.ADMIN), getConversionFunnel);
+export default router;

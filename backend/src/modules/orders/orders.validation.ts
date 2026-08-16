@@ -1,0 +1,6 @@
+import { z } from 'zod';
+export const orderIdParam=z.object({orderId:z.coerce.number().int().safe().positive()});
+export const paymentNotification=z.object({paymentReference:z.string().trim().max(255).optional()}).strict();
+export const customerCancelOrder=z.object({note:z.string().trim().max(500).optional()}).strict();
+export const customerOrderListQuery=z.object({page:z.coerce.number().int().positive().default(1),limit:z.coerce.number().refine(value=>[10,20,50].includes(value)).default(10),orderStatus:z.enum(['PENDING','CONFIRMED','PROCESSING','SHIPPED','DELIVERED','CANCELLED']).optional(),paymentStatus:z.enum(['UNPAID','PENDING','PAID','FAILED','PARTIALLY_REFUNDED','REFUNDED']).optional(),sortOrder:z.enum(['asc','desc']).default('desc')}).strict();
+export const createOrder=z.object({customerName:z.string().trim().min(1).max(200),customerPhone:z.string().trim().min(1).max(50),shippingAddressLine1:z.string().trim().min(1).max(255),shippingAddressLine2:z.string().trim().max(255).optional(),shippingCity:z.string().trim().min(1).max(100),shippingState:z.string().trim().max(100).optional(),shippingPostalCode:z.string().trim().max(30).optional(),shippingCountry:z.string().trim().min(1).max(100),cartVersion:z.coerce.number().int().positive(),voucherCode:z.string().trim().min(1).max(64).optional()}).strict();

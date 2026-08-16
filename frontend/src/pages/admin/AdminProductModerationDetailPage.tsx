@@ -1,0 +1,17 @@
+import { useCallback,useEffect,useState } from 'react';
+import { Link,useParams } from 'react-router-dom';
+import { productModerationApi } from '../../services/productModerationApi';
+export default function AdminProductModerationDetailPage(){
+  const{id}=useParams(),productId=Number(id),[item,setItem]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const load=useCallback(async()=>{setError('');try{setItem((await productModerationApi.detail(productId)).data.data);}catch(cause:any){setError(cause.response?.data?.message||'Không thể tải Product');}},[productId]);useEffect(()=>{void load();},[load]);
+  const act=async(kind:'approve'|'reject'|'suspend'|'republish')=>{let reason='';if(kind==='reject'||kind==='suspend'){reason=window.prompt('Nhập lý do')?.trim()||'';if(!reason)return;}if(!window.confirm(`Xác nhận ${kind}?`))return;setBusy(true);setError('');try{if(kind==='approve')await productModerationApi.approve(productId);else if(kind==='reject')await productModerationApi.reject(productId,reason);else if(kind==='suspend')await productModerationApi.suspend(productId,reason);else await productModerationApi.republish(productId);await load();}catch(cause:any){setError(cause.response?.data?.message||'Moderation thất bại');}finally{setBusy(false);}};
+  if(error&&!item)return <section className="p-6"><p className="text-red-400">{error}</p></section>;if(!item)return <p className="p-6">Đang tải…</p>;
+  return <section className="mx-auto max-w-5xl space-y-5 p-6"><Link to="/admin/product-moderation">← Moderation inbox</Link><div><h1 className="text-3xl font-bold">{item.name}</h1><p>{item.moderationStatus} · Shop {item.shop.name} · Seller {item.seller.name}</p>{item.reviewReason&&<p className="text-red-300">Reason: {item.reviewReason}</p>}<p>Submitted: {item.submittedAt||'—'} · Reviewed: {item.reviewedAt||'—'} · Published: {item.publishedAt||'—'}</p></div>
+    {error&&<p className="text-red-400">{error}</p>}<div className="flex gap-2">{item.moderationStatus==='PENDING_REVIEW'&&<><button disabled={busy} onClick={()=>void act('approve')}>Approve</button><button disabled={busy} onClick={()=>void act('reject')}>Reject</button></>}{item.moderationStatus==='PUBLISHED'&&<button disabled={busy} onClick={()=>void act('suspend')}>Suspend</button>}{item.moderationStatus==='SUSPENDED'&&<button disabled={busy} onClick={()=>void act('republish')}>Re-publish</button>}</div>
+    {!item.readiness.ready&&<div><h2>Thiếu điều kiện</h2><ul>{item.readiness.missing.map((x:string)=><li key={x}>{x}</li>)}</ul></div>}
+    <div><h2 className="text-xl font-semibold">Thông tin</h2><p>{item.description||'—'}</p><p>Brand: {item.brand||'—'} · Category: {item.category||'—'}</p></div>
+    <div><h2 className="text-xl font-semibold">Images</h2><div className="grid grid-cols-3 gap-3">{item.images.map((x:any)=><img className="aspect-square object-cover" key={x.id} src={x.imageUrl} alt={item.name}/>)}</div></div>
+    <div><h2 className="text-xl font-semibold">Variants / Inventory</h2>{item.variants.map((x:any)=><p key={x.id}>{x.variantName} · {x.sku} · {x.price} · on hand {x.onHand} / reserved {x.reserved} / available {x.available}</p>)}</div>
+    <div><h2 className="text-xl font-semibold">History</h2>{item.history.length===0?<p>Chưa có lịch sử.</p>:item.history.map((x:any)=><p key={x.id}>{x.fromStatus} → {x.toStatus} · {x.reason||'—'} · {x.createdAt}</p>)}</div>
+  </section>;
+}

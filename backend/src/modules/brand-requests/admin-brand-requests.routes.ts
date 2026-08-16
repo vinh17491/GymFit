@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { authenticate,authorize } from '../../middleware/auth';
+import { validate } from '../../middleware/validate';
+import { UserRole } from '../../types';
+import { approveAdmin,detailAdmin,listAdmin,rejectAdmin } from './brand-requests.controller';
+import { adminListSchema,rejectSchema,requestIdSchema } from './brand-requests.validation';
+const router=Router();router.use(authenticate,authorize(UserRole.ADMIN));
+router.get('/',validate(adminListSchema,'query'),listAdmin);
+router.get('/:requestId',validate(requestIdSchema,'params'),detailAdmin);
+router.post('/:requestId/approve',validate(requestIdSchema,'params'),approveAdmin);
+router.post('/:requestId/reject',validate(requestIdSchema,'params'),validate(rejectSchema),rejectAdmin);
+export default router;

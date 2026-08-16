@@ -1,0 +1,110 @@
+import crypto from 'crypto';
+import { promises as fs } from 'fs';
+import path from 'path';
+import bcrypt from 'bcryptjs';
+import * as mssql from 'mssql';
+import type { Server } from 'http';
+import { config } from '../config/config';
+import { closePool,query } from '../config/database';
+
+if(process.env.SELLER007_ACCEPTANCE!=='1')throw new Error('SELLER007_ACCEPTANCE=1 is required');
+if(config.db.database==='GYMFIT_DB'||!config.db.database.startsWith('GYMFIT_DB_SELLER007_ACCEPTANCE_'))throw new Error('Refusing canonical database');
+const uploadRoot=path.resolve(config.upload.dir);
+if(!uploadRoot.toLowerCase().includes('seller007-acceptance'))throw new Error('SELLER-007 requires an isolated upload directory');
+
+const stamp=Date.now(),port=Number(process.env.ACCEPTANCE_PORT||5527),base=`http://127.0.0.1:${port}/api`;
+let server:Server|undefined,lastStatus=0,assertions=0;
+const abortSuite=new AbortController();
+const evidence=new Map<number,boolean>();
+const verify=(number:number,value:boolean,message:string)=>{assertions++;evidence.set(number,value);if(!value)throw new Error(`Case ${number}: ${message}; last status=${lastStatus}`);};
+async function call(url:string,method='GET',token?:string,body?:unknown){
+  const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),15000),stop=()=>abort.abort();abortSuite.signal.addEventListener('abort',stop,{once:true});
+  try{const response=await fetch(base+url,{method,signal:abort.signal,headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(token?{authorization:`Bearer ${token}`}:{})},body:body===undefined?undefined:JSON.stringify(body)});lastStatus=response.status;let data:any={};try{data=await response.json();}catch{}return{status:response.status,data};}
+  finally{clearTimeout(timer);abortSuite.signal.removeEventListener('abort',stop);}
+}
+async function seedUser(role:string,key:string){const email=`seller007-${key}-${stamp}@example.test`,password=`Aa1!${crypto.randomBytes(12).toString('hex')}`,hash=await bcrypt.hash(password,12);const r=await query<any>(`INSERT dbo.Users(email,password,name,role,is_active,email_verified,token_version) OUTPUT INSERTED.id VALUES(@email,@hash,@name,@role,1,1,0)`,{email,hash,name:`SELLER007 ${key}`,role});return{id:Number(r.recordset[0].id),email,password,token:''};}
+async function login(user:any){const r=await call('/auth/login','POST',undefined,{email:user.email,password:user.password});if(r.status!==200)throw new Error(`Login failed for ${user.email}`);user.token=String(r.data.data.accessToken);}
+async function seedProduct(shopId:number,key:string,status:string,isActive:boolean,categoryId:number,brandId:number,prices=[100000,200000],stocks=[10,0]){
+  const sku=`SELLER007-${key}-${stamp}`,p=(await query<any>(`INSERT dbo.Products(product_name,slug,description,sku,price,stock,brand_id,category_id,is_active,shop_id,moderation_status,submitted_at,created_at,updated_at)
+    OUTPUT INSERTED.id VALUES(@name,@slug,N'SELLER007 safe public description',@sku,@price,10,@brand,@category,@active,@shop,@status,CASE WHEN @status=N'PENDING_REVIEW' THEN SYSUTCDATETIME() ELSE NULL END,DATEADD(second,-@age,SYSUTCDATETIME()),SYSUTCDATETIME())`,
+    {name:`SELLER007 ${key} Product`,slug:`seller007-${key.toLowerCase()}-${stamp}`,sku,price:prices[0],brand:brandId,category:categoryId,active:isActive,shop:shopId,status,age:key.length})).recordset[0];
+  const variants:number[]=[];
+  for(let i=0;i<prices.length;i++){const v=(await query<any>(`INSERT dbo.ProductVariants(product_id,variant_name,sku,price,sale_price,is_active,is_default,created_at,updated_at) OUTPUT INSERTED.id
+    VALUES(@product,@name,@sku,@price,NULL,1,@default,SYSUTCDATETIME(),SYSUTCDATETIME())`,{product:p.id,name:`Variant ${i+1}`,sku:`${sku}-${i+1}`,price:prices[i],default:i===0})).recordset[0];
+    variants.push(Number(v.id));const onHand=stocks[i]===0&&i===1?5:stocks[i],reserved=stocks[i]===0&&i===1?5:0;
+    await query(`INSERT dbo.Inventory(variant_id,on_hand,reserved,low_stock_threshold,updated_at) VALUES(@variant,@onHand,@reserved,2,SYSUTCDATETIME())`,{variant:v.id,onHand,reserved});
+  }
+  await query(`INSERT dbo.ProductImages(product_id,image_url,alt_text,sort_order,is_primary,created_at) VALUES(@product,@url,N'SELLER007',0,1,SYSUTCDATETIME())`,{product:p.id,url:`/uploads/products/seller007-${key}-${stamp}.webp`});
+  return{id:Number(p.id),slug:`seller007-${key.toLowerCase()}-${stamp}`,sku,variants};
+}
+async function dropDatabase(){if(process.env.SELLER007_KEEP_DB==='1')return;const pool=await new mssql.ConnectionPool({...config.db,database:'master'}).connect();try{const name=config.db.database;if(!/^GYMFIT_DB_SELLER007_ACCEPTANCE_[A-Za-z0-9_]+$/.test(name))throw new Error('Unsafe drop target');await pool.request().batch(`IF DB_ID(N'${name}') IS NOT NULL BEGIN ALTER DATABASE [${name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;DROP DATABASE [${name}];END`);}finally{await pool.close();}}
+
+async function main(){
+  const baseline=(await query<any>(`SELECT (SELECT COUNT(*) FROM dbo.SchemaMigrations)migrations,(SELECT COUNT(*) FROM dbo.Products)products,(SELECT COUNT(*) FROM dbo.ProductVariants)variants,(SELECT COUNT(*) FROM dbo.Inventory)inventory,(SELECT COUNT(*) FROM dbo.ProductImages)images,(SELECT COUNT(*) FROM dbo.OrderItems)orderItems,
+    (SELECT COUNT(*) FROM dbo.Products WHERE id=0 AND is_active=1 AND moderation_status=N'PUBLISHED')zeroPublic,
+    (SELECT COUNT(*) FROM dbo.Products p LEFT JOIN dbo.Shops s ON s.id=p.shop_id WHERE s.id IS NULL)orphans,
+    (SELECT COUNT(*) FROM dbo.Shops WHERE system_key=N'GYMFIT_OFFICIAL' AND is_system=1 AND status=N'ACTIVE' AND is_verified=1)official,
+    (SELECT COUNT(*) FROM dbo.Brands WHERE is_generic=1 AND is_active=1)generic,
+    (SELECT COUNT(*) FROM sys.indexes WHERE name LIKE N'IX_Products_%' OR name LIKE N'IX_Shops_%')marketIndexes`)).recordset[0];
+  const migrationDir=path.resolve(__dirname,'../../../db/migrations'),expected:Record<string,string>={'0100':'33040b4fcd214887863ab83622658bc398db95233d819b280063874f626d067e','0101':'1b7335a2af87b8e9379f7c5b1213c425b59bbba303a00443a72ccfbee005b66d','0102':'5d3734701bcd09099857cf65e612eaf942007d5fab3acc4f941f2d50b21d9cc8','0103':'93683259f19b91576cbc84ee20d91552b5757dcdd10ef8bbccd596fcce433859','0104':'ed7cd1af19f75532b81b9ec95deb312a3ddb6f5315f0b6c6f3a95b186081942d'};
+  let checksums=true;for(const [prefix,hash]of Object.entries(expected)){const file=(await fs.readdir(migrationDir)).find(x=>x.startsWith(prefix+'_'))!;const actual=crypto.createHash('sha256').update(await fs.readFile(path.join(migrationDir,file))).digest('hex');checksums&&=actual===hash;}
+  verify(1,checksums,'checksums 0100-0104');verify(2,!(await fs.readdir(migrationDir)).some(x=>x.startsWith('0105_')),'No database migration required');verify(3,Number(baseline.migrations)===11,'11 migrations');verify(4,[baseline.products,baseline.variants,baseline.inventory,baseline.images].every(x=>Number(x)===167),'baseline counts');verify(5,Number(baseline.zeroPublic)===1,'Product 0 public');verify(6,Number(baseline.orphans)===0,'no orphan ownership');verify(7,Number(baseline.official)===1,'Official invariant');verify(8,Number(baseline.generic)===1,'Generic Brand invariant');verify(9,Number(baseline.marketIndexes)>=5,'Seller-Shop/index invariant');verify(10,!(await fs.readdir(migrationDir)).some(x=>x.includes('marketplace_query_indexes')),'no duplicate index migration');
+
+  const refs=(await query<any>('SELECT (SELECT TOP 1 id FROM dbo.Categories WHERE is_active=1 ORDER BY id)category,(SELECT TOP 1 id FROM dbo.Brands WHERE is_active=1 ORDER BY is_generic DESC,id)brand')).recordset[0];
+  const member=await seedUser('member','member'),admin=await seedUser('admin','admin'),sellerA=await seedUser('seller','seller-a'),sellerB=await seedUser('seller','seller-b');await Promise.all([login(member),login(admin),login(sellerA),login(sellerB)]);
+  await query(`INSERT dbo.Shops(owner_user_id,name,slug,status,is_verified,is_system,description) VALUES(@a,N'SELLER007 Alpha Shop',@as,N'ACTIVE',1,0,N'Public Alpha'),(@b,N'SELLER007 Suspended Shop',@bs,N'SUSPENDED',0,0,N'Private suspended')`,{a:sellerA.id,as:`seller007-alpha-${stamp}`,b:sellerB.id,bs:`seller007-suspended-${stamp}`});
+  const shops=(await query<any>('SELECT id,slug,status FROM dbo.Shops WHERE owner_user_id IN(@a,@b)',{a:sellerA.id,b:sellerB.id})).recordset,activeShop=shops.find((x:any)=>x.status==='ACTIVE'),suspendedShop=shops.find((x:any)=>x.status==='SUSPENDED');
+  const published=await seedProduct(activeShop.id,'Alpha','PUBLISHED',true,refs.category,refs.brand),draft=await seedProduct(activeShop.id,'Draft','DRAFT',false,refs.category,refs.brand,[110000],[4]),pending=await seedProduct(activeShop.id,'Pending','PENDING_REVIEW',false,refs.category,refs.brand,[120000],[4]),rejected=await seedProduct(activeShop.id,'Rejected','REJECTED',false,refs.category,refs.brand,[130000],[4]),suspended=await seedProduct(activeShop.id,'Suspended','SUSPENDED',false,refs.category,refs.brand,[140000],[4]),inactive=await seedProduct(activeShop.id,'Inactive','PUBLISHED',false,refs.category,refs.brand,[150000],[4]),shopHidden=await seedProduct(suspendedShop.id,'ShopHidden','PUBLISHED',true,refs.category,refs.brand,[160000],[4]),out=await seedProduct(activeShop.id,'OutStock','PUBLISHED',true,refs.category,refs.brand,[300000],[0]);
+  const get=async(url:string)=>call(url),publicList=await get('/products?q=SELLER007&pageSize=100&sort=newest'),ids=publicList.data.data.map((x:any)=>x.id);
+  verify(11,ids.includes(published.id),'published appears');verify(12,!ids.includes(draft.id),'draft hidden');verify(13,!ids.includes(pending.id),'pending hidden');verify(14,!ids.includes(rejected.id),'rejected hidden');verify(15,!ids.includes(suspended.id),'suspended hidden');verify(16,!ids.includes(inactive.id),'inactive hidden');verify(17,!ids.includes(shopHidden.id),'suspended Shop product hidden');
+  for(const [n,p]of [[18,draft],[18,pending],[18,rejected],[18,suspended]]as any){const r=await get(`/products/${p.id}`);verify(n===18&&evidence.has(18)?18.1 as any:n,r.status===404,'non-public detail hidden');}
+  const hiddenShop=await get(`/shops/${suspendedShop.slug}`);verify(19,hiddenShop.status===404,'suspended Shop 404');
+  await query(`UPDATE dbo.Products SET moderation_status=N'PUBLISHED',is_active=1 WHERE id=@id`,{id:rejected.id});verify(20,(await get(`/products/${rejected.id}`)).status===200,'republish public');
+  await query(`UPDATE dbo.Shops SET status=N'ACTIVE' WHERE id=@id`,{id:suspendedShop.id});verify(21,(await get(`/products/${shopHidden.id}`)).status===200,'Shop reactivate public');
+  await query(`UPDATE dbo.Products SET moderation_status=N'SUSPENDED',is_active=0 WHERE id=@id`,{id:shopHidden.id});verify(22,(await get(`/products/${shopHidden.id}`)).status===404,'Product suspension survives Shop activation');
+
+  const names=(await query<any>('SELECT (SELECT name FROM dbo.Brands WHERE id=@brand)brand,(SELECT name FROM dbo.Categories WHERE id=@category)category',{brand:refs.brand,category:refs.category})).recordset[0];
+  const queries=[`q=${encodeURIComponent(`SELLER007 Alpha Product`)}`,`q=${encodeURIComponent('SELLER007 Alpha')}`,`q=Alpha`,`q=${published.slug}`,`q=${encodeURIComponent(String(names.brand))}`,`q=${encodeURIComponent(String(names.category))}`,`q=${encodeURIComponent('Alpha Shop')}`,`q=${encodeURIComponent(published.sku)}`];
+  for(let n=23;n<=30;n++){const r=await get(`/products?${queries[n-23]}&pageSize=100&sort=relevance`);verify(n,r.status===200&&r.data.data.some((x:any)=>x.id===published.id),`search case ${n}`);}
+  let r=await get(`/products?q=${encodeURIComponent('  SELLER007   Alpha   Product  ')}&sort=relevance`);verify(31,r.status===200&&r.data.data.some((x:any)=>x.id===published.id),'whitespace normalized');
+  verify(32,(await get('/products?q=')).status===200,'empty q safe');verify(33,!(await get('/products?q=Draft&pageSize=100')).data.data.some((x:any)=>x.id===draft.id),'search visibility');
+  r=await get('/products?q=SELLER007&pageSize=100');verify(34,new Set(r.data.data.map((x:any)=>x.id)).size===r.data.data.length,'no duplicate search');const r2=await get('/products?q=SELLER007&pageSize=100');verify(35,JSON.stringify(r.data.data.map((x:any)=>x.id))===JSON.stringify(r2.data.data.map((x:any)=>x.id)),'deterministic relevance');
+  verify(36,(await get(`/products?q=${encodeURIComponent("x%' OR 1=1--")}`)).status===200,'SQL injection safe');verify(37,(await get(`/products?q=${'x'.repeat(121)}`)).status===400,'search max length');
+
+  const filterUrls=[`q=SELLER007&categoryId=${refs.category}`,`q=SELLER007&brandId=${refs.brand}`,`q=SELLER007&shopSlug=${activeShop.slug}`,'q=SELLER007&verifiedShop=true','q=SELLER007&minPrice=100000','q=SELLER007&maxPrice=200000','q=SELLER007&minPrice=100000&maxPrice=200000'];
+  for(let n=38;n<=44;n++){r=await get(`/products?${filterUrls[n-38]}&pageSize=100`);verify(n,r.status===200&&r.data.data.some((x:any)=>x.id===published.id),`filter ${n}`);}
+  verify(45,(await get('/products?minPrice=2&maxPrice=1')).status===400,'invalid price range');verify(46,(await get('/products?q=SELLER007&inStock=true&pageSize=100')).data.data.some((x:any)=>x.id===published.id),'in stock true');verify(47,(await get('/products?q=SELLER007&inStock=false&pageSize=100')).data.data.some((x:any)=>x.id===out.id),'in stock false');verify(48,!(await get('/products?q=SELLER007&inStock=true&pageSize=100')).data.data.some((x:any)=>x.id===out.id),'reserved-only unavailable');
+  verify(49,(await get(`/products?q=Alpha&categoryId=${refs.category}&brandId=${refs.brand}&shopSlug=${activeShop.slug}`)).data.data.some((x:any)=>x.id===published.id),'combined filters');verify(50,(await get('/products?unknown=1')).status===400,'unknown query');verify(51,(await get('/products?inStock=yes')).status===400,'invalid boolean');verify(52,(await get('/products?minPrice=nope')).status===400,'invalid decimal');verify(53,!(await get(`/products?shopSlug=${suspendedShop.slug}&pageSize=100`)).data.data.length,'suspended Shop filter');
+  verify(54,(await get(`/shops/${activeShop.slug}?shopSlug=${suspendedShop.slug}`)).status===400,'Shop path cannot override');
+
+  for(const [n,sort]of [[55,'relevance'],[56,'newest'],[57,'price_asc'],[58,'price_desc'],[59,'name_asc'],[60,'name_desc']]as const){r=await get(`/products?q=SELLER007&sort=${sort}&pageSize=100`);verify(n,r.status===200&&r.data.data.length>0,`sort ${sort}`);}
+  verify(61,(await get('/products?sort=drop_table')).status===400,'unknown sort');const page1=await get('/products?page=1&pageSize=1&sort=newest'),page2=await get('/products?page=2&pageSize=1&sort=newest');
+  verify(62,page1.data.pagination.total>=2,'pagination total');verify(63,page1.data.data[0].id!==page2.data.data[0].id,'no duplicate pages');const page1Again=await get('/products?page=1&pageSize=1&sort=newest');verify(64,page1Again.data.data[0].id===page1.data.data[0].id,'stable page');verify(65,(await get('/products?page=99999&pageSize=100')).data.data.length===0,'out of range empty');verify(66,(await get('/products?pageSize=101')).status===400,'pageSize cap');const seller007Catalog=await get('/products?q=SELLER007&pageSize=100');verify(67,Number(seller007Catalog.data.pagination.total)===new Set(seller007Catalog.data.data.map((x:any)=>x.id)).size,'joins do not inflate count');
+
+  const card=(await get(`/products?q=${encodeURIComponent(published.slug)}`)).data.data[0],detail=(await get(`/products/${published.id}`)).data.data,serialized=JSON.stringify({card,detail}).toLowerCase();
+  verify(68,card.shop?.slug===activeShop.slug,'safe Shop summary');verify(69,Boolean(card.primary_image?.image_url),'primary image');verify(70,card.minPrice===100000&&card.maxPrice===200000,'min/max price');verify(71,card.inStock===true&&card.availableQuantity===10,'availability');verify(72,detail.shop?.slug===activeShop.slug,'detail Shop link');
+  for(const [n,field]of [[73,'owner_user_id'],[74,'pickup_address'],[75,'system_key'],[76,'review_reason'],[77,'reviewed_by'],[78,'reserved'],[79,'password']]as const)verify(n,!serialized.includes(field),`privacy ${field}`);
+  const zeroPages=[...(await get('/products?page=1&pageSize=100&sort=name_asc')).data.data,...(await get('/products?page=2&pageSize=100&sort=name_asc')).data.data];verify(80,(await get('/products/0')).status===200&&zeroPages.some((x:any)=>x.id===0),'Product 0 list/detail');
+
+  const official=await get('/shops/gymfit-official?pageSize=100');verify(81,official.status===200&&official.data.pagination.total===167,'Official Shop');const shopPage=await get(`/shops/${activeShop.slug}?pageSize=100`);verify(82,shopPage.status===200,'Seller Shop');
+  verify(83,shopPage.data.products.every((x:any)=>x.shop.slug===activeShop.slug),'Shop path scope');verify(84,(await get(`/shops/${activeShop.slug}?q=Alpha`)).data.products.some((x:any)=>x.id===published.id),'Shop search');
+  const shopFilters=[`categoryId=${refs.category}`,`brandId=${refs.brand}`,'minPrice=100000&maxPrice=200000','inStock=true','sort=price_desc','page=1&pageSize=1'];
+  for(let n=85;n<=90;n++){r=await get(`/shops/${activeShop.slug}?${shopFilters[n-85]}`);verify(n,r.status===200&&r.data.products.length>0,`Shop filter ${n}`);}
+  const shopSerialized=JSON.stringify(shopPage.data).toLowerCase();verify(91,!['owner_user_id','pickup_address','system_key','owneremail'].some(x=>shopSerialized.includes(x)),'Shop privacy');
+  await query(`UPDATE dbo.Shops SET status=N'SUSPENDED' WHERE id=@id`,{id:activeShop.id});verify(92,(await get(`/shops/${activeShop.slug}`)).status===404,'Shop suspension');await query(`UPDATE dbo.Shops SET status=N'ACTIVE' WHERE id=@id`,{id:activeShop.id});
+  const emptySeller=await seedUser('seller','empty');await query(`INSERT dbo.Shops(owner_user_id,name,slug,status,is_verified,is_system) VALUES(@owner,N'SELLER007 Empty',@slug,N'ACTIVE',0,0)`,{owner:emptySeller.id,slug:`seller007-empty-${stamp}`});r=await get(`/shops/seller007-empty-${stamp}`);verify(93,r.status===200&&r.data.products.length===0&&r.data.pagination.total===0,'empty Shop');
+
+  verify(94,publicList.status===200&&Array.isArray(publicList.data.data)&&publicList.data.pagination.limit===100,'existing public contract');verify(95,(await call('/admin/products?page=1&limit=10','GET',admin.token)).status===200,'Admin global list');verify(96,(await call('/admin/products/0','GET',admin.token)).status===200,'Admin detail/CRUD boundary');verify(97,(await call('/admin/product-moderation','GET',admin.token)).status===200,'Admin moderation');
+  verify(98,(await call('/seller/products?page=1&limit=100','GET',sellerA.token)).status===200,'Seller management scope');verify(99,(await call(`/seller/products/${shopHidden.id}`,'GET',sellerA.token)).status===404,'Seller cross-Shop IDOR');verify(100,(await call('/admin/variants/1','GET',admin.token)).status!==401,'Admin catalog auth remains wired');
+  const orderBody=(variantId:number)=>({customerName:'SELLER007 Buyer',customerPhone:'0900000000',shippingAddressLine1:'1 Test',shippingCity:'HCM',shippingCountry:'VN',items:[{variantId,quantity:1}]});
+  r=await call('/orders','POST',member.token,orderBody(published.variants[0]));verify(101,r.status===201,'eligible checkout');const before=(await query<any>('SELECT reserved FROM dbo.Inventory WHERE variant_id=@id',{id:draft.variants[0]})).recordset[0].reserved;
+  verify(102,(await call('/orders','POST',member.token,orderBody(draft.variants[0]))).status===404,'non-public checkout blocked');await query(`UPDATE dbo.Shops SET status=N'SUSPENDED' WHERE id=@id`,{id:activeShop.id});verify(103,(await call('/orders','POST',member.token,orderBody(published.variants[0]))).status===404,'suspended Shop checkout blocked');await query(`UPDATE dbo.Shops SET status=N'ACTIVE' WHERE id=@id`,{id:activeShop.id});
+  const ordered=(await query<any>('SELECT TOP 1 unit_price FROM dbo.OrderItems WHERE product_id=@id ORDER BY id DESC',{id:published.id})).recordset[0];verify(104,Number(ordered.unit_price)===100000,'Order price from database');verify(105,Number((await query<any>('SELECT reserved FROM dbo.Inventory WHERE variant_id=@id',{id:draft.variants[0]})).recordset[0].reserved)===Number(before),'failed eligibility did not reserve');
+  const final=(await query<any>(`SELECT (SELECT COUNT(*) FROM dbo.Products)products,(SELECT COUNT(*) FROM dbo.ProductVariants)variants,(SELECT COUNT(*) FROM dbo.Inventory)inventory,(SELECT COUNT(*) FROM dbo.ProductImages)images,(SELECT COUNT(*) FROM dbo.OrderItems WHERE product_id=@id)items`,{id:published.id})).recordset[0];
+  verify(106,Number(final.products)===Number(baseline.products)+8&&Number(final.variants)===Number(baseline.variants)+9&&Number(final.inventory)===Number(baseline.inventory)+9&&Number(final.images)===Number(baseline.images)+8,'fixture deltas');verify(107,Number(final.items)>=1,'OrderItem reference');verify(108,config.db.database.startsWith('GYMFIT_DB_SELLER007_ACCEPTANCE_'),'isolated fixture database');verify(109,!JSON.stringify([...evidence]).match(/accessToken|refreshToken|password/i),'no secrets in acceptance evidence');
+  if(assertions<109)throw new Error(`Expected at least 109 assertions, got ${assertions}`);
+  console.log(`[SELLER-007 ACCEPTANCE PASS] mandatoryCases=109 assertions=${assertions} database=${config.db.database}`);
+}
+
+async function run(){let timer:NodeJS.Timeout|undefined;try{const{default:app}=await import('../app');server=app.listen(port,'127.0.0.1');await new Promise<void>((resolve,reject)=>{server!.once('listening',resolve);server!.once('error',reject);});await Promise.race([main(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>{abortSuite.abort();reject(new Error('Suite timed out after 300000ms'));},300000);})]);return 0;}catch(error){console.error('[SELLER-007 ACCEPTANCE FAIL]',error instanceof Error?error.message:error);return 1;}finally{if(timer)clearTimeout(timer);if(server){server.closeAllConnections();await new Promise<void>(resolve=>server!.close(()=>resolve()));}await closePool();await fs.rm(uploadRoot,{recursive:true,force:true});await dropDatabase();}}
+void run().then(code=>{process.exitCode=code;});

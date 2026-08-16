@@ -1,0 +1,10 @@
+import { NextFunction, Request, Response } from 'express';
+import { shopsService } from './shops.service';
+
+export const getMine=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await shopsService.getMine(req.user!.userId)});}catch(e){next(e);}};
+export const patchMine=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await shopsService.updateMine(req.user!.userId,req.body),message:'Shop updated'});}catch(e){next(e);}};
+export const getPublic=async(req:Request,res:Response,next:NextFunction)=>{try{const q=req.query as any;const data=await shopsService.publicDetail(req.params.shopSlug,{q:q.q,categoryId:q.categoryId,categorySlug:q.category,brandId:q.brandId,brandSlug:q.brand,verifiedShop:q.verifiedShop,minPrice:q.minPrice,maxPrice:q.maxPrice,minRating:q.minRating,inStock:q.inStock,featured:q.featured,page:q.page,pageSize:q.pageSize,sort:q.sort});res.json({success:true,data:data.shop,products:data.products,pagination:{page:data.page,limit:data.pageSize,pageSize:data.pageSize,total:data.total,pages:Math.ceil(data.total/data.pageSize),totalPages:Math.ceil(data.total/data.pageSize)}});}catch(e){next(e);}};
+export const listAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{const result=await shopsService.listAdmin(req.query as any);res.json({success:true,data:result.items,pagination:{page:result.page,limit:result.limit,total:result.total,pages:Math.ceil(result.total/result.limit)}});}catch(e){next(e);}};
+export const detailAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await shopsService.adminDetail(Number(req.params.shopId))});}catch(e){next(e);}};
+export const statusAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await shopsService.setStatus(Number(req.params.shopId),req.body.status,req.body.reason,req.user!.userId)});}catch(e){next(e);}};
+export const verificationAdmin=async(req:Request,res:Response,next:NextFunction)=>{try{res.json({success:true,data:await shopsService.setVerification(Number(req.params.shopId),req.body.isVerified,req.user!.userId)});}catch(e){next(e);}};

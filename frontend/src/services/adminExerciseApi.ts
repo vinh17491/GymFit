@@ -1,0 +1,11 @@
+import api from '../api/axios';
+import type { AdminExercise, AdminExerciseInput } from '../types/adminExercise';
+import type { AdminPage } from '../types/adminCoach';
+const data = <T,>(response: { data: { data: T } }) => response.data.data;
+const page = <T,>(response: { data: { data: AdminPage<T> } }) => response.data.data;
+export const listAdminExercises = async (params: Record<string, unknown>) => page<AdminExercise>(await api.get('/admin/exercises', { params }));
+export const getAdminExercise = async (id: number) => data<AdminExercise>(await api.get(`/admin/exercises/${id}`));
+export const createAdminExercise = async (input: AdminExerciseInput) => data<AdminExercise>(await api.post('/admin/exercises', input));
+export const updateAdminExercise = async (id: number, input: Partial<AdminExerciseInput> & { is_active?: boolean }) => data<AdminExercise>(await api.patch(`/admin/exercises/${id}`, input));
+export const activateAdminExercise = async (id: number) => data<AdminExercise>(await api.post(`/admin/exercises/${id}/activate`, {}));
+export const deactivateAdminExercise = async (id: number) => data<AdminExercise>(await api.post(`/admin/exercises/${id}/deactivate`, {}));

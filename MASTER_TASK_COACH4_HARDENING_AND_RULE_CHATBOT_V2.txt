@@ -1,0 +1,1066 @@
+# MASTER TASK — WEB-GYM COACH4
+# FINAL HARDENING + RULE-BASED CHATBOT KHÔNG DÙNG AI API
+## TỰ ĐỘNG THỰC THI H00 → H46 — KHÔNG HỎI XÁC NHẬN LẶT VẶT
+
+Repository: vinh17491/GymFit
+Branch bắt buộc khi bắt đầu: coach4
+
+## 0. MỤC TIÊU
+
+1. Sửa các lỗi kỹ thuật/edge case còn lại đã audit trên coach4.
+2. Không mở rộng nghiệp vụ ngoài phạm vi cần thiết.
+3. Xây chatbot theo kiểu RULE-BASED / INTENT MATCHING / CANNED RESPONSES.
+4. KHÔNG Gemini API, KHÔNG OpenAI API, KHÔNG LLM, KHÔNG vector DB, KHÔNG embedding.
+5. Chatbot dùng rule-based intent matching + kho câu trả lời + các adapter CHỈ ĐỌC để tra cứu dữ liệu thật đã có của hệ thống khi phù hợp.
+6. Chatbot phải trả lời được toàn bộ nhóm chức năng đang tồn tại: sản phẩm, cửa hàng, Coach, gói hội viên, booking, workout, đơn hàng, Seller, Admin và hỗ trợ chung.
+7. Chatbot có HAI cách dùng song song:
+   - người dùng tự gõ câu hỏi;
+   - người dùng chọn gợi ý/quick replies khi không biết phải hỏi gì.
+8. Chatbot có độ trễ phản hồi ngẫu nhiên nhỏ để tạo cảm giác hội thoại tự nhiên, nhưng UI chỉ được ghi `Đang soạn...` hoặc `Đang tìm thông tin...`; KHÔNG được tuyên bố đây là thời gian AI đang suy nghĩ.
+9. Chatbot KHÔNG mutation dữ liệu và KHÔNG tự thực hiện giao dịch.
+10. Chạy lại build, test, encoding scan, browser QA và security/concurrency regression.
+11. Chỉ kết luận hoàn thành khi toàn bộ gate thật sự PASS.
+
+## 1. QUYỀN THỰC THI — KHÔNG HỎI LẠI
+
+Người dùng đã cho phép thực hiện toàn bộ nhiệm vụ này.
+
+Tự động được phép: đọc/sửa source đúng scope, tạo file/component/test/utility/docs, chạy npm ci/build/lint/typecheck/test/browser QA/encoding scanner, dùng disposable DB, tạo local commit nhỏ, tự sửa lỗi thuộc phase và tự chuyển phase khi PASS.
+
+KHÔNG hỏi các câu kiểu: có được sửa file không, có chạy test/build không, có tạo chatbot không, có tiếp tục phase không.
+
+Chỉ dừng BLOCKED khi:
+- branch không phải coach4;
+- có thay đổi người dùng có nguy cơ bị ghi đè không thể tách;
+- cần DROP/TRUNCATE/rewrite canonical DB;
+- migration checksum mismatch;
+- thiếu secret bắt buộc;
+- tool/hệ điều hành bắt buộc quyền ngoài khả năng hiện tại;
+- phải sửa Marketplace/Seller backend hoặc migration 0100–0111 để ép PASS;
+- lỗi ngoài scope không thể cô lập.
+
+Không vượt cơ chế bảo mật của hệ điều hành/Codex.
+
+## 2. SCOPE
+
+Được sửa Coach hardening:
+- backend/src/modules/coach-workspace/**
+- backend/src/modules/coaches/**
+- backend/src/modules/bookings/**
+- backend/src/modules/member-workout/**
+- backend/src/scripts/coach-*
+- frontend/src/pages/coaches/**
+- frontend/src/pages/booking/**
+- frontend/src/pages/appointments/**
+- frontend/src/services/coachWorkspaceApi.ts
+- frontend/src/services/coaches.ts
+- frontend/src/services/bookings.ts
+- frontend/src/types/coachWorkspace.ts
+- frontend/src/auth/accessPolicy.ts
+
+Được tạo chatbot:
+- frontend/src/features/chatbot/** hoặc frontend/src/components/chatbot/**
+- frontend/src/lib/chatbot/**
+- frontend/src/types/chatbot.ts
+- frontend/src/stores/** nếu cần UI state
+- frontend/src/App.tsx
+- frontend/src/components/layout/**
+- docs/chatbot/**
+
+Quality:
+- scripts/check-text-encoding.mjs
+- package.json / frontend/package.json / backend/package.json chỉ khi cần script
+- .editorconfig
+- docs/coach/**
+- docs/encoding/**
+- .github/workflows/** nếu thêm CI an toàn
+
+Seller fix: chỉ frontend route/access/UI. Không sửa Seller backend.
+Marketplace Product image: chỉ audit/report, không tự sửa/xóa canonical DB.
+
+CẤM:
+- sửa/rewrite migration 0100–0111;
+- rewrite migration đã apply;
+- thêm AI API/payment provider/chat DB/WebSocket chỉ cho chatbot;
+- thay đổi Order/Refund/Settlement/Seller business rules;
+- thay đổi Membership pricing/quota ngoài lỗi đã xác định;
+- tạo chức năng y tế/chẩn đoán.
+
+## 3. KIẾN TRÚC CHATBOT BẮT BUỘC
+
+Chatbot là RULE-BASED INFORMATION ASSISTANT + READ-ONLY DATA LOOKUP, không quảng bá là AI.
+
+Mục tiêu của chatbot:
+- luôn có phản hồi cho message hợp lệ;
+- trả lời chính xác các chức năng đã tồn tại trong dự án;
+- có thể tra cứu dữ liệu công khai/dữ liệu chính chủ qua API hiện hữu khi intent cần dữ liệu động;
+- không dùng LLM;
+- không gọi dịch vụ AI bên ngoài;
+- không tự mutation dữ liệu.
+
+Ưu tiên cấu trúc:
+
+frontend/src/features/chatbot/
+- ChatbotWidget.tsx
+- chatbotEngine.ts
+- chatbotCatalog.ts
+- chatbotNormalizer.ts
+- chatbotTypes.ts
+- chatbotStorage.ts
+- chatbotSuggestions.ts
+- chatbotDelay.ts
+- chatbotDataAdapters.ts
+- chatbotEntityParser.ts
+- chatbot.test.ts
+
+Có thể tách adapter theo domain nếu source thực tế cần:
+
+frontend/src/features/chatbot/adapters/
+- productsAdapter.ts
+- shopsAdapter.ts
+- coachesAdapter.ts
+- membershipAdapter.ts
+- bookingsAdapter.ts
+- workoutAdapter.ts
+- ordersAdapter.ts
+
+KHÔNG tạo backend chatbot API chỉ để relay message.
+
+ĐƯỢC phép reuse các API hiện hữu theo kiểu READ-ONLY:
+- public Product search/list/detail;
+- public Shop;
+- public Coach list/detail/availability;
+- Membership Plans;
+- current Member membership/quota;
+- current user's own Appointments;
+- current user's own Orders nếu API hiện tại đã hỗ trợ và quyền đúng;
+- current user's own Workout/Progress nếu API hiện tại đã hỗ trợ và việc đọc dữ liệu không làm phát sinh mutation.
+
+Nếu một domain không có API read-only phù hợp:
+- không tạo Marketplace/Seller backend mới chỉ để chatbot trả lời;
+- trả lời hướng dẫn tĩnh + link đúng route;
+- ghi rõ chatbot không thể xác minh dữ liệu động đó.
+
+Chatbot không được tự checkout, đặt Coach, cancel, refund, update profile, submit Seller application, đổi Membership, đổi Order hay thao tác Admin. Chỉ:
+- giải thích;
+- tra cứu read-only;
+- hiển thị kết quả;
+- đưa link;
+- quick replies;
+- gợi ý bước tiếp theo.
+
+Quyền thật vẫn do route/backend guards.
+
+### 3.1 NGUYÊN TẮC "LUÔN CÓ CÂU TRẢ LỜI"
+
+Không được có trường hợp user gửi message hợp lệ rồi chatbot im lặng.
+
+Mọi request phải kết thúc ở một trong:
+1. câu trả lời intent cụ thể;
+2. kết quả tra cứu động;
+3. câu hỏi làm rõ;
+4. fallback có gợi ý;
+5. safety/unsupported response.
+
+Không được bịa câu trả lời để đạt mục tiêu "mọi khả năng".
+
+"Mọi khả năng" trong task này nghĩa là:
+- mọi chức năng/route/user journey đang có trong dự án đều phải có coverage;
+- mọi câu hỏi ngoài catalog phải có fallback hữu ích;
+- mọi entity search hợp lệ phải có kết quả hoặc thông báo không tìm thấy;
+- không được suy đoán dữ liệu không tồn tại.
+
+### 3.2 DỮ LIỆU ĐỘNG VỀ SẢN PHẨM / DỊCH VỤ / COACH
+
+Sản phẩm:
+- intent có thể tra cứu Product theo từ khóa bằng API search hiện hữu;
+- nếu API hỗ trợ filter/sort thì reuse đúng contract;
+- không tự invent giá, tồn kho, giảm giá;
+- khi có dữ liệu, trả tối đa 3–5 kết quả để UI không quá dài;
+- mỗi kết quả có action mở Product detail.
+
+Coach:
+- intent có thể tra cứu Coach theo tên/chuyên môn/thông tin public mà API hiện hữu cho phép;
+- có thể trả availability chỉ khi user đã chỉ rõ Coach/ngày và API read-only hiện hữu hỗ trợ;
+- không nói slot còn trống nếu chưa đọc authoritative availability;
+- không tự đặt lịch.
+
+Dịch vụ:
+- Membership, booking Coach, workout, Seller, Marketplace, Admin được mô tả theo contract thật;
+- nếu hỏi "dịch vụ nào có trên GYMFIT?" chatbot phải có response tổng hợp theo role và public features hiện tồn tại.
+
+Cửa hàng:
+- nếu public Shop API hiện hữu, có thể search read-only;
+- nếu không, chỉ hướng dẫn route Shop/Product.
+
+Đơn hàng / lịch hẹn / workout của user:
+- chỉ đọc dữ liệu của chính user từ API đã được backend scope;
+- không dùng userId do client tự nhập để truy cập user khác;
+- nếu role không phù hợp, không gọi adapter.
+
+### 3.3 ENTITY PARSING
+
+Tạo deterministic parser cho các kiểu truy vấn phổ biến, ví dụ:
+
+- `tìm whey`
+- `tìm sản phẩm whey`
+- `whey dưới 500k`
+- `sản phẩm từ 300k đến 700k`
+- `coach online`
+- `coach tên an`
+- `coach nào còn lịch ngày 12/08`
+- `gói pro có gì`
+- `đơn hàng của tôi`
+- `lịch hẹn coach của tôi`
+
+Parser có thể nhận:
+- query text;
+- category;
+- minPrice;
+- maxPrice;
+- sort;
+- date;
+- mode;
+- entity name;
+- route context.
+
+Chỉ dùng filter mà API hiện hữu hỗ trợ.
+Nếu parser nhận được điều kiện API không hỗ trợ:
+- không giả kết quả;
+- dùng điều kiện có thể xác minh;
+- giải thích ngắn phần chưa lọc được.
+
+### 3.4 RESPONSE DELAY / "ĐANG SOẠN"
+
+Chatbot phải có response delay ngẫu nhiên nhỏ để hội thoại tự nhiên.
+
+Đây là delay UX, KHÔNG phải mô phỏng hay tuyên bố "AI đang suy nghĩ".
+
+UI text hợp lệ:
+- `Đang soạn...`
+- `Đang tìm thông tin...`
+
+Không dùng:
+- `AI đang suy nghĩ`
+- `Mô hình đang suy luận`
+- `Đang phân tích bằng AI`
+
+Delay gợi ý:
+- static reply: khoảng 350–1100 ms;
+- reply dài: có thể cộng thêm theo độ dài, tổng tối đa khoảng 1600 ms;
+- dynamic read-only lookup: hiển thị loading cho tới khi request xong, sau đó thêm tối đa 150–500 ms để tránh nhấp nháy;
+- không cố ý delay quá 2 giây.
+
+Delay phải:
+- cancel khi widget đóng/unmount;
+- không block UI thread;
+- dùng setTimeout/Promise;
+- test được bằng injectable delay/random provider hoặc fake timers;
+- production random được phép, test phải deterministic.
+
+### 3.5 HAI CHẾ ĐỘ SỬ DỤNG SONG SONG
+
+Chatbot không có toggle bắt buộc giữa "chat" và "menu".
+Cả hai luôn sẵn sàng:
+
+A. FREE CHAT
+- input text;
+- người dùng tự hỏi bất kỳ câu nào.
+
+B. SUGGESTION MODE
+- khi widget mới mở, hiển thị nhóm gợi ý lớn;
+- sau mỗi reply, hiển thị contextual quick replies;
+- khi fallback/clarification, hiển thị gợi ý rõ hơn.
+
+Nhóm gợi ý khởi đầu tối thiểu:
+- Sản phẩm
+- Coach
+- Gói hội viên
+- Đơn hàng
+- Workout
+- Seller
+- Hỗ trợ tài khoản
+
+Theo role:
+Guest:
+- Sản phẩm
+- Coach
+- Gói hội viên
+- Đăng nhập/Đăng ký
+
+Member:
+- Sản phẩm
+- Coach
+- Lịch hẹn
+- Workout
+- Gói hội viên
+- Đơn hàng
+- Đăng ký Seller
+
+Coach:
+- Sản phẩm
+- Lịch hẹn Coach
+- Học viên
+- Chương trình tập
+- Lịch workout
+- Đơn hàng cá nhân nếu Buyer route hỗ trợ
+
+Seller:
+- Sản phẩm của tôi
+- Đơn Seller
+- Doanh thu
+- Khiếu nại
+- Sản phẩm Marketplace
+
+Admin:
+- Quản lý Coach
+- Exercise Library
+- Duyệt sản phẩm
+- Seller Applications
+- Đơn hàng/Refund/Settlement overview
+
+Quick reply click phải đi qua cùng chatbot engine, không hardcode một flow tách biệt.
+
+## 4. RULE ENGINE
+
+Không dùng giant if/else.
+
+Mỗi intent typed tối thiểu:
+- id
+- category
+- priority
+- roles?
+- exactPhrases?
+- phraseBoosts?
+- keywordsAny?
+- keywordsAll?
+- negativeKeywords?
+- minScore?
+- responses
+- suggestions?
+- actions?
+
+Normalization:
+1. Unicode NFC.
+2. lowercase.
+3. trim/collapse whitespace.
+4. normalize punctuation.
+5. giữ original message.
+6. tạo bản accent-insensitive chỉ để matching: NFD, bỏ combining marks, map đ→d.
+7. không sửa original text.
+
+Scoring phải deterministic và test được. Gợi ý:
+- exact phrase +12
+- phrase boost +6
+- keywordsAll full +8
+- keywordAny +2/token
+- route/context +2
+- previous intent +1/+2
+- negative keyword -8
+- role mismatch = block intent
+
+Nếu score thấp → fallback. Nếu top1/top2 quá gần → clarification. Không đoán bừa. Nội dung response không được random theo kiểu thay đổi ý nghĩa. Nếu một intent có nhiều cách diễn đạt tương đương, có thể dùng stable hash để chọn deterministic.
+CHỈ response delay được random trong production theo mục 3.4.
+
+Engine phải hỗ trợ reply type:
+- STATIC
+- DYNAMIC_LOOKUP
+- CLARIFICATION
+- FALLBACK
+- SAFETY
+
+Dynamic lookup intent phải khai báo adapter id + entity parser contract, không gọi network tùy tiện.
+
+Reply contract tối thiểu:
+- intentId
+- score/confidence
+- replyType
+- message
+- suggestions
+- actions
+- results? (danh sách entity read-only)
+- sourceState? (`STATIC`, `LIVE_DATA`, `NOT_FOUND`, `UNAVAILABLE`)
+
+## 5. INTENT PHẠM VI
+
+GENERAL: greeting, help, thanks, goodbye, fallback, clarification.
+AUTH: login, register, profile, settings, password.
+MEMBERSHIP: plans, subscribe, pending payment, confirm simulated payment, upgrade, downgrade, cancel, Coach entitlement, quota.
+COACH: find Coach, profile, availability, booking, conflict, pending/confirmed, online/in-person.
+WORKOUT: program, assignment, schedule, start session, Set log, complete, progress, notifications.
+SELLER: apply, application status, products, orders, revenue, complaints.
+MARKETPLACE: search product, product filters, product price question, product detail, product availability/stock when API exposes it, shop search, shop detail, cart, checkout, order, tracking, cancel, complaint, refund/replacement overview, review.
+ADMIN: admin dashboard, Coach management, Exercise Library, Product moderation, Seller applications, order/refund/settlement overview.
+SAFETY: secrets/token/password, bypass role/IDOR, medical/injury/medicine, chatbot mutation request, unsupported feature.
+
+Chatbot không được chẩn đoán sức khỏe. Với đau/chấn thương/bệnh: chỉ nói đây là trợ lý hướng dẫn nền tảng và nên trao đổi Coach/chuyên gia phù hợp.
+
+## 6. UX
+
+Floating button không che mobile nav, có aria-label.
+
+Widget:
+- open/close;
+- header;
+- messages;
+- input;
+- send;
+- quick replies;
+- suggestion categories;
+- source-controlled action links;
+- clear conversation;
+- typing indicator `Đang soạn...`;
+- data lookup indicator `Đang tìm thông tin...`.
+
+Trang thái khởi đầu phải có:
+- lời chào ngắn;
+- câu "Bạn có thể nhắn câu hỏi hoặc chọn một gợi ý bên dưới";
+- suggestion cards/chips theo role.
+
+Sau mỗi câu trả lời:
+- nếu có next actions, hiện 2–5 quick replies;
+- user vẫn có thể bỏ qua suggestions và gõ tự do.
+
+Response delay:
+- static reply có randomized UX delay theo mục 3.4;
+- dynamic reply dùng actual request loading + bounded polish delay;
+- không giả là AI reasoning.
+
+Persistence:
+- sessionStorage;
+- max 40 messages;
+- versioned key;
+- corrupted JSON fallback;
+- không lưu password/token.
+
+Input:
+- max 500 chars;
+- empty ignored;
+- Enter send;
+- xử lý IME/composition để gõ tiếng Việt không gửi sớm;
+- user có thể gửi message tiếp sau khi bot hoàn tất;
+- trong lúc bot đang xử lý, không tạo double-send race.
+
+Không dangerouslySetInnerHTML, không eval, không arbitrary URL, không dynamic HTML.
+
+Dynamic entity results:
+- Product/Coach/Shop result hiển thị dạng compact cards;
+- max 3–5 result/reply;
+- có `Xem chi tiết`;
+- không render dữ liệu ngoài fields đã typed/sanitized;
+- nếu 0 result: câu trả lời `Không tìm thấy...` + gợi ý đổi từ khóa;
+- nếu API error: nói `Hiện chưa tải được dữ liệu` + link đến trang search nếu có.
+
+## 7. PHASE PROTOCOL
+
+Thực hiện liên tục H00 → H46, không chờ duyệt giữa phase.
+Sau mỗi phase cập nhật docs/chatbot/CHATBOT_AND_HARDENING_PROGRESS.md với Status, Findings, Files changed, Tests, Commit, Next.
+Nếu đã đúng → VERIFIED_NO_CHANGE. Nếu lỗi trong scope → tự sửa, test lại. Chỉ BLOCKED theo mục 1.
+
+# H00 — BASELINE COACH4
+Chạy git branch --show-current, git status --short, git log -10 --oneline, git diff --check. Branch phải coach4. Record START_COMMIT. Đọc Coach completion docs, encoding final docs, App/routes/accessPolicy/package scripts/tests. Tạo progress doc. Không sửa production.
+
+# H01 — RE-AUDIT LỖI ĐÃ BIẾT
+Xác minh: Program mutation-vs-Publish race; Publish Program rỗng; Day vượt duration; reschedule bounds/race; seller/apply role mismatch; Availability OPEN overlap/BOTH/location; Attention Queue date/scope; PATCH partial; stale Coach docs; Product missing local upload; background runner test isolation; encoding CI. Phân loại CONFIRMED/ALREADY_FIXED/NOT_REQUIRED/OUT_OF_SCOPE/DOCUMENT_ONLY.
+
+# H02 — ATOMIC DRAFT PROGRAM MUTATION DESIGN
+Thiết kế helper SERIALIZABLE: lock WorkoutPrograms WITH UPDLOCK,HOLDLOCK → verify owner + DRAFT → mutation → commit. Áp dụng cho updateProgram, Day CRUD/reorder, ProgramExercise CRUD/reorder. Ghi ADR_PROGRAM_DRAFT_MUTATION_LOCKING.md.
+
+# H03 — IMPLEMENT ATOMIC PROGRAM MUTATIONS
+Triển khai transaction/lock. Test Publish vs Add/Update/Delete/Reorder Exercise và Day. Không cho Published bị mutation sau race.
+
+# H04 — PROGRAM PUBLISH INTEGRITY GATE
+Trong cùng locked transaction, Publish chỉ khi: DRAFT; >=1 Day; mọi Day week<=durationWeeks; mọi Day có >=1 Exercise; targets hợp lệ; reps min<=max. Không invent rule ngoài spec. Invalid trả 400/409 với code PROGRAM_NOT_READY_TO_PUBLISH.
+
+# H05 — DAY BOUNDS CREATE/UPDATE/PROGRAM DURATION
+Create/Update Day: week<=durationWeeks, day 1–7, unique. Nếu giảm Program duration dưới max week hiện có → reject 409. Test duration 4 + week5 reject.
+
+# H06 — TRUE PARTIAL PATCH PROGRAM EXERCISE
+PATCH: lock Draft → read existing → merge chỉ field được gửi → validate merged object → update. Omitted giữ nguyên, explicit null mới clear. Test patch only coachNote giữ reps/sets/rest.
+
+# H07 — RESCHEDULE CONTRACT
+Chốt: status SCHEDULED, Assignment ACTIVE, newDate>=today timezone, >=assignment start, <=assignment end nếu có, <=programEnd, không duplicate conflict, đúng Coach scope. Không tự ép same program week nếu spec chưa yêu cầu.
+
+# H08 — ATOMIC RESCHEDULE/CANCEL
+SERIALIZABLE lock schedule+assignment. Cancel vs Reschedule, Reschedule A/B phải có một authoritative outcome. rowsAffected=0 → 409.
+
+# H09 — SELLER APPLY FRONTEND RBAC
+Không sửa backend. Member được apply; Seller chỉ xem status nếu backend/UI hỗ trợ; Coach/Admin không expose Apply nếu backend không cho. Cập nhật accessPolicy/nav/command menu. Test role routing.
+
+# H10 — AVAILABILITY OPEN PRECEDENCE
+OPEN exception trùng Weekly Rule cùng interval → OPEN wins, không trả duplicate cùng start/end. BLOCK full day mạnh nhất. Ưu tiên xử lý ở slot layer nếu 60-minute aligned để giảm complexity.
+
+# H11 — AVAILABILITY MODE CONTRACT
+Không để final Booking mode=BOTH khi Member không chọn concrete mode. Ưu tiên: Profile có thể BOTH; bookable Rule/Exception chỉ ONLINE hoặc IN_PERSON. Nếu code hiện hỗ trợ discriminator đầy đủ mới cân nhắc expand BOTH. Chọn ít thay đổi nhất.
+
+# H12 — AVAILABILITY LOCATION
+ONLINE: explicit rule/exception location nếu có, nếu không null; không kế thừa physical profile location. IN_PERSON: explicit location, fallback profile. Nếu cuối cùng null thì reject rule hoặc non-bookable theo contract hiện có.
+
+# H13 — ATTENTION QUEUE
+SKIPPED_SCHEDULES dùng đúng recent window 30 ngày. NO_WORKOUT_7D scope current active assignment/Coach, workout Coach cũ không suppress warning Coach mới. LOW_COMPLETION giữ bounded window. Thêm fixture old skipped >30d không trigger; 2 recent trigger.
+
+# H14 — COACH RELEASE STATE DOCS
+Tạo docs/coach/COACH_RELEASE_STATE.json là current source of truth. Ghi execution history, closure/current branch, verified migrations/pending/date. Docs cũ stale đánh dấu historical snapshot, không xóa lịch sử.
+
+# H15 — PRODUCT MISSING IMAGE REPORT
+Không sửa Marketplace DB. Nâng read-only integrity report in ProductImage id, Product id, image_url, is_primary, resolved path. Nếu còn finding tạo docs/marketplace/MISSING_PRODUCT_MEDIA_FINDING.md. Không delete/fake image.
+
+# H16 — BACKGROUND RUNNER TEST ISOLATION
+Mục tiêu import Express app trong tests không start scheduler. Ưu tiên app.ts chỉ build app, bootstrap/server start runner; nếu quá rộng dùng central DISABLE_BACKGROUND_RUNNERS=1, mọi acceptance set trước import. Không list thủ công nhiều env flag.
+
+# H17 — PRE-CHATBOT REGRESSION
+npm run check:encoding; backend build/lint; frontend tsc/build; critical Coach acceptance; git diff --check. Chatbot chỉ bắt đầu khi hardening không phá build.
+
+# H18 — CHATBOT ROUTE/ROLE/FUNCTION CATALOG
+Đọc App.tsx/accessPolicy/Sidebar/CommandMenu/public/member/coach/seller/admin routes. Tạo docs/chatbot/CHATBOT_SCOPE_AND_INTENTS.md với:
+- route thật;
+- role thật;
+- chức năng thật;
+- API read-only hiện hữu;
+- chức năng không tồn tại;
+- domain nào có thể lookup động;
+- domain nào chỉ static guidance.
+Không invent feature.
+
+# H19 — CHATBOT COVERAGE MATRIX
+Tạo docs/chatbot/CHATBOT_COVERAGE_MATRIX.md.
+
+Mỗi chức năng user-visible phải map tới ít nhất một intent hoặc một fallback category.
+
+Matrix tối thiểu:
+- Authentication
+- Profile/Settings
+- Membership
+- Products
+- Shops
+- Cart/Checkout
+- Orders
+- Complaints/Reviews
+- Coach discovery
+- Coach availability/booking
+- Member appointments
+- Member workouts/progress
+- Coach workspace
+- Seller workspace
+- Admin workspace
+- Notifications
+- Unsupported/safety
+
+Không để route chính nào không có coverage.
+
+# H20 — CHATBOT TYPES
+Tạo ChatbotRole, ChatbotIntentId, ChatbotIntent, ChatbotAction, ChatbotSuggestion, ChatbotMessage, ChatbotReply, ChatbotContext, ChatbotEntityResult, ChatbotReplyType, ChatbotDataAdapterId.
+
+Action path chỉ source-controlled và role-filtered.
+
+# H21 — NORMALIZER
+Implement Unicode NFC + lowercase + whitespace/punctuation normalization + accent-insensitive matching copy.
+Test:
+- “ĐẶT   LỊCH Coach!!!”
+- “dat lich coach”
+- “Đặt lịch với huấn luyện viên”
+- tiếng Việt IME output.
+Original text giữ nguyên.
+
+# H22 — ENTITY / FILTER PARSER
+Implement parser deterministic cho:
+- entity name/query;
+- price expressions: `500k`, `500.000`, `1tr`, `dưới`, `trên`, `từ...đến`;
+- date YYYY-MM-DD và common dd/MM nếu context rõ;
+- ONLINE/IN_PERSON aliases;
+- product/coach/shop keyword stripping.
+
+Không parse vượt khả năng.
+Ambiguous value → clarification.
+
+# H23 — MATCH ENGINE
+Implement deterministic scoring, priority, exact phrases, any/all keywords, negative keywords, role filter, route/context boost, tie clarification, fallback. Không giant if/else.
+
+Support reply types:
+STATIC
+DYNAMIC_LOOKUP
+CLARIFICATION
+FALLBACK
+SAFETY
+
+# H24 — READ-ONLY DATA ADAPTER FOUNDATION
+Tạo chatbotDataAdapters registry.
+
+Mỗi adapter phải:
+- typed input/output;
+- AbortSignal;
+- timeout/cancel handling;
+- không mutation HTTP method;
+- không direct database;
+- không tự truyền userId để bypass scope;
+- reuse service hiện hữu.
+
+Nếu existing service chưa expose read-only function nhưng endpoint đã tồn tại:
+có thể bổ sung frontend service wrapper.
+Không tạo Marketplace/Seller backend mới.
+
+# H25 — PRODUCT LOOKUP ADAPTER
+Reuse Product search/list/detail API hiện hữu.
+
+Chatbot hiểu tối thiểu:
+- `tìm whey`
+- `tìm sản phẩm creatine`
+- `whey dưới 500k`
+- `sản phẩm giá từ 300k đến 700k`
+- `cho tôi sản phẩm ...`
+
+Chỉ dùng filter backend support.
+Nếu price filter backend không support:
+- không bịa;
+- có thể lọc client-side chỉ trên bounded result page và ghi rõ đây là kết quả trong danh sách đã tải;
+- ưu tiên dùng API filter thật nếu có.
+
+Return max 5 result:
+name
+price
+public status
+thumbnail nếu typed
+shop/brand nếu API trả
+detail path
+
+Không invent stock/discount.
+
+# H26 — SHOP / SERVICE LOOKUP ADAPTER
+Nếu public Shop API hiện hữu:
+- search Shop;
+- trả 3–5 result;
+- link detail.
+
+Nếu không:
+- static guidance đến shop/product discovery.
+
+Tạo intent `services_overview`:
+- mô tả các nhóm dịch vụ hiện có trong GYMFIT theo role;
+- không liệt kê feature không tồn tại.
+
+# H27 — COACH LOOKUP ADAPTER
+Reuse public Coach API.
+
+Hỗ trợ:
+- tìm Coach;
+- Coach theo tên;
+- Coach online/in-person nếu field/API support;
+- xem hồ sơ;
+- availability theo Coach + date nếu authoritative endpoint support.
+
+Nếu user hỏi:
+`coach nào còn lịch ngày ...`
+chỉ trả Coach/slot nếu có thể xác minh qua API bounded query hợp lý.
+Không fan-out hàng trăm Coach.
+Giới hạn số Coach scan/query để tránh tải nặng.
+
+Không tự booking.
+
+# H28 — USER-SCOPED READ-ONLY ADAPTERS
+Audit và chỉ tạo adapter nếu API hiện hữu, backend đã self-scope:
+- my membership/quota;
+- my appointments;
+- my orders;
+- my workout/progress;
+- notifications.
+
+Không dùng adapter nếu backend cần arbitrary userId client-supplied.
+
+Role mismatch → không gọi.
+
+# H29 — RESPONSE DELAY ENGINE
+Tạo chatbotDelay.ts.
+
+Production:
+- static response random 350–1100ms;
+- cộng length factor nhưng cap ~1600ms;
+- dynamic request: actual loading + 150–500ms bounded polish delay;
+- max intentional delay <= 2s.
+
+UI:
+`Đang soạn...` cho static.
+`Đang tìm thông tin...` cho lookup.
+
+Không nói AI đang suy nghĩ.
+
+Test:
+- inject RNG hoặc fake timer;
+- cancel pending delay on unmount/new invalidated request;
+- không setState after unmount.
+
+# H30 — GENERAL/AUTH INTENTS
+Greeting/help/thanks/goodbye/login/register/profile/settings/password/fallback/clarification.
+Câu trả lời tiếng Việt rõ.
+Không lộ secret.
+
+# H31 — MEMBERSHIP INTENTS
+Plans/subscribe/pending/confirm/upgrade/downgrade/cancel/Coach entitlement/quota.
+Khớp simulated payment.
+Nếu plan data read-only API có sẵn, dùng live Plan data cho tên/giá/duration.
+Không nói free trial/PayPal/card/yearly discount nếu hệ thống không có.
+
+# H32 — COACH BOOKING INTENTS
+Find Coach/profile/availability/book/conflict/pending/confirmed/quota/online/in-person.
+Có thể gọi Coach lookup adapter.
+Không hứa availability nếu chưa đọc authoritative data.
+Không tự booking.
+
+# H33 — WORKOUT/PROGRESS INTENTS
+My program/assignment/schedule/start workout/Set log/complete/progress/notifications.
+Nếu current-user read-only API phù hợp, có thể hiển thị summary.
+Không mutation.
+Không chẩn đoán.
+
+# H34 — MARKETPLACE INTENTS
+Search product/filter/detail/shop/cart/checkout/order/tracking/cancel/complaint/refund-replacement overview/review.
+Product queries phải ưu tiên dynamic Product adapter.
+Phản ánh role thật Member+Coach Buyer nếu code hiện cho phép.
+Không tự quyết refund.
+
+# H35 — SELLER INTENTS
+Apply/status/shop/products/orders/revenue/complaints.
+Member được hướng dẫn apply.
+Coach/Admin không bị dẫn vào flow backend không cho.
+Seller hướng dẫn workspace.
+Nếu Seller current data API read-only không chắc scope thì chỉ guidance.
+
+# H36 — ADMIN INTENTS
+Admin dashboard/Coach management/Exercise Library/Product moderation/Seller applications/orders-refunds-settlements high-level.
+Action chỉ Admin.
+Không credential mặc định.
+Không query data nhạy cảm ngoài UI/API contract.
+
+# H37 — SAFETY / UNSUPPORTED / UNIVERSAL FALLBACK
+High-priority:
+SECRET_REQUEST
+IDOR_BYPASS
+MEDICAL
+TRANSACTION_MUTATION
+UNKNOWN_FEATURE
+
+Universal fallback bắt buộc luôn trả:
+- chưa hiểu chính xác;
+- 4–7 category suggestions theo role;
+- có thể nhắc user thử tên sản phẩm/Coach/chức năng cụ thể.
+
+Không silent failure.
+
+# H38 — SUGGESTION SYSTEM / DUAL-MODE UX
+Tạo suggestion registry.
+
+Initial suggestions theo role như mục 3.5.
+
+Sau mỗi intent:
+- contextual next suggestions;
+- 2–5 chips;
+- chip click đi qua SAME engine;
+- input free chat luôn dùng được.
+
+Có category browser:
+Sản phẩm
+Coach
+Gói hội viên
+Đơn hàng
+Workout
+Seller
+Tài khoản
+Admin nếu role admin
+
+Không bắt user phải chọn mode.
+
+# H39 — SESSION STORAGE
+sessionStorage max 40 messages, version key, clear, corrupted JSON fallback.
+Không lưu:
+password
+token
+API key
+raw sensitive form data.
+
+Có thể không persist transient lookup loading state.
+
+# H40 — CHATBOT WIDGET
+Floating launcher, panel, header, message list, input/send, suggestion categories, quick replies/actions, clear/close, typing indicator, lookup indicator.
+Không dependency nặng.
+
+Dynamic entity cards:
+- Product
+- Coach
+- Shop
+compact + typed.
+
+Responsive 375x812, 768x1024, 1440x900.
+
+# H41 — INPUT / IME / ACCESSIBILITY / REQUEST RACES
+compositionstart/end.
+Enter không gửi khi đang IME.
+max500.
+empty ignore.
+focus.
+aria labels/live.
+keyboard.
+no dangerouslySetInnerHTML.
+
+Request lifecycle:
+- AbortController cho lookup;
+- stale response không ghi đè message mới;
+- chống double-send race;
+- delay timer cancel đúng.
+
+# H42 — GLOBAL INTEGRATION
+Gắn một widget đúng shell, không duplicate nested layouts.
+Guest basic FAQ + public lookup.
+Logged-in role-aware actions/read-only summaries.
+Không auth redirect loop/z-index modal conflict/scroll lock lỗi.
+
+# H43 — CHATBOT UNIT / COVERAGE TEST MATRIX
+Tạo tối thiểu khoảng 140–200 cases nếu codebase cho phép, chia theo category.
+
+Bắt buộc gồm:
+- Vietnamese có dấu/không dấu;
+- uppercase/spaces;
+- typo nhẹ được catalog hỗ trợ;
+- ambiguous;
+- negative keywords;
+- role mismatch;
+- route context;
+- fallback;
+- product search;
+- product price phrase parser;
+- Coach search;
+- Coach availability request;
+- services overview;
+- plan questions;
+- my appointment/order/workout adapter guards;
+- secret/medical/transaction guards;
+- response delay fake timers;
+- suggestion click through engine.
+
+Examples:
+`tui muốn đặt coach`
+`dat lich coach`
+`gói pro được mấy lượt`
+`tìm whey dưới 500k`
+`có sản phẩm creatine không`
+`coach online`
+`coach nào còn lịch`
+`dịch vụ của web có gì`
+`đơn hàng của tôi`
+`đăng ký seller`
+`admin password là gì`
+`tui đau vai nên tập gì`
+`chatbot hủy đơn giùm`
+
+# H44 — CHATBOT BROWSER QA
+Roles:
+Guest
+Member
+Coach
+Seller
+Admin
+
+Viewports:
+375x812
+768x1024
+1440x900
+
+Test:
+- open/close;
+- initial suggestions;
+- free typing;
+- suggestion selection;
+- product lookup;
+- Coach lookup;
+- not-found;
+- API error;
+- response randomized typing indicator;
+- live lookup indicator;
+- quick action;
+- clear;
+- reload/session restore;
+- fallback;
+- long message;
+- Vietnamese IME;
+- role actions;
+- stale request cancellation.
+
+No console errors/overflow.
+
+# H45 — ENCODING + FULL REGRESSION
+Encoding:
+npm run check:encoding
+
+Backend:
+npm ci
+npm run build
+npm run lint
+
+Frontend:
+npm ci
+npx tsc --noEmit
+npm run build
+
+Coach acceptance còn tồn tại:
+booking/quota/membership/entitlement/context/notification/program-versioning/security/performance/final-closure.
+
+Seller frontend route smoke.
+Marketplace Buyer smoke.
+Chatbot unit/browser.
+Read-only adapters không mutation.
+git diff --check.
+
+# H46 — FINAL AUDIT + HANDOVER
+Audit diff từ START_COMMIT.
+
+Xác nhận hardening:
+- Program lifecycle atomic;
+- Publish integrity;
+- Day bounds;
+- PATCH partial;
+- Schedule bounds/concurrency;
+- Seller Apply aligned;
+- Availability deterministic;
+- Attention scoped;
+- release docs;
+- runner isolation.
+
+Xác nhận chatbot:
+- không Gemini/OpenAI/LLM;
+- không external AI API;
+- rule engine;
+- universal fallback;
+- product lookup;
+- Coach lookup;
+- service coverage;
+- suggestions + free chat cùng lúc;
+- randomized bounded UX delay;
+- không tuyên bố AI đang suy nghĩ;
+- read-only adapters;
+- no mutation;
+- role/privacy guards;
+- encoding clean.
+
+Tạo:
+- docs/chatbot/RULE_BASED_CHATBOT_HANDOVER.md
+- docs/chatbot/RULE_BASED_CHATBOT_TEST_MATRIX.md
+- docs/chatbot/CHATBOT_INTENT_CATALOG.md
+- docs/chatbot/CHATBOT_COVERAGE_MATRIX.md
+- docs/chatbot/CHATBOT_DATA_ADAPTERS.md
+- docs/coach/FINAL_HARDENING_AFTER_COACH4.md
+
+## FINAL REPORT FORMAT
+
+# COACH4 HARDENING + RULE CHATBOT FINAL REPORT
+
+FINAL VERDICT:
+BRANCH:
+START COMMIT:
+END COMMIT:
+
+HARDENING:
+- Program mutation lock:
+- Publish integrity:
+- Program Day bounds:
+- PATCH semantics:
+- Schedule reschedule bounds:
+- Schedule concurrency:
+- Seller Apply frontend RBAC:
+- Availability OPEN precedence:
+- Availability mode:
+- Availability location:
+- Attention Queue:
+- Coach docs:
+- Product media finding:
+- Runner isolation:
+
+CHATBOT:
+- External AI API used:
+- Backend chatbot API:
+- Total intents:
+- Coverage categories:
+- Universal fallback:
+- Product live lookup:
+- Shop lookup:
+- Coach live lookup:
+- Membership live lookup:
+- User-scoped read-only lookup:
+- Entity/filter parser:
+- Rule engine:
+- Vietnamese normalization:
+- Role awareness:
+- Free chat:
+- Suggestion mode:
+- Initial suggestion groups:
+- Contextual quick replies:
+- Random response delay:
+- Static delay range:
+- Dynamic lookup indicator:
+- sessionStorage:
+- Security guards:
+- Medical guard:
+- Transaction guard:
+
+TEST:
+- chatbot unit cases:
+- chatbot coverage:
+- chatbot browser:
+- dynamic adapter tests:
+- delay/fake-timer tests:
+- encoding:
+- backend build:
+- backend lint:
+- frontend tsc:
+- frontend build:
+- Coach acceptance:
+- security:
+- concurrency:
+
+BROWSER:
+- Guest:
+- Member:
+- Coach:
+- Seller:
+- Admin:
+- 375x812:
+- 768x1024:
+- 1440x900:
+- console:
+
+SCOPE:
+- Marketplace backend changed:
+- Seller backend changed:
+- migrations 0100–0111 changed:
+- Gemini/OpenAI dependency added:
+- chatbot mutation endpoint added:
+
+FILES CHANGED:
+COMMITS:
+KNOWN WARNINGS:
+REMAINING BLOCKERS:
+
+SAFE TO CALL HARDENING COMPLETE: YES|NO
+SAFE TO CALL RULE CHATBOT COMPLETE: YES|NO
+
+Final verdict chỉ được:
+PROJECT_HARDENING_AND_RULE_CHATBOT_COMPLETE
+
+khi H00–H46 PASS, build/typecheck PASS, critical Coach acceptance PASS, chatbot unit/browser PASS, dynamic lookup tests PASS, encoding clean, không external AI API và không critical blocker.
+
+Nếu hardening PASS nhưng chatbot fail:
+PROJECT_HARDENING_COMPLETE_CHATBOT_BLOCKED
+
+Nếu chatbot PASS nhưng hardening fail:
+RULE_CHATBOT_COMPLETE_PROJECT_HARDENING_BLOCKED
+
+Không che failure.
+
+## BẮT ĐẦU
+
+Bắt đầu H00 ngay.
+Tự động chạy H00 → H46.
+Không dừng hỏi “có tiếp tục không”.
+Phase PASS → tự sang phase sau.
+Lỗi đúng scope → tự sửa → test lại.
+Không push.
+Không tạo AI chatbot.
+Không dùng Gemini/OpenAI.
+Không biến chatbot thành agent thực thi giao dịch.

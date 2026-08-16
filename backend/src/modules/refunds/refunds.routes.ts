@@ -1,0 +1,15 @@
+import {Router} from "express";
+import {z} from "zod";
+import {authenticate,authorize} from "../../middleware/auth";
+import {validate} from "../../middleware/validate";
+import {UserRole} from "../../types";
+import {refundsService,type RefundStatus} from "./refunds.service";
+const router=Router();
+const id=z.object({refundId:z.coerce.number().int().positive()});
+const filter=z.object({status:z.enum(["PENDING","COMPLETED","FAILED"]).optional()}).strict();
+const update=z.object({status:z.enum(["PENDING","COMPLETED","FAILED"]),reason:z.string().trim().min(3).max(500),externalReference:z.string().trim().max(255).optional()}).strict();
+router.use(authenticate,authorize(UserRole.ADMIN));
+router.get("/",validate(filter,"query"),async(req,res,next)=>{try{res.json({success:true,data:await refundsService.list(req.query.status as RefundStatus|undefined)});}catch(error){next(error);}});
+router.get("/:refundId",validate(id,"params"),async(req,res,next)=>{try{res.json({success:true,data:await refundsService.detail(Number(req.params.refundId))});}catch(error){next(error);}});
+router.patch("/:refundId/status",validate(id,"params"),validate(update),async(req,res,next)=>{try{if(!req.user){res.status(401).json({success:false,message:"Authentication required"});return;}res.json({success:true,data:await refundsService.update(Number(req.params.refundId),req.user.userId,req.body)});}catch(error){next(error);}});
+export default router;

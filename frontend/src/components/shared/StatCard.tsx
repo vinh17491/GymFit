@@ -1,0 +1,4 @@
+import type { ComponentType, ReactNode } from 'react';
+type IconComponent=ComponentType<{size?:number|string}>;
+interface StatCardProps { title:string; value:string|number; icon?:ReactNode|IconComponent; subtitle?:string; className?:string; trend?:{value:number;positive:boolean}; }
+export default function StatCard({title,value,icon,subtitle,className,trend}:StatCardProps) { const renderedIcon=typeof icon==='function'?(() => { const Icon=icon as IconComponent; return <Icon size={18}/>; })():icon; return <article className={`metric-card metric-lime ${className||''}`}><div className="metric-top"><span>{title}</span>{icon && <span className="metric-icon">{renderedIcon}</span>}</div><strong>{typeof value==='number'?value.toLocaleString('vi-VN'):value}</strong>{trend && <small className={trend.positive?'trend-positive':'trend-negative'}>{trend.positive?'↑':'↓'} {Math.abs(trend.value)}%</small>}{subtitle && <small>{subtitle}</small>}</article>; }

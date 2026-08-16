@@ -1,0 +1,12 @@
+import api from '../api/axios';
+import type { AdminCoach, AdminCoachMember, AdminCoachStatus, AdminCoachSummary, AdminPage, AdminReassignInput } from '../types/adminCoach';
+const data = <T,>(response: { data: { data: T } }) => response.data.data;
+const page = <T,>(response: { data: { data: AdminPage<T> } }) => response.data.data;
+export const listAdminCoaches = async (params: Record<string, unknown>) => page<AdminCoach>(await api.get('/admin/coaches', { params }));
+export const getAdminCoachSummary = async () => data<AdminCoachSummary>(await api.get('/admin/coaches/summary'));
+export const getAdminCoach = async (coachId: number) => data<AdminCoach>(await api.get(`/admin/coaches/${coachId}`));
+export const setAdminCoachStatus = async (coachId: number, status: AdminCoachStatus, reason?: string) => data<AdminCoach>(await api.patch(`/admin/coaches/${coachId}/status`, { status, reason: reason || null }));
+export const listAdminCoachMembers = async (coachId: number, params: Record<string, unknown>) => page<AdminCoachMember>(await api.get(`/admin/coaches/${coachId}/members`, { params }));
+export const listUnassignedMembers = async (params: Record<string, unknown>) => page<AdminCoachMember>(await api.get('/admin/coaches/coach-members/unassigned', { params }));
+export const assignAdminMember = async (coachId: number, memberId: number) => data<AdminCoachMember>(await api.post(`/admin/coaches/${coachId}/members/${memberId}/assign`, {}));
+export const reassignAdminMember = async (coachId: number, memberId: number, input: AdminReassignInput) => data<unknown>(await api.post(`/admin/coaches/${coachId}/members/${memberId}/reassign`, input));

@@ -1,0 +1,1406 @@
+# MASTER TASK — WEB-GYM / COACH3 — PROJECT-WIDE TEXT ENCODING & MOJIBAKE RECOVERY
+## QUÉT TOÀN DỰ ÁN, SỬA LỖI CHỮ NGOẰN NGHÈO, KIỂM TRA RUNTIME VÀ NGĂN TÁI PHÁT
+## TỰ ĐỘNG THỰC THI NHIỀU PHASE — KHÔNG HỎI XÁC NHẬN LẶT VẶT
+
+Repository:
+vinh17491/GymFit
+
+Nhánh bắt buộc:
+coach3
+
+======================================================================
+0. MỤC TIÊU
+======================================================================
+
+Dự án hiện có lỗi hiển thị chữ do encoding/mojibake, ví dụ các chuỗi kiểu:
+
+- `KhÃ´ng thá»ƒ...`
+- `Quáº£n lÃ½ sáº£n pháº©m`
+- `Äang bÃ¡n`
+- `TrÆ°á»›c`
+- `â€”`
+- `â€“`
+- `â€¦`
+- `Â·`
+- `â‚«`
+- `â€œ...â€`
+- `vÃ...`
+- ký tự `�`
+- ký tự điều khiển C1 ẩn U+0080–U+009F
+
+Mục tiêu KHÔNG phải dịch toàn dự án sang tiếng Việt.
+
+Mục tiêu là:
+
+1. tìm TẤT CẢ text bị lỗi encoding trong repository;
+2. sửa đúng text dự định ban đầu;
+3. giữ nguyên text tiếng Anh hợp lệ;
+4. giữ nguyên tiếng Việt hợp lệ;
+5. không làm thay đổi nghiệp vụ;
+6. kiểm tra text lấy từ API/database;
+7. kiểm tra các cột database có thực sự lưu Unicode an toàn;
+8. kiểm tra toàn bộ giao diện runtime theo role;
+9. tạo công cụ tự động để lỗi mojibake không quay lại;
+10. chỉ kết luận hoàn thành khi source + build + runtime đều sạch.
+
+Final verdict mong muốn:
+
+PROJECT_TEXT_ENCODING_CLEAN
+
+Không được kết luận CLEAN chỉ vì grep source không còn match.
+Phải có browser/runtime evidence.
+
+======================================================================
+1. VẤN ĐỀ ĐÃ XÁC NHẬN TRƯỚC KHI CHẠY
+======================================================================
+
+Trên branch coach3 đã xác nhận:
+
+A. `frontend/index.html` đã có:
+`<meta charset="UTF-8"/>`
+
+=> Không được sửa lỗi bằng cách chỉ thêm meta charset.
+=> Root cause đã tồn tại trực tiếp trong source/text/data.
+
+B. File:
+`frontend/src/pages/admin/AdminProductsPage.tsx`
+
+đang có rất nhiều mojibake trực tiếp trong user-visible strings, ví dụ:
+- `KhÃ´ng thá»ƒ táº£i danh sÃ¡ch sáº£n pháº©m`
+- `Quáº£n lÃ½ sáº£n pháº©m`
+- `Äang bÃ¡n`
+- `Táº¡m áº©n`
+- `TrÆ°á»›c`
+- `â‚«`
+- `Â·`
+- `â€œ...â€`
+
+C. File:
+`frontend/src/pages/admin/AdminProductVariantsPage.tsx`
+
+đang có:
+- `â€”`
+- `Â·`
+- `Savingâ€¦`
+
+D. File:
+`docs/coach/COACH2_FINAL_CLOSURE_PROGRESS.md`
+
+đang có mojibake như:
+- `C00 â€”`
+- `vÃ...`
+- `0011â€“0016`
+
+Những file trên là CONFIRMED.
+Nhưng nhiệm vụ này KHÔNG được dừng ở các file đã biết.
+Phải quét toàn repository và runtime.
+
+======================================================================
+2. QUYỀN THỰC THI — KHÔNG HỎI XÁC NHẬN LẶT VẶT
+======================================================================
+
+Người dùng đã yêu cầu thực hiện trọn gói nhiệm vụ này.
+
+Trong phạm vi nhiệm vụ, TỰ ĐỘNG được phép:
+
+- đọc toàn repository;
+- tạo scanner/report;
+- sửa text literals;
+- sửa placeholder/title/aria-label/toast/dialog;
+- sửa documentation;
+- sửa seed/static configuration text;
+- thêm `.editorconfig`;
+- cập nhật `.gitattributes` CHỈ khi không gây line-ending churn;
+- cập nhật root package scripts;
+- chạy npm ci;
+- build;
+- lint;
+- typecheck;
+- chạy acceptance;
+- chạy browser QA;
+- tạo disposable database;
+- chạy read-only database audit;
+- tạo local commit nhỏ;
+- tự sửa lỗi thuộc nhiệm vụ;
+- tự chuyển phase tiếp theo khi PASS.
+
+KHÔNG hỏi:
+- "có được sửa file này không?"
+- "có được chạy build/test không?"
+- "có được tiếp tục không?"
+- "có được tạo scanner không?"
+- "có được kiểm tra DB không?"
+- "có được sửa thêm trang khác không?"
+
+Chỉ dừng khi gặp blocker an toàn thật:
+
+1. branch không phải `coach3`;
+2. nguy cơ ghi đè thay đổi người dùng không thể tách;
+3. cần xóa/drop/truncate dữ liệu thật;
+4. không xác định được database target;
+5. cần secret không có;
+6. checksum migration mismatch;
+7. tool/hệ điều hành bắt buộc quyền ngoài khả năng hiện tại;
+8. chỉ có thể sửa lỗi bằng cách thay đổi nghiệp vụ không liên quan;
+9. dữ liệu DB bị lỗi nhưng không thể suy ra text đúng một cách chắc chắn;
+10. phát hiện encoding corruption trong binary mà sửa tự động có nguy cơ phá file.
+
+Không tìm cách vượt cơ chế bảo mật của hệ điều hành/Codex.
+
+======================================================================
+3. QUY TẮC CỨNG — KHÔNG PHÁ NGHIỆP VỤ
+======================================================================
+
+Nhiệm vụ này là TEXT/ENCODING RECOVERY.
+
+Được sửa file ở bất kỳ module nào nếu và chỉ nếu thay đổi là:
+- text hiển thị;
+- accessibility text;
+- documentation;
+- encoding config;
+- encoding scanner/test;
+- deterministic static/seed text repair;
+- Unicode-safe schema repair đã được chứng minh cần thiết.
+
+KHÔNG được:
+- đổi state machine;
+- đổi permission;
+- đổi route semantics;
+- đổi giá;
+- đổi tồn kho;
+- đổi commission;
+- đổi order/refund/settlement rules;
+- đổi Coach quota;
+- đổi Membership rules;
+- đổi Seller workflow;
+- đổi API business contract không liên quan encoding;
+- refactor kiến trúc;
+- đổi framework;
+- đổi database;
+- thêm chức năng mới;
+- dịch English hợp lệ chỉ vì muốn "đồng bộ";
+- sửa tên riêng/brand/user data nếu không bị encoding corruption.
+
+Các migration cũ:
+- KHÔNG rewrite bất kỳ migration đã apply;
+- đặc biệt không rewrite `0100`–`0111`;
+- nếu Unicode schema thật sự cần forward fix, tạo migration MỚI theo convention thực tế sau khi audit.
+
+Không `git add .`.
+Không push.
+Không reset/clean/restore toàn repo.
+
+======================================================================
+4. ĐỊNH NGHĨA MOJIBAKE CẦN PHÁT HIỆN
+======================================================================
+
+Scanner phải phát hiện HIGH-CONFIDENCE signatures, tối thiểu:
+
+- `Ã`
+- `Â·`, `Â `, `Â©`, `Â®`
+- `â€”`
+- `â€“`
+- `â€¦`
+- `â€œ`
+- `â€`
+- `â€™`
+- `â€˜`
+- `â‚«`
+- `â†’`
+- `â†`
+- `Ä‘` và các chuỗi `Ä` bất thường do UTF-8 decode sai
+- `Æ°` và các chuỗi `Æ` bất thường
+- `áº`
+- `á»`
+- `ðŸ`
+- `ï¿½`
+- Unicode replacement character `�` U+FFFD
+- C1 control U+0080–U+009F
+- chuỗi UTF-8 bị decode 2 lần như `Ãƒ`, `Ã‚`, `Ã¢`
+- zero-width/BOM bất thường nằm giữa text
+
+KHÔNG được coi mọi chữ:
+`â`, `ă`, `ơ`, `ư`, `đ`, `ê`, `ô`
+là lỗi.
+
+Tiếng Việt hợp lệ phải được giữ nguyên.
+
+Scanner phải có:
+- path;
+- line;
+- column;
+- matched signature;
+- short context;
+- severity;
+- category.
+
+======================================================================
+5. PHẠM VI SCAN
+======================================================================
+
+Quét tất cả file text trong repository, gồm tối thiểu:
+
+- `frontend/src/**`
+- `frontend/public/**`
+- `frontend/index.html`
+- `backend/src/**`
+- `db/**`
+- `docs/**`
+- `bank/**` nếu tồn tại
+- root README/config/scripts
+- JSON
+- SQL
+- Markdown
+- TS/TSX/JS/JSX
+- HTML
+- CSS
+- text templates
+
+Loại khỏi primary source scan:
+- `.git/**`
+- `node_modules/**`
+- binary/image/font/video
+- lock files nếu scanner không cần
+- `frontend/dist/**` ở source phase
+- logs/runtime temp
+- uploads
+- test database files
+
+`frontend/dist/**` phải được kiểm tra RIÊNG sau khi rebuild.
+
+======================================================================
+6. CƠ CHẾ PHASE
+======================================================================
+
+Thực hiện tuần tự:
+
+E00 → E35
+
+Không dừng hỏi user giữa các phase.
+
+Sau mỗi phase cập nhật:
+`docs/encoding/PROJECT_TEXT_ENCODING_PROGRESS.md`
+
+Nếu thư mục chưa có:
+tạo.
+
+Status:
+- PASS
+- VERIFIED_NO_CHANGE
+- PARTIAL
+- BLOCKED
+
+Nếu phase fail do lỗi trong scope:
+tự sửa và chạy lại.
+
+======================================================================
+E00 — BASELINE / BRANCH / WORKTREE
+======================================================================
+
+Chạy:
+git branch --show-current
+git status --short
+git log -10 --oneline
+git diff --check
+
+Branch phải là:
+coach3
+
+Ghi START_COMMIT.
+
+Không sửa production code.
+
+Tạo:
+docs/encoding/PROJECT_TEXT_ENCODING_PROGRESS.md
+
+PASS → E01.
+
+======================================================================
+E01 — XÁC NHẬN ENCODING ENTRY POINT
+======================================================================
+
+Audit:
+- frontend/index.html
+- frontend/src/main.tsx
+- backend HTTP response path
+- Express response JSON
+- content-type headers nếu có
+- static file serving
+- Vite config
+
+Xác nhận:
+- HTML UTF-8;
+- JSON response UTF-8;
+- không có header ép ISO-8859-1/Windows-1252.
+
+Nếu charset đã đúng:
+VERIFIED_NO_CHANGE.
+
+Không "fix" meta charset nếu nó đã đúng.
+
+PASS → E02.
+
+======================================================================
+E02 — TẠO REPOSITORY ENCODING SCANNER
+======================================================================
+
+Tạo:
+`scripts/check-text-encoding.mjs`
+
+Yêu cầu:
+- Node built-in modules, không dependency nặng;
+- recursively scan text;
+- exclude directories theo section 5;
+- line/column/context;
+- high-confidence patterns;
+- C1 controls;
+- U+FFFD;
+- JSON report option;
+- exit 1 khi có HIGH severity;
+- deterministic;
+- Windows + Unix compatible.
+
+Thêm root script:
+
+`npm run check:encoding`
+
+Không auto-fix trong scanner.
+
+Scanner chỉ phát hiện.
+
+PASS → E03.
+
+======================================================================
+E03 — BASELINE SCAN TOÀN REPOSITORY
+======================================================================
+
+Chạy scanner.
+
+Xuất:
+`docs/encoding/ENCODING_FINDINGS_BASELINE.md`
+và nếu hữu ích:
+`docs/encoding/encoding-findings-baseline.json`
+
+Nhóm theo:
+- frontend source;
+- backend source;
+- SQL;
+- docs;
+- config;
+- generated;
+- archive.
+
+Không sửa ở phase này.
+
+PASS → E04.
+
+======================================================================
+E04 — PHÂN LOẠI FALSE POSITIVE / TRUE MOJIBAKE
+======================================================================
+
+Review từng finding.
+
+Phân loại:
+CONFIRMED_MOJIBAKE
+VALID_VIETNAMESE
+VALID_ENGLISH
+VALID_SYMBOL
+GENERATED_COPY
+HISTORICAL_ARCHIVE
+AMBIGUOUS
+
+Không mass replace `â` hoặc ký tự Unicode.
+
+Tạo mapping chính xác:
+broken → intended.
+
+Nếu không chắc:
+AMBIGUOUS, không tự đoán.
+
+PASS → E05.
+
+======================================================================
+E05 — SỬA ADMIN PRODUCTS PAGE
+======================================================================
+
+File confirmed:
+`frontend/src/pages/admin/AdminProductsPage.tsx`
+
+Sửa toàn bộ mojibake.
+
+Ví dụ phải thành text Unicode đúng:
+- Không thể tải danh sách sản phẩm.
+- Không thể tải bộ lọc.
+- Đã cập nhật sản phẩm.
+- Đã tạo sản phẩm.
+- Đã xóa sản phẩm.
+- Quản lý sản phẩm.
+- Thêm sản phẩm.
+- Tìm sản phẩm.
+- Mọi danh mục.
+- Trạng thái.
+- Đang bán.
+- Tạm ẩn.
+- Sắp xếp.
+- Tên A–Z.
+- Giá tăng.
+- Giá giảm.
+- Đang tải…
+- Ảnh.
+- Sản phẩm.
+- Giá.
+- Tồn.
+- Thao tác.
+- Trước.
+- Sửa sản phẩm.
+- Tên sản phẩm.
+- Thương hiệu.
+- Mô tả.
+- dấu `·`
+- dấu `“ ”`
+- ký hiệu tiền tệ đúng theo nghiệp vụ hiện có.
+
+QUAN TRỌNG:
+Không tự đổi USD/VND logic.
+Nếu source intended `₫`, chỉ sửa mojibake `â‚«` → `₫`.
+Không thay currency calculation.
+
+Chạy:
+frontend tsc
+frontend build
+encoding scanner targeted file.
+
+PASS → E06.
+
+======================================================================
+E06 — SỬA ADMIN PRODUCT VARIANTS PAGE
+======================================================================
+
+Confirmed:
+`frontend/src/pages/admin/AdminProductVariantsPage.tsx`
+
+Sửa:
+- `â€”` → `—`
+- `Â·` → `·`
+- `Savingâ€¦` → `Saving…`
+
+Quét toàn file và sửa mọi signature khác.
+
+Không dịch toàn page sang tiếng Việt nếu English hiện tại là hợp lệ.
+
+PASS → E07.
+
+======================================================================
+E07 — GLOBAL LAYOUT / NAVIGATION / SHARED COMPONENTS
+======================================================================
+
+Quét:
+- frontend/src/components/layout/**
+- shared UI components
+- toast helpers
+- modal/dialog components
+- table components
+- pagination
+- empty/error/loading states
+- command menu
+- marketing header/footer
+- sidebar
+
+Sửa mojibake trong:
+- label;
+- tooltip;
+- title;
+- aria-label;
+- placeholder;
+- status text.
+
+Không thay route.
+
+PASS → E08.
+
+======================================================================
+E08 — PUBLIC MARKETING PAGES
+======================================================================
+
+Quét runtime/source:
+- Landing
+- About
+- Contact
+- Blog
+- Success Stories
+- Membership
+- public Coaches
+- public Exercises
+- Workout Programs
+- public Products
+- public Shops
+- Videos
+
+Không dịch English hợp lệ.
+Chỉ repair broken encoding.
+
+PASS → E09.
+
+======================================================================
+E09 — AUTH PAGES
+======================================================================
+
+Quét:
+- Login
+- Register
+- access denied
+- validation messages
+- password helper
+- auth toast/errors
+
+Kiểm tra Vietnamese names entered/rendered:
+`Đỗ Đức Bích Ngân`
+`Quách Gia Vinh`
+`Diệp Tư Nguyên`
+
+Chỉ dùng test fixture, không hardcode production.
+
+PASS → E10.
+
+======================================================================
+E10 — MEMBER DASHBOARD & PROFILE
+======================================================================
+
+Quét:
+- Dashboard
+- Profile
+- Settings
+- Loyalty
+- Referral
+- Coupons
+- Tickets
+- Invoices
+- Notifications
+
+Sửa source/runtime mojibake.
+
+PASS → E11.
+
+======================================================================
+E11 — MEMBER COACH / BOOKING / APPOINTMENTS
+======================================================================
+
+Quét:
+- Coach list/detail
+- Availability labels
+- Booking
+- quota
+- Member Appointment list/detail
+- mode/location
+- status
+- errors/toasts
+
+Không thay Coach business rules.
+
+PASS → E12.
+
+======================================================================
+E12 — MEMBER WORKOUT / PROGRESS
+======================================================================
+
+Quét:
+- Workouts home
+- Program
+- Schedule
+- Sessions
+- Session detail
+- Set logs
+- Progress
+- exercise names/descriptions
+- Coach notes
+
+Phân biệt:
+source mojibake vs data mojibake.
+
+PASS → E13.
+
+======================================================================
+E13 — COACH WORKSPACE
+======================================================================
+
+Quét:
+- Coach Dashboard
+- Profile
+- Availability
+- Appointments
+- Exercise Library
+- Program List
+- Builder
+- Member List/Detail
+- Context
+- Assignments
+- Schedules
+- Sessions
+- Progress
+- Attention
+- Notifications
+
+Không sửa logic Coach ngoài text.
+
+PASS → E14.
+
+======================================================================
+E14 — SELLER PAGES — TEXT ONLY
+======================================================================
+
+Quét:
+- Seller application
+- Seller foundation/dashboard
+- Shop
+- Brand requests
+- Products
+- Product detail/form
+- Orders
+- Order detail
+- Revenue
+- Complaints
+
+ĐƯỢC sửa text encoding.
+KHÔNG được thay Seller business logic/API/state transition.
+
+PASS → E15.
+
+======================================================================
+E15 — ADMIN PAGES — TEXT ONLY
+======================================================================
+
+Quét:
+- Admin Dashboard
+- Products
+- Product Variants
+- Catalog
+- Inventory
+- Moderation
+- Orders
+- Refunds
+- Settlements
+- Seller Applications
+- Shops
+- Brand Requests
+- Coaches
+- Exercises
+- Workout Governance
+- Analytics
+- Audit
+- Revenue
+- Backup
+
+Đặc biệt chạy scanner toàn `frontend/src/pages/admin/**`.
+
+PASS → E16.
+
+======================================================================
+E16 — CUSTOMER COMMERCE PAGES — TEXT ONLY
+======================================================================
+
+Quét:
+- Product list/detail
+- Cart
+- Checkout
+- Orders
+- Order detail
+- Complaints
+- Reviews
+- Shop
+
+Không đổi commerce rules.
+
+PASS → E17.
+
+======================================================================
+E17 — BACKEND USER-VISIBLE STRINGS
+======================================================================
+
+Quét toàn:
+`backend/src/**`
+
+Tập trung:
+- AppError messages;
+- API success/error message;
+- validation;
+- email/template text;
+- invoice/pdf labels;
+- notification title/message;
+- seed/test fixtures nếu user-visible.
+
+Sửa mojibake.
+Không đổi status code/error code/business condition.
+
+PASS → E18.
+
+======================================================================
+E18 — SQL / SEED / MIGRATION STATIC TEXT
+======================================================================
+
+Quét:
+`db/**`
+
+Tìm mojibake trong:
+- seed Plan names;
+- category/brand names;
+- Exercise names/descriptions;
+- notification seed;
+- system labels;
+- default descriptions.
+
+KHÔNG rewrite migration đã apply.
+
+Nếu lỗi chỉ nằm trong migration cũ đã apply:
+- không sửa file cũ;
+- ghi finding;
+- chuẩn bị forward repair nếu dữ liệu canonical thật sự bị lỗi.
+
+PASS → E19.
+
+======================================================================
+E19 — DOCUMENTATION ACTIVE
+======================================================================
+
+Quét:
+- docs/*.md
+- docs/coach/**
+- docs/marketplace/**
+- active handover/readme/task docs
+
+Sửa CONFIRMED mojibake.
+
+Đặc biệt sửa:
+`docs/coach/COACH2_FINAL_CLOSURE_PROGRESS.md`
+
+Không thay factual history.
+Chỉ sửa encoding/text presentation.
+
+PASS → E20.
+
+======================================================================
+E20 — DOCUMENTATION ARCHIVE
+======================================================================
+
+Quét:
+`docs/archive/**`
+
+Nếu mojibake rõ ràng và repair deterministic:
+sửa.
+
+Nếu archive cần byte-for-byte historical preservation:
+không sửa; thêm finding `ARCHIVE_PRESERVED`.
+
+Không để archive false-positive làm final source gate fail nếu chủ động allowlist documented.
+
+PASS → E21.
+
+======================================================================
+E21 — UNICODE DATABASE SCHEMA AUDIT
+======================================================================
+
+Read-only audit canonical/dev DB.
+
+Xác định tất cả user-facing text columns.
+
+Ưu tiên:
+- Users.name
+- Plans
+- ProductCategories
+- Brands
+- Products
+- Product variants
+- Shops
+- Exercises
+- CoachProfiles
+- Notifications
+- CRM text
+- Complaints
+- Reviews
+- Orders notes
+- Seller text fields
+
+Phân loại SQL type:
+NVARCHAR/NCHAR
+VARCHAR/CHAR/TEXT
+
+Không mặc định mọi VARCHAR là lỗi.
+Đánh giá liệu Vietnamese roundtrip có an toàn với current collation/codepage.
+
+Không mutate DB.
+
+Xuất:
+docs/encoding/DATABASE_UNICODE_SCHEMA_AUDIT.md
+
+PASS → E22.
+
+======================================================================
+E22 — DATABASE CONTENT MOJIBAKE SCAN — READ ONLY
+======================================================================
+
+Chỉ trên intended local/dev canonical database đã xác minh.
+
+Scan user-facing text rows bằng HIGH-CONFIDENCE signatures.
+
+Không dump secret/password/token.
+
+Không ghi dữ liệu.
+
+Report:
+- table;
+- column;
+- primary key;
+- masked/short value;
+- signature;
+- source classification nếu suy ra được.
+
+Tạo:
+docs/encoding/DATABASE_MOJIBAKE_FINDINGS.md
+
+Phân loại:
+SYSTEM_STATIC
+SEED_STATIC
+USER_GENERATED
+UNKNOWN
+
+PASS → E23.
+
+======================================================================
+E23 — UNICODE ROUNDTRIP DATABASE TEST
+======================================================================
+
+Dùng disposable DB hoặc controlled disposable fixture.
+
+Test Unicode roundtrip với:
+- `Tiếng Việt đầy đủ: Đặng Thị Hồng, Nguyễn, Trường, sản phẩm, thương hiệu`
+- punctuation `— – … “ ” ‘ ’ ·`
+- symbol `₫`
+- emoji nếu schema/user experience có hỗ trợ
+
+Test:
+insert → query → API → JSON → frontend-safe string.
+
+Không để fixture trong canonical.
+
+Nếu roundtrip PASS:
+không đổi schema.
+
+Nếu fail:
+ghi exact column/type/root cause.
+
+PASS/PARTIAL → E24.
+
+======================================================================
+E24 — DATABASE REPAIR CHỈ KHI DETERMINISTIC
+======================================================================
+
+Chỉ chạy nếu E22/E23 tìm lỗi thật.
+
+Không sửa user-generated text bằng phỏng đoán.
+
+Được auto-repair CHỈ khi:
+- local/dev target verified;
+- text là system/seed static;
+- broken value và intended value xác định 100%;
+- backup/rollback path rõ;
+- update theo exact PK/exact broken value;
+- row count assertion.
+
+Không rewrite migration cũ.
+
+Nếu cần forward schema/data migration:
+tạo migration mới theo convention hiện tại,
+không dùng lại version đã tồn tại.
+
+Nếu user-generated/unknown ambiguous:
+không mutate;
+ghi `MANUAL_DATA_REVIEW_REQUIRED`.
+
+Nhiệm vụ vẫn tiếp tục các phase source/browser.
+
+PASS/PARTIAL → E25.
+
+======================================================================
+E25 — API JSON RUNTIME TEXT SCAN
+======================================================================
+
+Khởi chạy backend với test/local database phù hợp.
+
+Gọi representative endpoints cho:
+Guest
+Member
+Coach
+Seller
+Admin
+
+Recursively scan ALL JSON string values trả về cho mojibake signatures.
+
+Bao gồm:
+- message;
+- data strings;
+- pagination metadata text nếu có;
+- notification;
+- product/category/brand;
+- Coach;
+- Plan;
+- Exercise.
+
+Tạo:
+docs/encoding/API_TEXT_RUNTIME_AUDIT.md
+
+PASS → E26.
+
+======================================================================
+E26 — FONT / CSS / HTML RENDERING SANITY
+======================================================================
+
+Kiểm tra lỗi không phải encoding nhưng giống lỗi chữ:
+- font fallback;
+- missing Vietnamese glyph;
+- text-transform;
+- letter-spacing cực đoan;
+- CSS content;
+- pseudo-elements;
+- icon font misuse.
+
+Inter hiện hỗ trợ Vietnamese thông thường.
+Không đổi font nếu glyph render đúng.
+
+Kiểm tra `<html lang>`.
+Nếu giao diện chủ yếu Vietnamese/mixed:
+chỉ đổi `lang` khi hợp lý và không gây regression.
+
+PASS → E27.
+
+======================================================================
+E27 — UNICODE NORMALIZATION / BOM AUDIT
+======================================================================
+
+Scan:
+- NFC/NFD anomalies;
+- BOM đầu file;
+- zero-width chars;
+- NBSP bất thường;
+- C1 controls.
+
+Không mass-normalize toàn repository gây huge diff.
+
+Chỉ sửa user-visible text hoặc file có xác nhận anomaly.
+
+UTF-8 BOM ở đầu file chỉ sửa khi tooling thật sự bị ảnh hưởng.
+
+PASS → E28.
+
+======================================================================
+E28 — PREVENTION CONFIG
+======================================================================
+
+Nếu chưa có:
+tạo `.editorconfig`:
+
+root = true
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+Không ép whitespace format gây churn.
+
+Review `.gitattributes`.
+Hiện không được tạo thay đổi line ending hàng loạt.
+
+Root package.json:
+thêm script:
+`check:encoding`
+
+Có thể thêm:
+`verify:text`
+
+gồm scanner + build checks phù hợp.
+
+Không auto-fix source.
+
+PASS → E29.
+
+======================================================================
+E29 — GENERATED FRONTEND DIST
+======================================================================
+
+Không hand-edit minified bundle.
+
+Sau source clean:
+- build frontend;
+- nếu `frontend/dist` tracked, regenerate bằng build;
+- nếu untracked/ignored, không commit.
+
+Scan generated JS/HTML/CSS cho high-confidence mojibake.
+
+Nếu generated output còn mojibake:
+quay lại source/data root cause.
+Không patch dist thủ công.
+
+PASS → E30.
+
+======================================================================
+E30 — FULL STATIC CLEAN GATE
+======================================================================
+
+Chạy:
+npm run check:encoding
+
+Expected:
+0 HIGH severity unresolved trong active source.
+
+Allowed exceptions phải nằm trong documented allowlist với lý do.
+
+Chạy:
+git diff --check
+
+PASS → E31.
+
+======================================================================
+E31 — BUILD / TYPECHECK / LINT
+======================================================================
+
+Root:
+npm run check:encoding
+
+Backend:
+npm ci
+npm run build
+npm run lint
+
+Frontend:
+npm ci
+npx tsc --noEmit
+npm run build
+
+Không sửa business code để xử lý warning không liên quan.
+
+Critical:
+0 build error
+0 typecheck error
+0 new lint error do task.
+
+PASS → E32.
+
+======================================================================
+E32 — BROWSER CRAWL PUBLIC + MEMBER
+======================================================================
+
+Dùng browser QA tooling hiện có.
+Không thêm dependency nặng nếu không cần.
+
+Viewports:
+375x812
+768x1024
+1440x900
+
+Crawl public routes lấy từ App.tsx.
+
+Sau đó Member routes.
+
+Mỗi route:
+scan:
+- document.body.innerText
+- button text
+- labels
+- placeholder
+- title attributes
+- aria-label
+- select options
+- dialog
+- toast
+- error state
+- empty state
+
+Tự động fail nếu thấy high-confidence signature:
+`Ã`, `â€`, `â‚`, `Â·`, `áº`, `á»`, `Ä`, `Æ`, `�`, C1.
+
+Không flag Vietnamese hợp lệ.
+
+Chụp evidence route + offending text.
+
+PASS → E33.
+
+======================================================================
+E33 — BROWSER CRAWL COACH + SELLER + ADMIN
+======================================================================
+
+Tiếp tục cùng scan cho:
+Coach
+Seller
+Admin
+
+Đặc biệt:
+- `/admin/products`
+- `/admin/products/:id/variants`
+- inventory/catalog
+- seller products/orders
+- Coach workspace
+
+Dùng disposable/test fixtures khi route cần dữ liệu.
+
+Không phá canonical.
+
+PASS → E34.
+
+======================================================================
+E34 — FULL REGRESSION + TEXT ROUNDTRIP
+======================================================================
+
+Chạy acceptance hiện có liên quan các module bị chạm.
+
+Tối thiểu:
+- auth regression nếu auth text touched;
+- Coach suites nếu Coach files touched;
+- Seller integrity/acceptance nếu Seller text files touched nhưng KHÔNG thay assertion logic;
+- Product regression/integrity nếu Admin Products source touched.
+
+Thêm lightweight text-encoding acceptance nếu hợp lý.
+
+Test browser input:
+`Sản phẩm thử nghiệm — Đỏ · 250.000 ₫`
+và xác nhận:
+form → API → DB → API → render
+không biến thành mojibake.
+
+Fixture phải cleanup.
+
+PASS → E35.
+
+======================================================================
+E35 — FINAL AUDIT / HANDOVER
+======================================================================
+
+Chạy:
+git status --short
+git diff --check
+npm run check:encoding
+
+Review diff.
+
+Đảm bảo:
+- không business logic accidental change;
+- không auth/RBAC change;
+- không state-machine change;
+- không migration cũ rewritten;
+- không secret;
+- không .env;
+- không node_modules;
+- không hand-edited dist;
+- không temp fixture;
+- không database dump.
+
+Tạo:
+docs/encoding/PROJECT_TEXT_ENCODING_FINAL_HANDOVER.md
+docs/encoding/PROJECT_TEXT_ENCODING_TEST_MATRIX.md
+
+Final report phải ghi:
+- total files scanned;
+- total findings baseline;
+- total confirmed mojibake;
+- total repaired;
+- source remaining;
+- docs remaining;
+- DB remaining;
+- runtime remaining;
+- allowlisted exceptions;
+- browser routes tested;
+- roles tested;
+- build/test results.
+
+Final verdict chỉ được là:
+
+PROJECT_TEXT_ENCODING_CLEAN
+
+nếu:
+- scanner active source sạch;
+- generated build sạch;
+- API runtime scan sạch;
+- browser public/member/coach/seller/admin sạch;
+- database deterministic system data sạch;
+- không còn U+FFFD/C1/mojibake visible;
+- build/typecheck pass.
+
+Nếu source sạch nhưng DB còn ambiguous user data:
+PROJECT_SOURCE_ENCODING_CLEAN_DATA_REVIEW_REQUIRED
+
+Nếu browser còn lỗi:
+PROJECT_TEXT_ENCODING_RUNTIME_BLOCKED
+
+Nếu build fail:
+PROJECT_TEXT_ENCODING_CLOSURE_BLOCKED
+
+======================================================================
+7. QUY TẮC SỬA MOJIBAKE
+======================================================================
+
+Không dùng global blind replacement trên toàn repository.
+
+KHÔNG:
+replace("Ã", ...)
+replace("â", ...)
+replace mọi non-ASCII.
+
+Quy trình:
+1. identify exact corrupted sequence;
+2. infer intended string from context;
+3. verify semantics;
+4. patch exact literal/line;
+5. rescan;
+6. browser verify.
+
+Có thể dùng Latin-1/Windows-1252 → UTF-8 reversal như công cụ CHẨN ĐOÁN,
+nhưng không tự động ghi file nếu result chưa được xác minh.
+
+Ví dụ hợp lệ:
+`KhÃ´ng thá»ƒ` → `Không thể`
+`Quáº£n lÃ½` → `Quản lý`
+`ÄÃ£` → `Đã`
+`TrÆ°á»›c` → `Trước`
+`â€”` → `—`
+`â€“` → `–`
+`â€¦` → `…`
+`Â·` → `·`
+`â‚«` → `₫`
+`â€œ` → `“`
+`â€` → `”`
+
+======================================================================
+8. LOCAL COMMIT
+======================================================================
+
+Có thể local commit theo nhóm:
+
+1. audit/scanner
+2. confirmed frontend repair
+3. backend/static text repair
+4. docs repair
+5. database deterministic repair nếu có
+6. prevention config
+7. browser/test evidence
+8. final handover
+
+Không push.
+
+Không `git add .`.
+Stage explicit files.
+
+======================================================================
+9. PROGRESS REPORT
+======================================================================
+
+Sau mỗi phase append:
+
+## EXX — <name>
+Status:
+Findings:
+Files inspected:
+Files changed:
+Scanner:
+Build/Test:
+Database:
+Browser:
+Remaining:
+Commit:
+Next:
+
+Không dừng hỏi user.
+
+======================================================================
+10. FINAL OUTPUT BẮT BUỘC
+======================================================================
+
+# PROJECT TEXT ENCODING FINAL REPORT
+
+FINAL VERDICT:
+
+BRANCH:
+START COMMIT:
+END COMMIT:
+
+BASELINE:
+- files scanned:
+- findings:
+- confirmed:
+- false positives:
+
+REPAIRS:
+- frontend:
+- backend:
+- database/static data:
+- docs:
+- generated output:
+
+CONFIRMED MAJOR FILES:
+- AdminProductsPage:
+- AdminProductVariantsPage:
+- Coach closure docs:
+- additional files discovered:
+
+DATABASE:
+- target:
+- Unicode schema audit:
+- mojibake rows:
+- repaired deterministic rows:
+- ambiguous rows:
+- roundtrip:
+
+API:
+- endpoints sampled:
+- mojibake findings:
+
+BROWSER:
+- Guest:
+- Member:
+- Coach:
+- Seller:
+- Admin:
+- 375x812:
+- 768x1024:
+- 1440x900:
+- remaining visible mojibake:
+
+BUILD:
+- encoding scanner:
+- backend build:
+- backend lint:
+- frontend typecheck:
+- frontend build:
+
+PREVENTION:
+- editorconfig:
+- scanner:
+- package scripts:
+- CI/build integration:
+
+BUSINESS LOGIC:
+- accidental functional changes:
+- migrations rewritten:
+- RBAC changed:
+- state machines changed:
+
+FILES CHANGED:
+COMMITS:
+ALLOWLIST:
+KNOWN WARNINGS:
+REMAINING BLOCKERS:
+
+SAFE TO CALL PROJECT TEXT CLEAN:
+YES | NO
+
+Nếu YES:
+FINAL VERDICT = PROJECT_TEXT_ENCODING_CLEAN
+
+======================================================================
+11. BẮT ĐẦU
+======================================================================
+
+Bắt đầu ngay E00.
+
+Tự động chạy liên tục E00 → E35.
+
+Không hỏi "có tiếp tục không".
+Không hỏi permission lặp lại cho thao tác không phá hủy trong scope.
+Tự sửa lỗi thuộc text/encoding rồi chạy lại test.
+Chỉ dừng khi gặp blocker an toàn thật đã nêu.

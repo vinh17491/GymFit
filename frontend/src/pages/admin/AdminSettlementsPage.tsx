@@ -1,0 +1,30 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import api from "../../api/axios";
+
+type Status = "PENDING" | "HELD" | "ELIGIBLE" | "PAID";
+type Row = { id:number; shopId:number; shopName:string; orderNumber:string; shopOrderId:number; status:Status; grossMerchandiseAmount:number; commissionAmount:number; appliedAdjustmentAmount:number; payableAmount:number; eligibleAt:string; holdReason:string|null; holdSourceType:string|null; batchId:number|null; activeComplaintCount:number; sellerFaultComplaintCount:number };
+const money = (value:number) => Number(value).toLocaleString("vi-VN", { style:"currency", currency:"VND" });
+const today = new Date().toISOString().slice(0,10);
+const weekAgo = new Date(Date.now()-6*86400000).toISOString().slice(0,10);
+
+export default function AdminSettlementsPage() {
+  const [rows,setRows]=useState<Row[]>([]),[selected,setSelected]=useState<number[]>([]),[from,setFrom]=useState(weekAgo),[to,setTo]=useState(today),[status,setStatus]=useState<Status|"">(""),[search,setSearch]=useState(""),[loading,setLoading]=useState(true),[error,setError]=useState("");
+  const load=useCallback(async()=>{setLoading(true);setError("");try{setRows((await api.get<{data:{items:Row[]}}>("/admin/marketplace-finance/settlements",{params:{from,to,status:status||undefined,search:search||undefined,pageSize:100}})).data.data.items);}catch{setError("Không thể tải settlement inbox.");}finally{setLoading(false);}},[from,to,status,search]);
+  useEffect(()=>{void load();},[load]);
+  const eligible=useMemo(()=>rows.filter(row=>row.status==="ELIGIBLE"&&!row.batchId),[rows]);
+  const action=async(path:string,body:object={})=>{setError("");try{await api.post(path,body);await load();}catch(e:any){setError(e?.response?.data?.message||"Thao tác thất bại.");}};
+  const askAction=async(row:Row,kind:"hold"|"release")=>{const reason=window.prompt(`Lý do ${kind} settlement`)?.trim();if(reason)await action(`/admin/marketplace-finance/settlements/${row.id}/${kind}`,{reason});};
+  const adjustment=async(row:Row,paid=false)=>{const raw=window.prompt("Số tiền điều chỉnh có dấu (+ tăng, - giảm)");const signedAmount=Number(raw),reason=window.prompt("Lý do điều chỉnh")?.trim();if(!reason||!Number.isFinite(signedAmount)||signedAmount===0)return;const payload=paid?{shopId:row.shopId,signedAmount,reason,sourcePaidSettlementId:row.id}:{shopId:row.shopId,signedAmount,reason,sourceShopOrderId:row.shopOrderId,sourceSettlementId:row.id};await action("/admin/marketplace-finance/adjustments",payload);};
+  const createBatch=async()=>{if(!selected.length)return;await action("/admin/marketplace-finance/settlement-batches",{periodStart:from,periodEnd:to,settlementIds:selected});setSelected([]);};
+  const markPaid=async(row:Row)=>{if(!row.batchId)return;const reason=window.prompt("Lý do xác nhận thanh toán ngoài hệ thống")?.trim();if(reason)await action(`/admin/marketplace-finance/settlement-batches/${row.batchId}/mark-paid`,{reason});};
+  return <main className="space-y-5 p-4 md:p-8">
+    <header><h1 className="text-3xl font-bold">Admin Settlement Inbox</h1><p className="text-slate-400">Đối soát thủ công; không thực hiện chuyển khoản ngân hàng.</p></header>
+    <section className="flex flex-wrap gap-3 rounded-xl border border-white/10 p-4"><input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="input-field"/><input type="date" value={to} onChange={e=>setTo(e.target.value)} className="input-field"/><select value={status} onChange={e=>setStatus(e.target.value as Status|"")} className="input-field"><option value="">Tất cả</option><option>PENDING</option><option>HELD</option><option>ELIGIBLE</option><option>PAID</option></select><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Order / ShopOrder" className="input-field"/><button className="btn-secondary" onClick={()=>void action("/admin/marketplace-finance/settlements/refresh-eligibility")}>Refresh eligibility</button><button className="btn-primary" disabled={!selected.length} onClick={()=>void createBatch()}>Tạo batch ({selected.length})</button></section>
+    {error&&<p role="alert" className="rounded bg-red-500/10 p-3 text-red-300">{error}</p>}
+    {loading?<p>Đang tải…</p>:rows.length===0?<p className="p-8 text-center text-slate-400">Không có settlement.</p>:<div className="overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[1200px]"><thead><tr><th>Chọn</th><th>Shop</th><th>Order</th><th>Gross</th><th>Commission</th><th>Adjustment</th><th>Payable</th><th>Eligible</th><th>Status / Complaint</th><th>Actions</th></tr></thead><tbody>{rows.map(row=><tr key={row.id} className="border-t border-white/10">
+      <td className="p-3"><input type="checkbox" disabled={!eligible.some(item=>item.id===row.id)} checked={selected.includes(row.id)} onChange={e=>setSelected(value=>e.target.checked?[...value,row.id]:value.filter(id=>id!==row.id))}/></td><td>{row.shopName}</td><td>{row.orderNumber} / #{row.shopOrderId}</td><td>{money(row.grossMerchandiseAmount)}</td><td>{money(row.commissionAmount)}</td><td>{money(row.appliedAdjustmentAmount)}</td><td>{money(row.payableAmount)}</td><td>{new Date(row.eligibleAt).toLocaleDateString("vi-VN")}</td>
+      <td>{row.status}{row.holdReason&&<small className="block text-amber-300">{row.holdReason}</small>}{row.activeComplaintCount>0&&<small className="block text-amber-300">{row.activeComplaintCount} active · {row.sellerFaultComplaintCount} Seller-fault blocker · {row.holdSourceType||"chưa hold"}</small>}</td>
+      <td className="space-x-2">{(row.status==="PENDING"||row.status==="ELIGIBLE")&&<button onClick={()=>void askAction(row,"hold")}>Hold</button>}{row.status==="HELD"&&<button onClick={()=>void askAction(row,"release")}>Release</button>}{row.status!=="PAID"&&<button onClick={()=>void adjustment(row)}>Adjustment</button>}{row.status==="PAID"&&<button onClick={()=>void adjustment(row,true)}>Carry-forward</button>}{row.status==="ELIGIBLE"&&row.batchId&&<button onClick={()=>void markPaid(row)}>Mark batch paid</button>}</td>
+    </tr>)}</tbody></table></div>}
+  </main>;
+}

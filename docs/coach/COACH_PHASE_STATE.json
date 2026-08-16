@@ -1,0 +1,23 @@
+{
+  "branch": "coach1",
+  "activePhase": "DONE",
+  "activeStatus": "PASS",
+  "lastCompletedPhase": "29",
+  "nextPhase": null,
+  "checkpointDate": "2026-08-07",
+  "lastCommit": "d8808bf docs(coach): clarify migration deployment boundary",
+  "blocker": null,
+  "scopeGuard": {
+    "marketplaceSellerExcluded": true,
+    "excludedMigrationRange": "0100-0111",
+    "canonicalDatabaseChanged": false,
+    "migrationRunning": false
+  },
+  "phase24WorktreeChanges": "Phase 24 frontend code committed in f4962ab; documentation checkpoint committed in e496929.",
+  "phase25WorktreeChanges": "Phase 25 migration/backend/API/acceptance committed in 54fe846; documentation checkpoint committed separately after state update.",
+  "phase26WorktreeChanges": "Phase 26 frontend lifecycle UI/type/API changes committed in 65d4455; documentation checkpoint committed in 4081bd8. Browser QA passed through a temporary disposable-only origin-normalizing proxy; disposable database GYMFIT_DB_COACH_ACCEPTANCE_PHASE26_UIQA_20260806 was dropped, exact QA processes were stopped, browser tabs were finalized, canonicalDatabaseChanged=false.",
+  "phase27WorktreeChanges": "Phase 27 completion security/concurrency acceptance script and npm command committed in 414366a; documentation checkpoint committed separately after state update. Four disposable databases and QA processes were cleaned up; canonicalDatabaseChanged=false and migrationRunning=false.",
+  "phase28WorktreeChanges": "Phase 28 performance acceptance harness, evidence-backed migration 0016 indexes, SQL entitlement filtering and Coach/Booking AbortSignal request cancellation committed in 674279e. Disposable database GYMFIT_DB_COACH_ACCEPTANCE_PHASE28_PERF_20260806 and backend PID 16044 were cleaned up; canonicalDatabaseChanged=false and migrationRunning=false.",
+  "phase29WorktreeChanges": "Phase 29 final Coach acceptance, npm ci/build/lint/typecheck, migration verification, browser QA, Starter/Pro/Elite tier audit, RBAC/IDOR/concurrency regression and cleanup passed. Final mobile QA added min-w-0 layout guards to Coach Program Builder and Admin Exercise Library. Disposable browser databases GYMFIT_DB_COACH_ACCEPTANCE_PHASE29_BROWSER_20260807 and GYMFIT_DB_COACH_ACCEPTANCE_PHASE29_TIER_AUDIT_20260807 were dropped; QA ports 51230-51234 were closed; canonicalDatabaseChanged=false and migrationRunning=false. Required baseline artifact COACH_COMPLETION_BASELINE.md is present. Checkpoint commit: 803e4b0 docs(coach): finalize coach1 completion handover.",
+  "safeToStartNextPhase": false
+}

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "path": "MASTER_TASK_COACH3_PROJECT_TEXT_ENCODING_RECOVERY.txt",
+      "lineRanges": [
+        [17, 28],
+        [69, 76],
+        [82, 84],
+        [90, 92],
+        [200, 219],
+        [465, 465],
+        [483, 485],
+        [1117, 1117],
+        [1257, 1267]
+      ],
+      "reason": "The user-owned master task intentionally prints broken examples and detector signatures as specification fixtures. The file is scanned and reported, but these exact documented ranges are not application source or runtime data."
+    }
+  ]
+}

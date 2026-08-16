@@ -1,0 +1,35 @@
+import api from '../api/axios';
+import type { AdjustmentHistoryFilters,AdjustmentHistoryResponse,AdminProductOption,ApiResponse,Brand,BrandInput,CatalogActionResult,CatalogListFilters,Category,CategoryInput,InventoryAdjustmentInput,InventoryAdjustmentResult,InventoryDetail,InventoryFilters,InventoryItem,ProductVariant,ThresholdUpdateInput } from '../types/adminCatalog';
+import type { AdminProductSummary,VariantCreateInput,VariantUpdateInput } from '../types/adminCatalog';
+export type CatalogEntity='categories'|'brands';
+export const adminCatalogApi={
+ listCatalog:<T extends Category|Brand>(entity:CatalogEntity,params:Record<string,unknown>)=>api.get<ApiResponse<T[]>>(`/admin/${entity}`,{params}),
+ listCategories:(filters:CatalogListFilters)=>api.get<ApiResponse<Category[]>>('/admin/categories',{params:filters}),
+ getCategory:(id:number)=>api.get<ApiResponse<Category>>(`/admin/categories/${id}`),
+ createCategory:(body:CategoryInput)=>api.post<ApiResponse<Category>>('/admin/categories',body),
+ updateCategory:(id:number,body:CategoryInput)=>api.patch<ApiResponse<Category>>(`/admin/categories/${id}`,body),
+ deleteCategory:(id:number)=>api.delete<ApiResponse<CatalogActionResult>>(`/admin/categories/${id}`),
+ listBrands:(filters:CatalogListFilters)=>api.get<ApiResponse<Brand[]>>('/admin/brands',{params:filters}),
+ getBrand:(id:number)=>api.get<ApiResponse<Brand>>(`/admin/brands/${id}`),
+ createBrand:(body:BrandInput)=>api.post<ApiResponse<Brand>>('/admin/brands',body),
+ updateBrand:(id:number,body:BrandInput)=>api.patch<ApiResponse<Brand>>(`/admin/brands/${id}`,body),
+ deleteBrand:(id:number)=>api.delete<ApiResponse<CatalogActionResult>>(`/admin/brands/${id}`),
+  variants:(productId:number)=>api.get<ApiResponse<ProductVariant[]>>(`/admin/products/${productId}/variants`),
+  listVariants:(productId:number)=>api.get<ApiResponse<ProductVariant[]>>(`/admin/products/${productId}/variants`),
+  getVariant:(id:number)=>api.get<ApiResponse<ProductVariant>>(`/admin/variants/${id}`),
+  getAdminProduct:(id:number)=>api.get<ApiResponse<AdminProductSummary>>(`/admin/products/${id}`),
+  createVariant:(productId:number,body:VariantCreateInput)=>api.post<ApiResponse<ProductVariant>>(`/admin/products/${productId}/variants`,body),
+  createVariantTyped:(productId:number,body:VariantCreateInput)=>api.post<ApiResponse<ProductVariant>>(`/admin/products/${productId}/variants`,body),
+  updateVariant:(id:number,body:VariantUpdateInput)=>api.patch<ApiResponse<ProductVariant>>(`/admin/variants/${id}`,body),
+  updateVariantTyped:(id:number,body:VariantUpdateInput)=>api.patch<ApiResponse<ProductVariant>>(`/admin/variants/${id}`,body),
+ deleteVariant:(id:number)=>api.delete<ApiResponse<{action:string}>>(`/admin/variants/${id}`),
+  setDefault:(id:number)=>api.post<ApiResponse<ProductVariant>>(`/admin/variants/${id}/set-default`),
+  setDefaultVariant:(id:number)=>api.post<ApiResponse<ProductVariant>>(`/admin/variants/${id}/set-default`),
+ inventory:(filters:InventoryFilters)=>api.get<ApiResponse<InventoryItem[]>>('/admin/inventory',{params:{search:filters.search||undefined,categoryId:filters.categoryId||undefined,brandId:filters.brandId||undefined,productId:filters.productId||undefined,status:filters.status||undefined,lowStock:filters.lowStock||undefined,sortBy:filters.sortBy,sortOrder:filters.sortOrder,page:filters.page,limit:filters.limit}}),
+ listAdminProducts:(params:{page:number;limit:number;search?:string})=>api.get<ApiResponse<AdminProductOption[]>>('/admin/products',{params}),
+ inventoryDetail:(id:number)=>api.get<ApiResponse<InventoryDetail>>(`/admin/variants/${id}/inventory`),
+ adjustInventory:(variantId:number,payload:InventoryAdjustmentInput)=>api.post<ApiResponse<InventoryAdjustmentResult>>(`/admin/variants/${variantId}/inventory/adjustments`,payload),
+ adjust:(id:number,body:InventoryAdjustmentInput)=>api.post<ApiResponse<InventoryAdjustmentResult>>(`/admin/variants/${id}/inventory/adjustments`,body),
+ updateInventoryThreshold:(variantId:number,lowStockThreshold:number)=>api.patch<ApiResponse<InventoryDetail>>(`/admin/variants/${variantId}/inventory/threshold`,{lowStockThreshold} satisfies ThresholdUpdateInput),
+ getInventoryAdjustments:(variantId:number,filters:AdjustmentHistoryFilters)=>api.get<AdjustmentHistoryResponse>(`/admin/variants/${variantId}/inventory/adjustments`,{params:{type:filters.type||undefined,dateFrom:filters.dateFrom?`${filters.dateFrom}T00:00:00.000Z`:undefined,dateTo:filters.dateTo?`${filters.dateTo}T23:59:59.999Z`:undefined,page:filters.page,limit:filters.limit}}),
+};

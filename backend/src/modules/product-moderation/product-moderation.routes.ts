@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { authenticate,authorize } from '../../middleware/auth';
+import { validate } from '../../middleware/validate';
+import { UserRole } from '../../types';
+import { detailModeration,listModeration,transitionModeration } from './product-moderation.controller';
+import { approveSchema,inboxQuerySchema,productIdSchema,reasonSchema,republishSchema } from './product-moderation.validation';
+const router=Router();router.use(authenticate,authorize(UserRole.ADMIN));
+router.get('/',validate(inboxQuerySchema,'query'),listModeration);
+router.get('/:productId',validate(productIdSchema,'params'),detailModeration);
+router.post('/:productId/approve',validate(productIdSchema,'params'),validate(approveSchema),transitionModeration('approve'));
+router.post('/:productId/reject',validate(productIdSchema,'params'),validate(reasonSchema),transitionModeration('reject'));
+router.post('/:productId/suspend',validate(productIdSchema,'params'),validate(reasonSchema),transitionModeration('suspend'));
+router.post('/:productId/republish',validate(productIdSchema,'params'),validate(republishSchema),transitionModeration('republish'));
+export default router;

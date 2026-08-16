@@ -1,0 +1,1917 @@
+# MASTER PROMPT — HOÀN THIỆN COACH MODULE TRÊN NHÁNH `coach1`
+
+## STATE — Trạng thái hiện tại và mục tiêu
+
+Repository: `vinh17491/GymFit`  
+Nhánh bắt buộc: `coach1`
+
+Module Coach hiện đã có phần lõi:
+
+- Public Coach list/detail.
+- Member booking Coach.
+- Coach appointment management.
+- Coach self-profile.
+- Coach Workspace.
+- Exercise Library.
+- Workout Program Builder.
+- Coach–Member scope.
+- Assignment.
+- Workout Schedule.
+- Member Workout Session.
+- Immutable Session Snapshot.
+- Set Logs.
+- Progress.
+- Admin Coach Management.
+- Admin Exercise Library.
+- Admin Workout Governance.
+
+Tuy nhiên module chưa đạt mức vận hành đầy đủ vì còn các lỗi và thiếu sót:
+
+1. Migration `0010_coach_profiles.sql` có nguy cơ chưa được áp dụng trên database chạy thật.
+2. Membership purchase/upgrade chưa hoàn chỉnh.
+3. Booking Coach chưa kiểm tra quyền lợi của Membership Plan.
+4. Chưa giới hạn số lần booking Coach theo gói.
+5. Generate Schedule tính tuần sai khi generate bổ sung từ giữa chương trình.
+6. Generate Schedule chưa chặn vượt `assignment.start_date`, `assignment.end_date` và `program.duration_weeks`.
+7. Schedule quá hạn không tự chuyển sang `SKIPPED`.
+8. Member có thể Complete Session rỗng.
+9. Exercise bị deactivate có thể biến mất khỏi Session Snapshot.
+10. Session legacy và member session có nguy cơ trùng ID trên route.
+11. Assignment transition giữa backend và frontend chưa đồng nhất.
+12. Dashboard có lỗi query lịch tương lai và hai metric Member bị trùng logic.
+13. `attentionQueue` chưa hoạt động.
+14. Program Builder thiếu UI cho weight, duration, tempo.
+15. Program Builder gọi PATCH trực tiếp theo từng lần gõ.
+16. Chưa có UI sửa Workout Program Day.
+17. Các danh sách Coach thường chỉ tải page 1, tối đa 50 bản ghi.
+18. Booking UI lấy tối đa 100 booking rồi lọc phía frontend.
+19. Coach chưa có Availability Calendar riêng.
+20. Chưa có Coach Member Notes/Goals cơ bản.
+21. Chưa có notification nghiệp vụ cơ bản.
+22. Chưa có Program Versioning.
+23. Thiếu acceptance test cho các lỗi nghiệp vụ nêu trên.
+
+Mục tiêu cuối cùng:
+
+- Sửa toàn bộ lỗi P0/P1 của Coach.
+- Hoàn thiện luồng Membership → Entitlement → Booking Coach.
+- Hoàn thiện Availability của từng Coach.
+- Hoàn thiện Program, Assignment, Schedule, Session và Progress.
+- Bảo đảm RBAC, ownership, IDOR protection và concurrency.
+- Không phá Seller/Marketplace/Auth/Video hoặc các module ngoài phạm vi.
+- Build, lint, TypeScript, migration verification và acceptance đều PASS.
+- Tạo tài liệu bàn giao cuối cùng có bằng chứng rõ ràng.
+
+---
+
+## TAILOR — Stack, phạm vi và nguyên tắc làm việc
+
+### Stack hiện tại
+
+Backend:
+
+- Node.js.
+- Express.
+- TypeScript.
+- SQL Server.
+- `mssql`.
+- Zod.
+- Migration script tại `backend/src/scripts/migrate.ts`.
+
+Frontend:
+
+- React 18.
+- TypeScript.
+- React Router.
+- Axios.
+- Zustand.
+- Tailwind CSS.
+- Vite.
+
+### Các khu vực code Coach đang có
+
+Backend chính:
+
+- `backend/src/modules/coaches/`
+- `backend/src/modules/bookings/`
+- `backend/src/modules/coach-workspace/`
+- `backend/src/modules/member-workout/`
+- `backend/src/modules/admin-coaches/`
+- `backend/src/modules/admin-exercises/`
+- `backend/src/modules/admin-workouts/`
+- `backend/src/modules/plans/`
+- `backend/src/utils/coachBooking.ts`
+- `backend/src/utils/timezone.ts`
+- `backend/src/middleware/auth.ts`
+- `backend/src/app.ts`
+
+Frontend chính:
+
+- `frontend/src/pages/coaches/`
+- `frontend/src/pages/booking/`
+- `frontend/src/pages/appointments/`
+- `frontend/src/pages/workouts/`
+- `frontend/src/pages/membership/`
+- `frontend/src/services/coaches.ts`
+- `frontend/src/services/bookings.ts`
+- `frontend/src/services/coachWorkspaceApi.ts`
+- `frontend/src/services/memberWorkoutApi.ts`
+- `frontend/src/services/plans.ts`
+- `frontend/src/types/`
+- `frontend/src/auth/accessPolicy.ts`
+- `frontend/src/App.tsx`
+- `frontend/src/components/layout/`
+
+Database hiện có:
+
+- `db/migrations/0007_coach_programs_assignments_schedules.sql`
+- `db/migrations/0008_member_workout_flow.sql`
+- `db/migrations/0009_admin_coach_management.sql`
+- `db/migrations/0010_coach_profiles.sql`
+- `db/migrations/0100_seller_application_role_foundation.sql`
+
+### Quy tắc tuyệt đối
+
+1. Chỉ làm trên nhánh `coach1`.
+2. Không checkout sang nhánh khác.
+3. Không push trực tiếp nếu chưa được người dùng yêu cầu.
+4. Không sửa Seller/Marketplace chỉ để làm test Coach pass.
+5. Không sửa migration `0100_seller_application_role_foundation.sql`.
+6. Không xóa hoặc rewrite migration đã có checksum/applied.
+7. Migration mới phải additive, idempotent khi phù hợp và có rollback strategy được mô tả.
+8. Không đổi kiến trúc Auth hiện tại.
+9. Backend là nguồn xác thực quyền hạn; frontend guard chỉ là UX.
+10. Mọi ownership phải lấy từ JWT/session identity, không tin `coachId`, `memberId` gửi trong body nếu có thể suy ra từ token.
+11. Không thêm mock/fake data vào production code.
+12. Không hardcode user ID, Coach ID, Member ID hoặc Plan ID.
+13. Không tạo SQL rời rạc ngoài hệ thống migration, trừ acceptance fixture có tên rõ ràng.
+14. Không dùng `SELECT *` trong API production mới.
+15. Mọi query động phải dùng parameter binding; không nối trực tiếp input người dùng.
+16. Mọi state transition quan trọng phải có transaction hoặc optimistic concurrency phù hợp.
+17. Mọi danh sách lớn phải có server-side pagination.
+18. Mọi mutation phải xử lý lỗi `400`, `401`, `403`, `404`, `409` rõ ràng.
+19. Không che lỗi bằng `catch {}` nếu lỗi ảnh hưởng nghiệp vụ.
+20. Không tự phát triển AI, chat realtime, video call, payroll hoặc chức năng ngoài scope.
+21. Không gom nhiều phase thành một thay đổi lớn.
+22. Sau mỗi phase phải build/test lại trước khi sang phase tiếp theo.
+23. Nếu phát hiện repo thực tế khác mô tả, cập nhật tài liệu checkpoint trước rồi điều chỉnh tối thiểu; không tự viết lại toàn module.
+24. Không thay đổi public API đang dùng nếu chưa có compatibility layer hoặc cập nhật toàn bộ caller.
+25. Ưu tiên clean architecture vừa đủ; không over-engineer.
+
+---
+
+## EVALUATE — Yêu cầu kiểm tra trước, trong và sau khi code
+
+### Kiểm tra đầu vào bắt buộc
+
+Trước khi chỉnh code:
+
+```bash
+git status --short
+git branch --show-current
+git log -1 --oneline
+```
+
+Kết quả bắt buộc:
+
+```text
+branch = coach1
+```
+
+Ghi lại:
+
+- HEAD commit.
+- File đang dirty.
+- Migration status.
+- Backend build status.
+- Backend lint status.
+- Frontend TypeScript status.
+- Frontend build status.
+- Acceptance Coach hiện tại.
+
+### Lệnh baseline
+
+Backend:
+
+```bash
+cd backend
+npm ci
+npm run db:migrate:status
+npm run build
+npm run lint
+npm run verify:coach-migration
+npm run test:coach-booking-unit
+npm run acceptance:coach-role
+npm run acceptance:coach-member-e2e
+npm run acceptance:admin-coach
+npm run acceptance:coach-booking
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm ci
+npx tsc --noEmit
+npm run build
+```
+
+Nếu acceptance cần database:
+
+- Chỉ chạy trên database disposable có tên rõ ràng.
+- Không tự apply migration lên database production/canonical.
+- Không sửa Marketplace migration để test Coach.
+- Ghi lại database fixture đã tạo và bảo đảm cleanup.
+
+### Kiểm tra bắt buộc trong mọi phase
+
+- Bug logic.
+- RBAC.
+- IDOR.
+- SQL injection.
+- Race condition.
+- Duplicate request.
+- Transaction isolation.
+- Timezone.
+- Boundary date.
+- Pagination.
+- Empty state.
+- Error state.
+- Mobile layout.
+- Backward compatibility.
+- Migration safety.
+- Query index.
+- N+1 query.
+- TypeScript type safety.
+- API DTO consistency.
+- Không để TODO giả hoặc code chết.
+
+### Quy tắc báo cáo
+
+Sau mỗi phase, tạo hoặc cập nhật:
+
+```text
+docs/coach/COACH_COMPLETION_PROGRESS.md
+```
+
+Mẫu:
+
+```markdown
+## Phase XX — <tên phase>
+
+Status: PASS | BLOCKED | PARTIAL
+
+Changed files:
+- ...
+
+Database:
+- ...
+
+Tests:
+- command: PASS/FAIL
+
+Acceptance evidence:
+- ...
+
+Known limitations:
+- ...
+
+Next phase prerequisites:
+- ...
+```
+
+Không tuyên bố `COMPLETE` nếu test tương ứng chưa chạy.
+
+---
+
+# PLAN — THỰC HIỆN THEO 30 PHASE
+
+## PHASE 00 — Workspace Safety và Baseline
+
+### Mục tiêu
+
+Xác nhận đúng nhánh, trạng thái repo và baseline trước khi sửa.
+
+### Công việc
+
+1. Kiểm tra branch phải là `coach1`.
+2. Không reset hoặc xóa thay đổi chưa commit của người dùng.
+3. Ghi HEAD commit.
+4. Chạy baseline build/test.
+5. Tạo:
+   - `docs/coach/COACH_COMPLETION_PROGRESS.md`
+   - `docs/coach/COACH_COMPLETION_BASELINE.md`
+6. Ghi rõ lỗi hiện có là pre-existing hay do phase mới.
+
+### Không được làm
+
+- Không sửa code trong phase này.
+- Không tự checkout/reset.
+- Không apply migration lên DB chính.
+- Không sửa lỗi Seller migration `0100`.
+
+### Done khi
+
+- Baseline được ghi đầy đủ.
+- Xác định rõ test nào PASS/FAIL.
+- Không có thay đổi code ngoài tài liệu checkpoint.
+
+### Commit đề xuất
+
+```text
+docs(coach): record coach1 completion baseline
+```
+
+---
+
+## PHASE 01 — Coach Domain Contract và Decision Log
+
+### Mục tiêu
+
+Chốt contract nghiệp vụ trước khi thêm schema/code.
+
+### Công việc
+
+Tạo:
+
+```text
+docs/coach/COACH_DOMAIN_RULES.md
+docs/coach/ADR_COACH_MEMBERSHIP_ENTITLEMENT.md
+docs/coach/ADR_COACH_AVAILABILITY.md
+docs/coach/ADR_COACH_PROGRAM_VERSIONING.md
+```
+
+Chốt các quy tắc:
+
+1. Coach Appointment tách biệt Workout Schedule.
+2. Booking không tự tạo Coach–Member ownership.
+3. Member cần entitlement hợp lệ mới booking.
+4. Gói không có Coach thì trả `403`.
+5. Gói giới hạn lượt thì quota tính theo tháng Asia/Ho_Chi_Minh.
+6. Cancelled booking có hoàn quota hay không: chọn và ghi rõ.
+7. Coach Availability quyết định slot mở; Booking quyết định slot đã chiếm.
+8. Workout Program có lifecycle/version rõ ràng.
+9. Session Snapshot phải ổn định trước thay đổi Exercise.
+10. Coach Notes là dữ liệu riêng của Coach, Member không được đọc.
+11. Medical diagnosis ngoài scope.
+12. Notification chỉ là in-app cơ bản.
+
+### Done khi
+
+- Mọi decision được ghi rõ.
+- Không có contract mâu thuẫn.
+- Các phase sau có thể code mà không phải tự đoán nghiệp vụ.
+
+### Commit đề xuất
+
+```text
+docs(coach): define remaining coach domain rules
+```
+
+---
+
+## PHASE 02 — Migration 0010 Readiness và Database Guard
+
+### Mục tiêu
+
+Bảo đảm `CoachProfiles` tồn tại an toàn trước các chức năng phụ thuộc.
+
+### Công việc
+
+1. Kiểm tra migration status.
+2. Kiểm tra:
+   - `dbo.CoachProfiles`
+   - unique key theo `coach_id`
+   - FK tới `Users`
+   - các constraint.
+3. Cập nhật migration verification script nếu thiếu kiểm tra `0010`.
+4. Không rewrite `0010` nếu đã applied.
+5. Nếu migration runner cần cải thiện guard/checksum reporting, chỉ chỉnh tối thiểu.
+6. Tạo acceptance fixture disposable để xác minh:
+   - fresh Coach schema.
+   - `CoachProfiles` tạo đúng.
+   - insert/update self-profile.
+   - duplicate `coach_id` bị chặn.
+7. Nếu canonical DB còn pending:
+   - chỉ báo cáo lệnh deploy.
+   - không tự apply nếu không có phê duyệt.
+
+### Files dự kiến
+
+- `backend/src/scripts/coach-migration-verify.ts`
+- `backend/src/scripts/coach-acceptance-db.ts`
+- `docs/coach/COACH_DATABASE_DEPLOYMENT.md`
+
+### Done khi
+
+- Verification nhận biết chính xác applied/pending/mismatch.
+- Acceptance disposable PASS.
+- Không chạm `0100`.
+
+### Commit đề xuất
+
+```text
+test(coach): harden coach profile migration verification
+```
+
+---
+
+## PHASE 03 — Schedule Generation Date Model
+
+### Mục tiêu
+
+Sửa lỗi tính tuần và giới hạn thời gian của Assignment/Program.
+
+### Công việc
+
+Refactor `generateSchedules` để:
+
+1. `effectiveFrom = max(requestedFromDate, assignment.start_date, today nếu contract yêu cầu)`.
+2. Với mỗi `scheduledDate`:
+   - tính `daysFromAssignmentStart`.
+   - `programWeek = floor(daysFromAssignmentStart / 7) + 1`.
+3. Không tạo trước `assignment.start_date`.
+4. Không tạo sau `assignment.end_date` nếu có.
+5. Không tạo khi `programWeek > program.duration_weeks`.
+6. Chỉ chọn Program Day có:
+   - `week_number = programWeek`
+   - `day_number = weekday theo timezone`.
+7. Không tạo Schedule nếu Program Day không thuộc Program của Assignment.
+8. Giữ idempotency.
+9. Xử lý generate bổ sung từ giữa chương trình đúng Week.
+10. Trả response có:
+    - `inserted`
+    - `skippedExisting`
+    - `skippedOutsideAssignment`
+    - `skippedOutsideProgram`
+    - `effectiveFromDate`
+    - `effectiveToDate`.
+
+### Files dự kiến
+
+- `backend/src/modules/coach-workspace/coach-workspace.service.ts`
+- `backend/src/modules/coach-workspace/coach-workspace.controller.ts`
+- `backend/src/modules/coach-workspace/coach-workspace.routes.ts`
+- `frontend/src/services/coachWorkspaceApi.ts`
+- `frontend/src/pages/coaches/CoachSchedulesPage.tsx`
+- types liên quan.
+
+### Acceptance bắt buộc
+
+- Assignment bắt đầu tương lai.
+- Assignment có end date.
+- Program 4 tuần.
+- Generate từ ngày đầu.
+- Generate bổ sung từ tuần 3.
+- Generate trùng.
+- Generate vượt duration.
+- Timezone Asia/Ho_Chi_Minh.
+- Concurrent generate.
+
+### Commit đề xuất
+
+```text
+fix(coach): generate schedules from assignment-relative program weeks
+```
+
+---
+
+## PHASE 04 — Schedule State Lifecycle và Overdue Runner
+
+### Mục tiêu
+
+Không để Schedule quá hạn ở `SCHEDULED` vô thời hạn.
+
+### Công việc
+
+1. Tạo service chuyển:
+   - `SCHEDULED` quá hạn → `SKIPPED`
+   - chỉ khi chưa có Session.
+2. Không đổi:
+   - `IN_PROGRESS`
+   - `COMPLETED`
+   - `CANCELLED`.
+3. Chạy bằng runner định kỳ hoặc lazy reconciliation an toàn.
+4. Runner phải:
+   - idempotent.
+   - batch.
+   - log số bản ghi.
+   - không chạy trong acceptance mode khi cần.
+5. Dùng timezone của Assignment.
+6. Thêm index nếu query overdue cần.
+7. Dashboard và list Schedule dùng trạng thái đã reconcile.
+
+### Files dự kiến
+
+- `backend/src/modules/coach-workspace/coach-schedule-lifecycle.service.ts`
+- `backend/src/modules/coach-workspace/coach-schedule-lifecycle.runner.ts`
+- `backend/src/app.ts`
+- migration mới nếu cần index.
+
+### Acceptance
+
+- Yesterday SCHEDULED → SKIPPED.
+- Today SCHEDULED không đổi.
+- Future SCHEDULED không đổi.
+- Có Session không đổi sai.
+- Runner chạy hai lần không tạo side effect.
+
+### Commit đề xuất
+
+```text
+feat(coach): reconcile overdue workout schedules
+```
+
+---
+
+## PHASE 05 — Session Completion Integrity
+
+### Mục tiêu
+
+Ngăn hoàn thành Session rỗng hoặc dữ liệu không hợp lệ.
+
+### Công việc
+
+1. Trước `COMPLETED`, kiểm tra:
+   - session có ít nhất một Session Exercise.
+   - có ít nhất một completed Set Log có measurement hợp lệ.
+2. Cân nhắc contract:
+   - không ép hoàn thành toàn bộ target.
+   - nhưng không cho session rỗng.
+3. Trả `409 SESSION_HAS_NO_COMPLETED_WORK`.
+4. Có thể trả summary:
+   - total exercises.
+   - exercises with completed sets.
+   - total completed sets.
+5. Frontend:
+   - disable Complete khi chưa đủ điều kiện nếu dữ liệu local biết được.
+   - confirm dialog.
+   - hiển thị message backend.
+6. Abandon vẫn cho phép dù chưa có Set.
+7. Terminal session vẫn immutable.
+
+### Files dự kiến
+
+- `backend/src/modules/member-workout/member-workout.service.ts`
+- `backend/src/modules/member-workout/member-workout.controller.ts`
+- `frontend/src/pages/workouts/MemberWorkoutPages.tsx`
+- types/service.
+
+### Acceptance
+
+- Start rồi Complete ngay → `409`.
+- Có draft Set nhưng chưa completed → `409`.
+- Có completed Set hợp lệ → PASS.
+- Complete concurrent → một request thắng.
+- Terminal Set mutation → bị chặn.
+
+### Commit đề xuất
+
+```text
+fix(coach): prevent empty workout session completion
+```
+
+---
+
+## PHASE 06 — Immutable Snapshot với Exercise Inactive
+
+### Mục tiêu
+
+Exercise bị deactivate không làm hỏng Program/Schedule đã giao.
+
+### Công việc
+
+1. Khi thêm Exercise mới vào Program:
+   - vẫn yêu cầu Exercise active.
+2. Khi Start Session từ Program đã giao:
+   - snapshot toàn bộ Program Exercise được tham chiếu.
+   - không lọc mất Exercise chỉ vì global Exercise hiện inactive.
+3. Snapshot giữ:
+   - name.
+   - targets.
+   - note.
+   - sort order.
+4. Nếu Exercise record đã bị hard-delete:
+   - không được hard-delete Exercise đang được tham chiếu.
+   - Admin chỉ soft deactivate.
+5. Thêm acceptance:
+   - tạo Program.
+   - assign/generate.
+   - deactivate Exercise.
+   - Member vẫn Start và nhận snapshot đầy đủ.
+6. Không thay đổi snapshot lịch sử khi Exercise cập nhật sau đó.
+
+### Files dự kiến
+
+- `backend/src/modules/member-workout/member-workout.service.ts`
+- `backend/src/modules/admin-exercises/admin-exercises.service.ts`
+- acceptance scripts.
+
+### Commit đề xuất
+
+```text
+fix(coach): preserve assigned exercises in session snapshots
+```
+
+---
+
+## PHASE 07 — Session Identity và Legacy Collision
+
+### Mục tiêu
+
+Loại bỏ nhầm session khi ID trùng giữa bảng legacy và bảng mới.
+
+### Công việc
+
+Chọn contract rõ ràng:
+
+```text
+source = legacy | member
+```
+
+Route đề xuất:
+
+```text
+GET /api/coach/members/:memberId/sessions/:source/:sessionId
+```
+
+Frontend:
+
+```text
+/coach/members/:memberId/sessions/:source/:sessionId
+```
+
+Yêu cầu:
+
+1. List session luôn trả `source`.
+2. Detail bắt buộc `source`.
+3. Không fallback tự đoán.
+4. Route cũ có thể giữ compatibility:
+   - redirect hoặc resolve chỉ khi không ambiguity.
+   - nếu ambiguity trả `409 SESSION_SOURCE_REQUIRED`.
+5. Update link Dashboard, Member Detail, Progress.
+6. TypeScript dùng discriminated union.
+7. Test ID legacy = ID member.
+
+### Files dự kiến
+
+- coach workspace routes/controller/service.
+- Coach session pages.
+- dashboard links.
+- types/services.
+- App routes.
+
+### Commit đề xuất
+
+```text
+fix(coach): disambiguate legacy and member workout sessions
+```
+
+---
+
+## PHASE 08 — Assignment Transition Consistency
+
+### Mục tiêu
+
+Đồng bộ state machine backend và frontend.
+
+### Công việc
+
+1. Chốt transition:
+   - `ACTIVE → PAUSED | COMPLETED | CANCELLED`
+   - `PAUSED → ACTIVE | COMPLETED | CANCELLED`
+   - terminal không chuyển tiếp.
+2. Backend dùng một transition map duy nhất.
+3. Mutation có transaction/conditional update.
+4. Khi complete/cancel:
+   - xử lý future Schedule còn `SCHEDULED`.
+   - quyết định chuyển `CANCELLED` hoặc giữ lịch sử theo ADR.
+5. Khi pause:
+   - Member không Start Session mới.
+6. Khi resume:
+   - kiểm tra Member không có active assignment khác.
+7. Frontend chỉ hiển thị action hợp lệ.
+8. Error code cụ thể.
+
+### Acceptance
+
+- Mọi transition hợp lệ.
+- Mọi transition không hợp lệ.
+- Concurrent pause/complete.
+- Resume khi có assignment khác.
+- Member access khi assignment paused.
+
+### Commit đề xuất
+
+```text
+fix(coach): align assignment lifecycle across API and UI
+```
+
+---
+
+## PHASE 09 — Program Builder Data Integrity
+
+### Mục tiêu
+
+Hoàn thiện target và giảm request race condition.
+
+### Công việc
+
+1. Thêm field UI:
+   - target sets.
+   - reps min.
+   - reps max.
+   - target weight.
+   - target duration seconds.
+   - rest seconds.
+   - tempo.
+   - Coach note.
+2. Validate:
+   - reps min ≤ reps max.
+   - cần reps hoặc duration.
+   - số không âm/positive theo schema.
+3. Không gọi PATCH trên mỗi ký tự.
+4. Dùng local draft + nút Save cho từng Exercise hoặc debounce có request sequencing.
+5. Có saving state và dirty state.
+6. Không để response cũ ghi đè response mới.
+7. Hiển thị lỗi backend chính xác.
+8. Mobile layout dùng được.
+9. Không thêm dependency form mới nếu không cần.
+
+### Files dự kiến
+
+- `CoachProgramBuilderPage.tsx`
+- types.
+- service.
+- có thể tách component editor.
+
+### Commit đề xuất
+
+```text
+feat(coach): complete workout target editor with safe saves
+```
+
+---
+
+## PHASE 10 — Program Day Editing
+
+### Mục tiêu
+
+Cho Coach sửa Week, Day, Title và Description.
+
+### Công việc
+
+1. Thêm Edit Day form.
+2. Dùng endpoint PATCH hiện có.
+3. Validate unique `(program_id, week_number, day_number)`.
+4. Không tự tăng `dayNumber` thành 8.
+5. Khi add Day 7:
+   - reset về 1 hoặc giữ 7 với validation.
+6. Nếu Program đang Published/assigned:
+   - áp dụng rule Versioning sau phase tương ứng.
+   - trước khi versioning hoàn tất, hiển thị warning.
+7. Reorder vẫn hoạt động.
+8. Không xóa Day đang được Schedule tham chiếu.
+
+### Commit đề xuất
+
+```text
+feat(coach): add safe workout program day editing
+```
+
+---
+
+## PHASE 11 — Server-side Pagination Foundation
+
+### Mục tiêu
+
+Không giới hạn dữ liệu ở page 1/50.
+
+### Công việc
+
+Chuẩn hóa response:
+
+```json
+{
+  "items": [],
+  "page": 1,
+  "limit": 20,
+  "total": 0,
+  "totalPages": 0
+}
+```
+
+Áp dụng cho:
+
+- Coach Programs.
+- Coach Exercises.
+- Coach Members.
+- Assignments.
+- Schedules.
+- Sessions.
+- Public Coach.
+- Coach Appointments.
+- Admin Coach.
+- Admin Exercise.
+- Admin Workout Governance.
+
+Frontend:
+
+- Previous/Next hoặc pagination control dùng chung.
+- Giữ filter/search khi đổi page.
+- Reset page khi filter thay đổi.
+- Không fetch toàn bộ chỉ để lọc.
+- Có loading riêng cho page.
+
+### Performance
+
+- Count query dùng cùng scope/filter.
+- Index theo owner/status/date/search cần thiết.
+- Không N+1.
+
+### Commit đề xuất
+
+```text
+refactor(coach): add consistent server-side pagination
+```
+
+---
+
+## PHASE 12 — Booking Query, Summary và Filtering
+
+### Mục tiêu
+
+Không lấy 100 booking rồi lọc phía frontend.
+
+### Công việc
+
+Backend hỗ trợ:
+
+```text
+GET /api/bookings?status=
+GET /api/bookings?fromDate=
+GET /api/bookings?toDate=
+GET /api/bookings?page=&limit=
+GET /api/bookings/summary
+```
+
+Summary cho Coach:
+
+- pending count.
+- confirmed upcoming count.
+- today count.
+- completed count.
+- cancelled/no-show count.
+
+Yêu cầu:
+
+1. Scope theo role.
+2. Date/time theo Asia/Ho_Chi_Minh.
+3. Index phù hợp.
+4. Dashboard gọi summary endpoint.
+5. Appointment tabs gọi server filter.
+6. Lịch sử có pagination.
+7. Không expose booking của Coach khác.
+
+### Commit đề xuất
+
+```text
+feat(coach): add scoped booking summaries and server filters
+```
+
+---
+
+## PHASE 13 — Coach Dashboard Correctness
+
+### Mục tiêu
+
+Sửa metric/query sai và chuẩn bị Attention Queue.
+
+### Công việc
+
+1. `assignedMembers` và `activeMembers` phải khác định nghĩa.
+2. SQL lọc lịch tương lai trước `TOP`.
+3. Không tải lịch cũ rồi filter JS.
+4. Recent Session route phải dùng source.
+5. Metric có query rõ ràng:
+   - assigned members.
+   - members with active assignment.
+   - active programs.
+   - pending appointments.
+   - today appointments.
+   - overdue schedules.
+6. Không query trùng.
+7. Dùng booking summary phase 12.
+8. Timezone nhất quán.
+9. Dashboard lỗi một panel không làm hỏng toàn trang.
+
+### Commit đề xuất
+
+```text
+fix(coach): correct coach dashboard metrics and date queries
+```
+
+---
+
+## PHASE 14 — Attention Queue Backend
+
+### Mục tiêu
+
+Tạo danh sách việc Coach cần xử lý.
+
+### Rule tối thiểu
+
+- Booking pending quá thời gian quy định.
+- Member bỏ ít nhất 2 Schedule liên tiếp.
+- Member không hoàn thành Workout trong 7 ngày.
+- Assignment sắp hết hạn trong 7 ngày.
+- Assignment active nhưng chưa có Schedule tương lai.
+- Program active nhưng không có Day/Exercise.
+- Schedule overdue chưa reconcile.
+- Member completion rate dưới ngưỡng có đủ dữ liệu.
+
+### Yêu cầu
+
+1. Không chẩn đoán sức khỏe.
+2. Mỗi item có:
+   - `type`
+   - `severity`
+   - `memberId`
+   - `title`
+   - `description`
+   - `actionUrl`
+   - `createdFrom`.
+3. Query bounded, không scan toàn DB.
+4. Scope theo Coach.
+5. Có limit và sort priority.
+6. Dashboard hiển thị tối đa 10.
+
+### Commit đề xuất
+
+```text
+feat(coach): add actionable coach attention queue
+```
+
+---
+
+## PHASE 15 — Coach Availability Database
+
+### Mục tiêu
+
+Tạo lịch làm việc riêng cho từng Coach.
+
+### Migration mới đề xuất
+
+```text
+db/migrations/0011_coach_availability.sql
+```
+
+Schema tối thiểu:
+
+1. `CoachAvailabilityRules`
+   - coach_id.
+   - day_of_week.
+   - start_time.
+   - end_time.
+   - session_mode.
+   - location.
+   - is_active.
+2. `CoachAvailabilityExceptions`
+   - coach_id.
+   - exception_date.
+   - start_time nullable.
+   - end_time nullable.
+   - type: BLOCK | OPEN.
+   - note.
+3. Constraint:
+   - valid weekday.
+   - start < end.
+   - valid mode.
+4. Index:
+   - coach/date.
+   - coach/day/active.
+5. Không lưu slot generated cố định nếu có thể tính từ rule.
+6. Không cho overlap rule cùng Coach nếu contract cấm.
+
+### Acceptance
+
+- Weekly rules.
+- Day off.
+- Special open slot.
+- Overlap validation.
+- Suspended Coach không public availability.
+
+### Commit đề xuất
+
+```text
+feat(coach): add coach availability persistence
+```
+
+---
+
+## PHASE 16 — Coach Availability Backend API
+
+### Mục tiêu
+
+Cho Coach quản lý availability và public endpoint tính slot thật.
+
+### API Coach
+
+```text
+GET    /api/coach/availability/rules
+POST   /api/coach/availability/rules
+PATCH  /api/coach/availability/rules/:ruleId
+DELETE /api/coach/availability/rules/:ruleId
+
+GET    /api/coach/availability/exceptions
+POST   /api/coach/availability/exceptions
+PATCH  /api/coach/availability/exceptions/:exceptionId
+DELETE /api/coach/availability/exceptions/:exceptionId
+```
+
+### Public availability
+
+`GET /api/coaches/:id/availability?date=YYYY-MM-DD`
+
+Phải tính:
+
+1. Coach active.
+2. `booking_enabled = true`.
+3. Weekly rule.
+4. Exceptions.
+5. Appointment duration.
+6. Existing pending/confirmed bookings.
+7. Past time.
+8. Session mode.
+9. Location.
+10. Timezone.
+
+### Security
+
+- Coach chỉ sửa rule của mình.
+- Admin không được tự giả làm Coach qua route Coach.
+- IDOR test.
+
+### Commit đề xuất
+
+```text
+feat(coach): expose scoped coach availability APIs
+```
+
+---
+
+## PHASE 17 — Coach Availability Frontend
+
+### Mục tiêu
+
+Tạo UI `/coach/availability`.
+
+### UI cần có
+
+- Danh sách thứ trong tuần.
+- Bật/tắt ngày.
+- Thêm nhiều time range.
+- Mode Online/In-person/Both.
+- Location.
+- Ngày nghỉ.
+- Ngày mở đặc biệt.
+- Validation overlap.
+- Preview slot 7–14 ngày.
+- Empty/error/loading state.
+- Responsive mobile.
+
+### Public Booking
+
+- Hiển thị slot thật.
+- Hiển thị mode/location.
+- Không hiện ngày không có availability.
+- Khi slot vừa bị đặt:
+  - nhận `409`.
+  - reload availability.
+- Không hardcode toàn bộ Coach cùng giờ.
+
+### Navigation
+
+- Thêm vào Coach Sidebar.
+- Thêm Quick Start nếu chưa thiết lập availability.
+
+### Commit đề xuất
+
+```text
+feat(coach): add coach availability management UI
+```
+
+---
+
+## PHASE 18 — Membership Purchase và Upgrade Flow
+
+### Mục tiêu
+
+Sửa nút Plan chỉ redirect register và hoàn thiện lifecycle gói.
+
+### Công việc
+
+1. Xác định user guest/member.
+2. Guest chọn Plan:
+   - lưu intended plan an toàn.
+   - login/register.
+   - quay lại checkout/subscribe.
+3. Member:
+   - xem current membership.
+   - subscribe.
+   - upgrade/downgrade.
+   - cancel.
+4. Không tạo Membership `active` khi Payment vẫn `pending`.
+5. Tối thiểu lifecycle:
+   - `PENDING_PAYMENT`
+   - `ACTIVE`
+   - `CANCELLED`
+   - `EXPIRED`.
+6. Không cần tích hợp cổng thanh toán thật nếu project đang mô phỏng:
+   - phải có explicit simulated confirmation flow.
+   - không âm thầm active.
+7. Không cho nhiều active membership.
+8. Upgrade phải có transaction.
+9. Ghi audit.
+10. Frontend hiển thị trạng thái và lỗi rõ.
+
+### Files dự kiến
+
+- plans controller/routes/service.
+- membership pages/services/types.
+- migration nếu cần.
+- payment simulation hiện có.
+
+### Commit đề xuất
+
+```text
+feat(membership): complete plan subscription and upgrade lifecycle
+```
+
+---
+
+## PHASE 19 — Membership Entitlement Model
+
+### Mục tiêu
+
+Tách quyền lợi Plan khỏi text hiển thị.
+
+### Migration mới đề xuất
+
+```text
+db/migrations/0012_membership_entitlements.sql
+```
+
+Thiết kế đề xuất:
+
+`PlanEntitlements`
+
+- plan_id.
+- entitlement_key.
+- entitlement_value.
+- value_type.
+- unique `(plan_id, entitlement_key)`.
+
+Các key tối thiểu:
+
+```text
+COACH_BOOKING_ENABLED
+COACH_BOOKING_MONTHLY_LIMIT
+COACH_PRIORITY_BOOKING
+```
+
+Quy ước:
+
+- Starter:
+  - enabled false.
+  - limit 0.
+- Pro:
+  - enabled true.
+  - limit 2.
+- Elite:
+  - enabled true.
+  - limit null/unlimited.
+
+Yêu cầu:
+
+1. Không parse quyền từ chuỗi `features`.
+2. Service đọc active membership + entitlement.
+3. Cache chỉ khi invalidation rõ ràng; mặc định không cần cache.
+4. Admin Plan update phải quản lý entitlement hoặc seed migration.
+5. Có helper thống nhất.
+
+### Files dự kiến
+
+- `backend/src/modules/membership-entitlements/`
+- plans/admin plan code.
+- migration/seed.
+- docs ADR.
+
+### Commit đề xuất
+
+```text
+feat(membership): add structured coach booking entitlements
+```
+
+---
+
+## PHASE 20 — Booking Entitlement và Monthly Quota Enforcement
+
+### Mục tiêu
+
+Chỉ Member có quyền mới được booking Coach.
+
+### Backend bắt buộc
+
+Trong transaction tạo booking:
+
+1. Xác minh active Membership.
+2. Đọc entitlement.
+3. Nếu disabled → `403 COACH_BOOKING_NOT_INCLUDED`.
+4. Nếu limit hữu hạn:
+   - tính số booking chargeable trong tháng Asia/Ho_Chi_Minh.
+   - dùng lock/concurrency strategy.
+5. Chống hai request đồng thời vượt quota.
+6. Xác định status tính quota:
+   - pending.
+   - confirmed.
+   - completed.
+   - cancelled/no_show theo ADR.
+7. Trả quota:
+   - limit.
+   - used.
+   - remaining.
+8. Admin không bypass qua public Member booking route.
+9. Coach không tự tạo booking cho Member qua route này.
+
+### Frontend
+
+- Trang Plan hiển thị quyền đúng từ API.
+- Booking page hiển thị quota còn lại.
+- Không chỉ disable frontend; backend phải enforce.
+- Message nâng cấp gói có link đúng.
+
+### Acceptance
+
+- Starter bị chặn.
+- Pro booking lần 1/2 PASS.
+- Pro lần 3 bị chặn.
+- Elite unlimited.
+- Concurrent request ở quota cuối.
+- Cancel behavior đúng ADR.
+- Month boundary.
+
+### Commit đề xuất
+
+```text
+feat(coach): enforce membership booking entitlements and quotas
+```
+
+---
+
+## PHASE 21 — Coach Member Goals và Private Notes Database/API
+
+### Mục tiêu
+
+Cho Coach quản lý thông tin tập luyện cơ bản của Member.
+
+### Migration mới đề xuất
+
+```text
+db/migrations/0013_coach_member_context.sql
+```
+
+Schema tối thiểu:
+
+`CoachMemberContexts`
+
+- coach_id.
+- member_id.
+- training_goal.
+- limitations_self_reported.
+- coach_private_note.
+- next_review_date.
+- created_at.
+- updated_at.
+- unique `(coach_id, member_id)`.
+
+Quy tắc:
+
+1. Chỉ tồn tại trong active Coach scope.
+2. Coach cũ giữ lịch sử read-only hoặc bị đóng scope theo ADR.
+3. Member không đọc `coach_private_note`.
+4. Admin chỉ đọc khi policy cho phép; mặc định không expose.
+5. Không ghi diagnosis.
+6. Text bounded.
+7. Audit mutation.
+
+API:
+
+```text
+GET   /api/coach/members/:memberId/context
+PATCH /api/coach/members/:memberId/context
+```
+
+### Commit đề xuất
+
+```text
+feat(coach): add scoped member goals and private coach notes
+```
+
+---
+
+## PHASE 22 — Coach Member Context Frontend
+
+### Mục tiêu
+
+Tích hợp Goals/Notes vào Member Detail.
+
+### UI
+
+- Training goal.
+- Self-reported limitations.
+- Private Coach note.
+- Next review date.
+- Save state.
+- Dirty warning.
+- Không hiển thị private note ở Member UI.
+- Không gọi PATCH mỗi ký tự.
+- Scope error rõ ràng.
+- Khi Member reassigned:
+  - Coach cũ không sửa.
+  - Coach mới có context mới hoặc policy đã chốt.
+
+### Commit đề xuất
+
+```text
+feat(coach): add member context editor to coach workspace
+```
+
+---
+
+## PHASE 23 — Basic In-app Notifications Backend
+
+### Mục tiêu
+
+Tạo notification tối thiểu cho nghiệp vụ Coach.
+
+### Migration mới đề xuất
+
+```text
+db/migrations/0014_notifications.sql
+```
+
+Schema:
+
+- recipient_user_id.
+- type.
+- title.
+- message.
+- action_url.
+- read_at.
+- created_at.
+- deduplication_key nullable.
+
+Trigger nghiệp vụ:
+
+1. Member tạo booking → Coach.
+2. Coach confirm/cancel → Member.
+3. Admin assign/reassign Member → Coach và Member.
+4. Coach tạo Assignment → Member.
+5. Coach generate Schedule → Member.
+6. Assignment sắp hết hạn có thể tạo notification theo batch.
+
+Yêu cầu:
+
+- Tạo notification trong cùng transaction hoặc outbox pattern nhẹ.
+- Không gửi email bắt buộc.
+- Không duplicate khi request retry.
+- Self-scoped API:
+  - list.
+  - unread count.
+  - mark read.
+  - mark all read.
+
+### Commit đề xuất
+
+```text
+feat(notifications): add coach workflow in-app notifications
+```
+
+---
+
+## PHASE 24 — Notifications Frontend
+
+### Mục tiêu
+
+Hiển thị notification đơn giản, không realtime phức tạp.
+
+### UI
+
+- Bell icon.
+- Unread count.
+- Dropdown/list page.
+- Click action URL.
+- Mark read.
+- Empty/loading/error.
+- Polling nhẹ hoặc refresh khi mở; không cần WebSocket.
+- Role-safe links.
+- Mobile usable.
+
+### Commit đề xuất
+
+```text
+feat(notifications): add coach and member notification UI
+```
+
+---
+
+## PHASE 25 — Workout Program Versioning Database/Backend
+
+### Mục tiêu
+
+Không sửa trực tiếp Program đã được dùng làm mất tính nhất quán.
+
+### Migration mới đề xuất
+
+```text
+db/migrations/0015_workout_program_versioning.sql
+```
+
+Thiết kế tối thiểu:
+
+`WorkoutPrograms` bổ sung hoặc bảng version riêng:
+
+- root_program_id.
+- version_number.
+- lifecycle_status: DRAFT | PUBLISHED | ARCHIVED.
+- published_at.
+- cloned_from_program_id.
+
+Quy tắc:
+
+1. DRAFT được sửa.
+2. PUBLISHED đã assign:
+   - không sửa cấu trúc trực tiếp.
+   - dùng Clone New Version.
+3. Assignment giữ program_id/version cũ.
+4. Program cũ vẫn đọc được.
+5. Program mới không tự thay Assignment đang chạy.
+6. Archive không xóa lịch sử.
+7. Activate/deactivate cũ cần compatibility mapping hoặc migration rõ.
+
+API:
+
+```text
+POST /api/coach/workout-programs/:programId/publish
+POST /api/coach/workout-programs/:programId/clone-version
+POST /api/coach/workout-programs/:programId/archive
+```
+
+### Commit đề xuất
+
+```text
+feat(coach): add immutable workout program version lifecycle
+```
+
+---
+
+## PHASE 26 — Workout Program Versioning Frontend
+
+### Mục tiêu
+
+Cho Coach hiểu rõ Draft/Published/Archived.
+
+### UI
+
+- Badge lifecycle.
+- Publish button.
+- Clone Version.
+- Archive.
+- Disable editor khi Published.
+- Warning Program đang có Assignment.
+- Link xem versions.
+- Assignment New chỉ chọn Published/Active version.
+- Không gọi tên mơ hồ `Activate` nếu lifecycle đã thay đổi.
+- Migration compatibility cho dữ liệu cũ.
+
+### Commit đề xuất
+
+```text
+feat(coach): expose workout program version lifecycle in UI
+```
+
+---
+
+## PHASE 27 — Security, IDOR và Concurrency Hardening
+
+### Mục tiêu
+
+Rà lại toàn bộ surface mới và cũ.
+
+### Ma trận bắt buộc
+
+Guest:
+
+- public Coach list/detail/availability được phép.
+- private Coach/Member/Admin route → `401`.
+
+Member:
+
+- không vào Coach Workspace.
+- chỉ đọc workout/session/progress của mình.
+- chỉ booking theo entitlement.
+- chỉ cancel booking của mình.
+- không đọc Coach private notes.
+
+Coach A:
+
+- không đọc/sửa Member của Coach B.
+- không đọc/sửa availability Coach B.
+- không đọc booking Coach B.
+- không sửa Program Coach B.
+- không đọc private note Coach B.
+
+Admin:
+
+- chỉ route được policy cho phép.
+- không mutate Set Logs/Member Session trái thiết kế.
+- không bypass ownership bằng query parameter.
+
+Concurrency:
+
+- booking same slot.
+- quota cuối cùng.
+- generate Schedule.
+- assignment transition.
+- session Complete.
+- reassignment.
+- Program publish/clone.
+
+### Kết quả
+
+Tạo acceptance script mới:
+
+```text
+backend/src/scripts/coach-completion-security-acceptance.ts
+```
+
+Thêm npm script:
+
+```text
+acceptance:coach-completion-security
+```
+
+### Commit đề xuất
+
+```text
+test(coach): add completion security and concurrency acceptance
+```
+
+---
+
+## PHASE 28 — Performance và Database Index Review
+
+### Mục tiêu
+
+Bảo đảm module hoạt động với dữ liệu lớn vừa phải.
+
+### Công việc
+
+1. Rà query plan cho:
+   - Coach list/search.
+   - Booking scope/status/date.
+   - Availability.
+   - Member list.
+   - Schedule date/status.
+   - Attention Queue.
+   - Session history.
+   - Progress.
+   - Notifications unread.
+   - entitlement usage.
+2. Thêm index bằng migration mới nếu cần:
+   - không duplicate index.
+   - tên rõ.
+3. Tránh query in-memory toàn bộ rồi paginate.
+4. Không N+1.
+5. Count query bounded.
+6. Dashboard dùng aggregate query hợp lý.
+7. Test fixture:
+   - >50 Members.
+   - >100 Bookings.
+   - nhiều Schedule/Session.
+8. Frontend:
+   - không render list khổng lồ.
+   - stable keys.
+   - cancel stale requests khi search.
+
+### Commit đề xuất
+
+```text
+perf(coach): optimize coach workspace queries and pagination
+```
+
+---
+
+## PHASE 29 — Full Acceptance, Browser QA và Final Handover
+
+### Mục tiêu
+
+Chỉ kết luận hoàn thành khi có bằng chứng toàn diện.
+
+### Backend commands
+
+```bash
+cd backend
+npm ci
+npm run db:migrate:status
+npm run build
+npm run lint
+npm run verify:coach-migration
+npm run test:coach-booking-unit
+npm run acceptance:coach-role
+npm run acceptance:coach-member-e2e
+npm run acceptance:admin-coach
+npm run acceptance:coach-booking
+npm run acceptance:coach-completion-security
+```
+
+Chạy thêm acceptance mới cho:
+
+- schedule generation.
+- overdue lifecycle.
+- session integrity.
+- inactive Exercise snapshot.
+- session source collision.
+- membership quota.
+- Coach availability.
+- notifications.
+- versioning.
+- pagination.
+
+### Frontend commands
+
+```bash
+cd frontend
+npm ci
+npx tsc --noEmit
+npm run build
+```
+
+### Browser QA roles
+
+Guest:
+
+- `/coaches`
+- `/coaches/:id`
+- availability.
+- login redirect khi booking.
+
+Starter Member:
+
+- không booking được.
+- thấy upgrade action.
+
+Pro Member:
+
+- booking trong quota.
+- quota exhausted.
+
+Elite Member:
+
+- booking không giới hạn theo rule.
+
+Coach:
+
+- profile.
+- availability.
+- appointments.
+- programs/versioning.
+- members/context.
+- assignments.
+- schedules.
+- sessions.
+- progress.
+- attention queue.
+- notifications.
+
+Admin:
+
+- coach management.
+- suspension behavior.
+- exercise deactivate không phá snapshot.
+- workout governance.
+
+### Viewport
+
+```text
+375x812
+768x1024
+1440x900
+```
+
+### Final documentation
+
+Tạo/cập nhật:
+
+```text
+docs/coach/COACH_COMPLETION_FINAL_HANDOVER.md
+docs/coach/COACH_COMPLETION_TEST_MATRIX.md
+docs/coach/COACH_DATABASE_DEPLOYMENT.md
+docs/coach/COACH_KNOWN_LIMITATIONS.md
+docs/coach/COACH_COMPLETION_PROGRESS.md
+```
+
+### Final verdict chỉ được dùng khi tất cả critical test PASS
+
+```text
+COACH_MODULE_OPERATIONAL_CAPACITY_COMPLETE
+```
+
+Nếu còn blocker:
+
+```text
+COACH_MODULE_PARTIAL
+```
+
+và liệt kê chính xác blocker.
+
+### Commit đề xuất
+
+```text
+docs(coach): finalize coach completion verification and handover
+```
+
+---
+
+# THỨ TỰ ƯU TIÊN BẮT BUỘC
+
+Không đổi thứ tự nhóm sau:
+
+## Nhóm A — Data Integrity và lỗi P0
+
+1. Phase 00.
+2. Phase 01.
+3. Phase 02.
+4. Phase 03.
+5. Phase 04.
+6. Phase 05.
+7. Phase 06.
+8. Phase 07.
+9. Phase 08.
+
+## Nhóm B — Coach Workspace hoàn chỉnh
+
+10. Phase 09.
+11. Phase 10.
+12. Phase 11.
+13. Phase 12.
+14. Phase 13.
+15. Phase 14.
+
+## Nhóm C — Availability và Monetization
+
+16. Phase 15.
+17. Phase 16.
+18. Phase 17.
+19. Phase 18.
+20. Phase 19.
+21. Phase 20.
+
+## Nhóm D — CRM nhẹ và vận hành
+
+22. Phase 21.
+23. Phase 22.
+24. Phase 23.
+25. Phase 24.
+
+## Nhóm E — Versioning, Security và hoàn tất
+
+26. Phase 25.
+27. Phase 26.
+28. Phase 27.
+29. Phase 28.
+30. Phase 29.
+
+---
+
+# EXECUTION PROTOCOL — Cách Codex phải làm việc
+
+1. Đọc toàn bộ prompt này.
+2. Xác nhận đang ở `coach1`.
+3. Thực hiện đúng Phase 00 trước.
+4. Không triển khai hai phase cùng lúc.
+5. Đầu mỗi phase:
+   - đọc code liên quan.
+   - ghi kế hoạch file sẽ sửa.
+   - ghi risk.
+6. Cuối mỗi phase:
+   - chạy test tối thiểu liên quan.
+   - chạy backend build nếu backend đổi.
+   - chạy frontend TypeScript/build nếu frontend đổi.
+   - cập nhật progress document.
+   - chạy `git diff --check`.
+7. Không sang phase tiếp theo nếu:
+   - build fail.
+   - test critical fail.
+   - migration mismatch.
+   - có thay đổi ngoài scope chưa giải thích.
+8. Nếu blocker pre-existing thuộc Marketplace/Seller:
+   - ghi rõ.
+   - không sửa ngoài scope.
+   - dùng Coach disposable acceptance DB nếu phù hợp.
+9. Mỗi phase ưu tiên một commit độc lập.
+10. Không push.
+11. Không squash lịch sử của người dùng.
+12. Không dùng `git reset --hard`.
+13. Không xóa untracked file của người dùng.
+14. Không tuyên bố hoàn thành dựa trên việc “code có route”.
+15. Chỉ tuyên bố PASS khi có test evidence.
+
+---
+
+# DEFINITION OF DONE TOÀN MODULE
+
+Module Coach chỉ hoàn thành khi:
+
+- Migration Coach verify PASS.
+- Public Coach hoạt động.
+- Coach Profile hoạt động.
+- Coach Availability hoạt động.
+- Booking dùng slot thật.
+- Membership purchase/upgrade hoạt động.
+- Entitlement booking được enforce backend.
+- Quota chống race condition.
+- Program multi-week generate đúng.
+- Schedule overdue lifecycle đúng.
+- Session rỗng không Complete được.
+- Exercise inactive không phá snapshot.
+- Session legacy/member không nhầm ID.
+- Assignment transition đồng nhất.
+- Program Builder đủ field và save an toàn.
+- Program Day sửa được.
+- Pagination server-side.
+- Booking summary đúng.
+- Dashboard metric đúng.
+- Attention Queue có dữ liệu thật.
+- Member Goals/Private Notes có scope đúng.
+- Notification cơ bản hoạt động.
+- Program Versioning bảo vệ Assignment cũ.
+- Guest/Member/Coach/Admin RBAC PASS.
+- IDOR PASS.
+- Concurrency PASS.
+- Backend build PASS.
+- Backend lint không có error.
+- Frontend TypeScript PASS.
+- Frontend production build PASS.
+- Browser QA PASS.
+- Không phá Seller/Marketplace regression.
+- Có final handover và known limitations trung thực.
+
+---
+
+# OUTPUT FORMAT CODEx PHẢI TRẢ SAU MỖI PHASE
+
+```markdown
+# Phase XX Result
+
+## Status
+PASS | PARTIAL | BLOCKED
+
+## Changes
+- File:
+  - thay đổi gì
+  - lý do
+
+## Database
+- migration:
+- schema/index:
+- migration verification:
+
+## Security
+- RBAC:
+- IDOR:
+- concurrency:
+
+## Tests
+- `<command>`: PASS/FAIL
+- `<command>`: PASS/FAIL
+
+## Manual verification
+- ...
+
+## Remaining risks
+- ...
+
+## Next phase
+- Phase XX+1
+- prerequisite:
+```
+
+Không trả lời chung chung như:
+
+```text
+Đã hoàn thành tất cả.
+```
+
+Phải có file, test và evidence cụ thể.

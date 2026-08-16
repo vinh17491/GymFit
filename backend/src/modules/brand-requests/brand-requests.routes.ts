@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { authenticate,authorize } from '../../middleware/auth';
+import { validate } from '../../middleware/validate';
+import { UserRole } from '../../types';
+import { createSeller,detailSeller,listSeller } from './brand-requests.controller';
+import { brandRequestCreateLimiter } from './brand-requests.rate-limit';
+import { createBrandRequestSchema,requestIdSchema,sellerListSchema } from './brand-requests.validation';
+const router=Router();router.use(authenticate,authorize(UserRole.SELLER));
+router.get('/',validate(sellerListSchema,'query'),listSeller);
+router.get('/:requestId',validate(requestIdSchema,'params'),detailSeller);
+router.post('/',brandRequestCreateLimiter,validate(createBrandRequestSchema),createSeller);
+export default router;
