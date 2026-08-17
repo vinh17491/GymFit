@@ -65,7 +65,7 @@ export function assertBookingDate(date: string, now = new Date()): void {
 
 export function assertBookingStartTime(startTime: string): void {
   if (!isTimeString(startTime) || timeToMinutes(startTime) + COACH_BOOKING_DURATION_MINUTES >= 24 * 60) {
-    throw new AppError(400, 'startTime must be a valid 60-minute Coach slot');
+    throw new AppError(400, `startTime must be a valid ${COACH_BOOKING_DURATION_MINUTES}-minute Coach slot`);
   }
 }
 

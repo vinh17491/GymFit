@@ -1,3 +1,9 @@
+-- LEGACY SNAPSHOT / DEV SEED ARTIFACT — NOT CANONICAL PROVISIONING
+-- WARNING: this script drops and recreates GYMFIT_DB and contains demo data.
+-- Never run it against a canonical or shared database.
+-- Forward schema changes are owned by db/migrations and the migration runner.
+-- Fresh-install/bootstrap policy must be resolved before using this artifact.
+
 -- ============================================
 -- GYMER DATABASE — Full Schema + Procs + Demo Data
 -- 1 file duy nhất. Mở SSMS, F5 là chạy.
@@ -61,11 +67,8 @@ DROP TABLE IF EXISTS Notifications;
 DROP TABLE IF EXISTS Payments;
 DROP TABLE IF EXISTS Memberships;
 DROP TABLE IF EXISTS Plans;
-DROP TABLE IF EXISTS SellerApplicationStatusHistory;
-DROP TABLE IF EXISTS SellerApplications;
 DROP TABLE IF EXISTS AnalyticsRetention;
 DROP TABLE IF EXISTS AnalyticsDaily;
-DROP TABLE IF EXISTS CoachProfiles;
 DROP TABLE IF EXISTS Users;
 DROP TABLE IF EXISTS Inventory;
 DROP TABLE IF EXISTS Bookings;
@@ -87,14 +90,11 @@ CREATE TABLE Users (
   password NVARCHAR(255) NOT NULL,
   name NVARCHAR(100) NOT NULL,
   phone NVARCHAR(20) NULL,
-  role NVARCHAR(20) NOT NULL DEFAULT 'member' CONSTRAINT CK_Users_Role CHECK (role IN ('member','coach','admin','seller')),
+  role NVARCHAR(20) NOT NULL DEFAULT 'member' CONSTRAINT CK_Users_Role CHECK (role IN ('member','coach','admin')),
   referral_code NVARCHAR(10) NULL,
   referred_by INT NULL,
   avatar_url NVARCHAR(500) NULL,
   is_active BIT NOT NULL DEFAULT 1,
-  coach_status NVARCHAR(20) NULL CONSTRAINT CK_Users_CoachStatus CHECK (coach_status IS NULL OR coach_status IN ('ACTIVE','SUSPENDED','INACTIVE')),
-  coach_status_reason NVARCHAR(500) NULL,
-  coach_status_updated_at DATETIME2 NULL,
   email_verified BIT NOT NULL DEFAULT 0,
   last_login_at DATETIME2 NULL,
   created_at DATETIME2 NOT NULL DEFAULT GETDATE(),
@@ -103,81 +103,6 @@ CREATE TABLE Users (
  );
  CREATE INDEX IX_Users_Email ON Users(email);
  CREATE INDEX IX_Users_Role ON Users(role);
- CREATE INDEX IX_Users_CoachStatus ON Users(role, coach_status, is_active, created_at DESC, id DESC);
-
-CREATE TABLE CoachProfiles (
-  id INT IDENTITY(1,1) PRIMARY KEY,
-  coach_id INT NOT NULL UNIQUE,
-  specialty NVARCHAR(200) NULL,
-  bio NVARCHAR(2000) NULL,
-  experience_years INT NULL CHECK (experience_years IS NULL OR experience_years >= 0),
-  session_mode NVARCHAR(20) NULL CHECK (session_mode IS NULL OR session_mode IN ('ONLINE','IN_PERSON','BOTH')),
-  location NVARCHAR(255) NULL,
-  booking_enabled BIT NOT NULL DEFAULT 1,
-  created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-  FOREIGN KEY (coach_id) REFERENCES Users(id)
- );
-
-CREATE TABLE SellerApplications (
-  id INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SellerApplications PRIMARY KEY,
-  user_id INT NOT NULL,
-  status NVARCHAR(20) NOT NULL CONSTRAINT DF_SellerApplications_Status DEFAULT 'DRAFT',
-  business_name NVARCHAR(200) NULL,
-  business_type NVARCHAR(30) NULL,
-  contact_name NVARCHAR(200) NULL,
-  contact_email NVARCHAR(255) NULL,
-  contact_phone NVARCHAR(50) NULL,
-  business_address NVARCHAR(500) NULL,
-  pickup_address NVARCHAR(500) NULL,
-  tax_code NVARCHAR(50) NULL,
-  website_url NVARCHAR(500) NULL,
-  social_url NVARCHAR(500) NULL,
-  description NVARCHAR(2000) NULL,
-  review_reason NVARCHAR(1000) NULL,
-  submitted_at DATETIME2 NULL,
-  reviewed_at DATETIME2 NULL,
-  reviewed_by_user_id INT NULL,
-  created_at DATETIME2 NOT NULL CONSTRAINT DF_SellerApplications_CreatedAt DEFAULT SYSUTCDATETIME(),
-  updated_at DATETIME2 NOT NULL CONSTRAINT DF_SellerApplications_UpdatedAt DEFAULT SYSUTCDATETIME(),
-  row_version ROWVERSION NOT NULL,
-  CONSTRAINT UQ_SellerApplications_User UNIQUE (user_id),
-  CONSTRAINT FK_SellerApplications_User FOREIGN KEY (user_id) REFERENCES Users(id),
-  CONSTRAINT FK_SellerApplications_ReviewedBy FOREIGN KEY (reviewed_by_user_id) REFERENCES Users(id),
-  CONSTRAINT CK_SellerApplications_Status CHECK (status IN ('DRAFT','PENDING','APPROVED','REJECTED','WITHDRAWN')),
-  CONSTRAINT CK_SellerApplications_BusinessType CHECK (business_type IS NULL OR business_type IN ('BRAND','SPORTS_STORE','SMALL_BUSINESS','OTHER')),
-  CONSTRAINT CK_SellerApplications_ContactEmail CHECK (contact_email IS NULL OR LEN(LTRIM(RTRIM(contact_email))) BETWEEN 3 AND 255),
-  CONSTRAINT CK_SellerApplications_ReviewFields CHECK ((status IN ('APPROVED','REJECTED') AND reviewed_at IS NOT NULL AND reviewed_by_user_id IS NOT NULL) OR status NOT IN ('APPROVED','REJECTED')),
-  CONSTRAINT CK_SellerApplications_SubmittedAt CHECK (status='DRAFT' OR submitted_at IS NOT NULL)
-);
-CREATE INDEX IX_SellerApplications_Status_SubmittedAt ON SellerApplications(status,submitted_at DESC,id DESC);
-
-CREATE TABLE SellerApplicationStatusHistory (
-  id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_SellerApplicationStatusHistory PRIMARY KEY,
-  seller_application_id INT NOT NULL,
-  from_status NVARCHAR(20) NULL,
-  to_status NVARCHAR(20) NOT NULL,
-  actor_user_id INT NULL,
-  reason NVARCHAR(1000) NULL,
-  created_at DATETIME2 NOT NULL CONSTRAINT DF_SellerApplicationStatusHistory_CreatedAt DEFAULT SYSUTCDATETIME(),
-  CONSTRAINT FK_SellerApplicationStatusHistory_Application FOREIGN KEY (seller_application_id) REFERENCES SellerApplications(id),
-  CONSTRAINT FK_SellerApplicationStatusHistory_Actor FOREIGN KEY (actor_user_id) REFERENCES Users(id),
-  CONSTRAINT CK_SellerApplicationStatusHistory_FromStatus CHECK (from_status IS NULL OR from_status IN ('DRAFT','PENDING','APPROVED','REJECTED','WITHDRAWN')),
-  CONSTRAINT CK_SellerApplicationStatusHistory_ToStatus CHECK (to_status IN ('DRAFT','PENDING','APPROVED','REJECTED','WITHDRAWN')),
-  CONSTRAINT CK_SellerApplicationStatusHistory_Changed CHECK (from_status IS NULL OR from_status<>to_status),
-  CONSTRAINT CK_SellerApplicationStatusHistory_Reason CHECK (reason IS NULL OR LEN(LTRIM(RTRIM(reason)))>0)
-);
-CREATE INDEX IX_SellerApplicationStatusHistory_Application_CreatedAt ON SellerApplicationStatusHistory(seller_application_id,created_at,id);
-GO
-CREATE OR ALTER TRIGGER TR_SellerApplicationStatusHistory_Immutable
-ON SellerApplicationStatusHistory
-AFTER UPDATE, DELETE
-AS
-BEGIN
-  SET NOCOUNT ON;
-  THROW 51100, 'Seller application status history is immutable.', 1;
-END;
-GO
 
 CREATE TABLE Plans (
   id INT IDENTITY(1,1) PRIMARY KEY,
@@ -1546,93 +1471,3 @@ GO
 
 PRINT '========================================';
 GO
-
--- SELLER-002/003 canonical marketplace convergence
-CREATE TABLE dbo.Shops(
- id INT IDENTITY(1,1) PRIMARY KEY,owner_user_id INT NULL,system_key NVARCHAR(100) NULL,name NVARCHAR(200) NOT NULL,slug NVARCHAR(200) NOT NULL,
- logo_url NVARCHAR(500) NULL,banner_url NVARCHAR(500) NULL,description NVARCHAR(2000) NULL,pickup_address NVARCHAR(500) NULL,
- status NVARCHAR(20) NOT NULL DEFAULT N'ACTIVE',is_verified BIT NOT NULL DEFAULT 0,is_system BIT NOT NULL DEFAULT 0,
- average_rating DECIMAL(3,2) NOT NULL DEFAULT 0,review_count INT NOT NULL DEFAULT 0,completed_order_count INT NOT NULL DEFAULT 0,sold_count INT NOT NULL DEFAULT 0,
- created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),row_version ROWVERSION,
- CONSTRAINT FK_Shops_Owner FOREIGN KEY(owner_user_id) REFERENCES dbo.Users(id),CONSTRAINT UQ_Shops_Slug UNIQUE(slug),
- CONSTRAINT CK_Shops_Status CHECK(status IN(N'ACTIVE',N'SUSPENDED')),
- CONSTRAINT CK_Shops_SystemOwnership CHECK((is_system=1 AND owner_user_id IS NULL AND system_key IS NOT NULL) OR (is_system=0 AND owner_user_id IS NOT NULL AND system_key IS NULL))
-);
-CREATE UNIQUE INDEX UX_Shops_Owner ON dbo.Shops(owner_user_id) WHERE owner_user_id IS NOT NULL;
-CREATE UNIQUE INDEX UX_Shops_SystemKey ON dbo.Shops(system_key) WHERE system_key IS NOT NULL;
-INSERT dbo.Shops(system_key,name,slug,status,is_verified,is_system) VALUES(N'GYMFIT_OFFICIAL',N'GymFit Official',N'gymfit-official',N'ACTIVE',1,1);
-ALTER TABLE dbo.Products ADD shop_id INT NULL;
-GO
-UPDATE dbo.Products SET shop_id=(SELECT id FROM dbo.Shops WHERE system_key=N'GYMFIT_OFFICIAL');
-ALTER TABLE dbo.Products ALTER COLUMN shop_id INT NOT NULL;
-ALTER TABLE dbo.Products ADD CONSTRAINT FK_Products_Shops FOREIGN KEY(shop_id) REFERENCES dbo.Shops(id);
-CREATE INDEX IX_Products_Shop_Active ON dbo.Products(shop_id,is_active,id);
-GO
-
-ALTER TABLE dbo.Brands ADD normalized_name NVARCHAR(200) NULL,is_generic BIT NOT NULL DEFAULT 0;
-GO
-UPDATE dbo.Brands SET normalized_name=LOWER(LTRIM(RTRIM(name)));
-WHILE EXISTS(SELECT 1 FROM dbo.Brands WHERE normalized_name LIKE N'%  %') UPDATE dbo.Brands SET normalized_name=REPLACE(normalized_name,N'  ',N' ');
-ALTER TABLE dbo.Brands ALTER COLUMN normalized_name NVARCHAR(200) NOT NULL;
-CREATE UNIQUE INDEX UX_Brands_NormalizedName ON dbo.Brands(normalized_name);
-CREATE UNIQUE INDEX UX_Brands_OneGeneric ON dbo.Brands(is_generic) WHERE is_generic=1;
-IF EXISTS(SELECT 1 FROM dbo.Brands WHERE normalized_name=LOWER(N'Không có thương hiệu'))
- UPDATE dbo.Brands SET is_generic=1,is_active=1 WHERE normalized_name=LOWER(N'Không có thương hiệu');
-ELSE INSERT dbo.Brands(name,slug,normalized_name,is_generic,is_active) VALUES(N'Không có thương hiệu',N'khong-co-thuong-hieu',LOWER(N'Không có thương hiệu'),1,1);
-GO
-
-CREATE TABLE dbo.BrandRequests(
- id INT IDENTITY(1,1) PRIMARY KEY,requester_user_id INT NOT NULL,shop_id INT NOT NULL,requested_name NVARCHAR(200) NOT NULL,normalized_name NVARCHAR(200) NOT NULL,
- website_url NVARCHAR(500) NULL,description NVARCHAR(2000) NULL,status NVARCHAR(20) NOT NULL DEFAULT N'PENDING',resolved_brand_id INT NULL,
- review_reason NVARCHAR(1000) NULL,reviewed_by_user_id INT NULL,reviewed_at DATETIME2 NULL,created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
- updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),row_version ROWVERSION,
- FOREIGN KEY(requester_user_id) REFERENCES dbo.Users(id),FOREIGN KEY(shop_id) REFERENCES dbo.Shops(id),FOREIGN KEY(resolved_brand_id) REFERENCES dbo.Brands(id),
- FOREIGN KEY(reviewed_by_user_id) REFERENCES dbo.Users(id),CHECK(status IN(N'PENDING',N'APPROVED',N'REJECTED')),
- CONSTRAINT CK_BrandRequests_State CHECK((status=N'PENDING' AND resolved_brand_id IS NULL AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL AND review_reason IS NULL)
- OR(status=N'APPROVED' AND resolved_brand_id IS NOT NULL AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)
- OR(status=N'REJECTED' AND resolved_brand_id IS NULL AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND LEN(LTRIM(RTRIM(review_reason)))>0))
-);
-CREATE UNIQUE INDEX UX_BrandRequests_PendingNormalized ON dbo.BrandRequests(normalized_name) WHERE status=N'PENDING';
-CREATE INDEX IX_BrandRequests_Shop_Status_Created ON dbo.BrandRequests(shop_id,status,created_at DESC,id DESC);
-CREATE TABLE dbo.BrandRequestStatusHistory(id BIGINT IDENTITY(1,1) PRIMARY KEY,brand_request_id INT NOT NULL,from_status NVARCHAR(20) NULL,to_status NVARCHAR(20) NOT NULL,actor_user_id INT NULL,reason NVARCHAR(1000) NULL,created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),FOREIGN KEY(brand_request_id) REFERENCES dbo.BrandRequests(id),FOREIGN KEY(actor_user_id) REFERENCES dbo.Users(id));
-GO
-CREATE OR ALTER TRIGGER dbo.TR_BrandRequestStatusHistory_Immutable ON dbo.BrandRequestStatusHistory AFTER UPDATE,DELETE AS BEGIN SET NOCOUNT ON;THROW 51300,'Brand request status history is immutable.',1;END;
-GO
-
--- SELLER-005 Product lifecycle foundation
-ALTER TABLE dbo.Products ADD
- moderation_status NVARCHAR(20) NOT NULL CONSTRAINT DF_Products_ModerationStatus DEFAULT N'PUBLISHED',
- submitted_at DATETIME2 NULL,review_reason NVARCHAR(1000) NULL,brand_request_id INT NULL,
- CONSTRAINT FK_Products_BrandRequest FOREIGN KEY(brand_request_id) REFERENCES dbo.BrandRequests(id),
- CONSTRAINT CK_Products_ModerationStatus CHECK(moderation_status IN(N'DRAFT',N'PENDING_REVIEW',N'PUBLISHED',N'REJECTED',N'SUSPENDED')),
- CONSTRAINT CK_Products_BrandSource CHECK((brand_id IS NOT NULL AND brand_request_id IS NULL) OR (brand_id IS NULL AND brand_request_id IS NOT NULL)),
- CONSTRAINT CK_Products_ModerationState CHECK(
-  (moderation_status=N'DRAFT' AND submitted_at IS NULL AND is_active=0)
-  OR(moderation_status=N'PENDING_REVIEW' AND submitted_at IS NOT NULL AND review_reason IS NULL AND is_active=0)
-  OR(moderation_status=N'PUBLISHED' AND brand_id IS NOT NULL AND brand_request_id IS NULL)
-  OR(moderation_status=N'REJECTED' AND is_active=0)
-  OR(moderation_status=N'SUSPENDED' AND is_active=0));
-CREATE INDEX IX_Products_Shop_Moderation ON dbo.Products(shop_id,moderation_status,updated_at DESC,id DESC);
-CREATE INDEX IX_Products_Moderation_Submitted ON dbo.Products(moderation_status,submitted_at,id) INCLUDE(shop_id,is_active,brand_id,category_id);
-GO
-
--- SELLER-006 Admin Product moderation
-ALTER TABLE dbo.Products ADD reviewed_at DATETIME2 NULL,published_at DATETIME2 NULL,reviewed_by_user_id INT NULL,
- CONSTRAINT FK_Products_ReviewedBy FOREIGN KEY(reviewed_by_user_id) REFERENCES dbo.Users(id);
-CREATE TABLE dbo.ProductModerationHistory(
- id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ProductModerationHistory PRIMARY KEY,
- product_id INT NOT NULL,from_status NVARCHAR(20) NULL,to_status NVARCHAR(20) NOT NULL,actor_user_id INT NULL,reason NVARCHAR(1000) NULL,
- created_at DATETIME2 NOT NULL CONSTRAINT DF_ProductModerationHistory_CreatedAt DEFAULT SYSUTCDATETIME(),
- CONSTRAINT FK_ProductModerationHistory_Product FOREIGN KEY(product_id) REFERENCES dbo.Products(id),
- CONSTRAINT FK_ProductModerationHistory_Actor FOREIGN KEY(actor_user_id) REFERENCES dbo.Users(id),
- CONSTRAINT CK_ProductModerationHistory_FromStatus CHECK(from_status IS NULL OR from_status IN(N'DRAFT',N'PENDING_REVIEW',N'PUBLISHED',N'REJECTED',N'SUSPENDED')),
- CONSTRAINT CK_ProductModerationHistory_ToStatus CHECK(to_status IN(N'DRAFT',N'PENDING_REVIEW',N'PUBLISHED',N'REJECTED',N'SUSPENDED')),
- CONSTRAINT CK_ProductModerationHistory_Reason CHECK(to_status NOT IN(N'REJECTED',N'SUSPENDED') OR LEN(LTRIM(RTRIM(reason)))>0));
-CREATE INDEX IX_ProductModerationHistory_Product_Created ON dbo.ProductModerationHistory(product_id,created_at DESC,id DESC);
-CREATE INDEX IX_ProductModerationHistory_Status_Created ON dbo.ProductModerationHistory(to_status,created_at DESC,id DESC);
-CREATE INDEX IX_Products_Moderation_Reviewed ON dbo.Products(moderation_status,reviewed_at DESC,id DESC) INCLUDE(shop_id,is_active,submitted_at,published_at);
-GO
-CREATE OR ALTER TRIGGER dbo.TR_ProductModerationHistory_Immutable ON dbo.ProductModerationHistory AFTER UPDATE,DELETE AS
-BEGIN SET NOCOUNT ON;THROW 51400,'Product moderation history is immutable.',1;END;
-GO
-

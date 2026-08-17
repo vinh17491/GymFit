@@ -208,7 +208,7 @@ export default function MarketingHeader() {
           <Link to="/" tabIndex={drawerOpen ? 0 : -1} onClick={() => closeDrawer()} className="sidebar-brand-link">
             <span className="brand-mark">G</span>
             <span>
-              <strong className="block text-sm tracking-[.08em]">GYMER</strong>
+              <strong className="block text-sm tracking-[.08em]">GYMFIT</strong>
               <span className="marketing-drawer-kicker">Train with intent</span>
             </span>
           </Link>

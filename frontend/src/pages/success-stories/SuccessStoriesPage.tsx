@@ -11,7 +11,7 @@ const stories = [
     goal: 'Weight Loss',
     duration: '4 months',
     weightLost: '30 lbs',
-    quote: 'Gymer transformed my relationship with fitness. The coaches pushed me when I wanted to quit, and the community kept me accountable. I\'m stronger and happier than ever.',
+    quote: 'GymFit transformed my relationship with fitness. The coaches pushed me when I wanted to quit, and the community kept me accountable. I\'m stronger and happier than ever.',
     rating: 5,
     coach: 'GYMFIT Coaching Team',
   },
@@ -44,7 +44,7 @@ const stories = [
     goal: 'Athletic Performance',
     duration: '5 months',
     weightLost: '-15% body fat',
-    quote: 'As a competitive athlete, I needed specialized training. Gymer connected me with a coach who understood my sport-specific needs. My performance improved dramatically.',
+    quote: 'As a competitive athlete, I needed specialized training. GymFit connected me with a coach who understood my sport-specific needs. My performance improved dramatically.',
     rating: 5,
     coach: 'GYMFIT Coaching Team',
   },
@@ -66,7 +66,7 @@ const stories = [
     goal: 'Health Recovery',
     duration: '10 months',
     weightLost: 'Lost 45 lbs',
-    quote: 'After my doctor told me to get in shape, I was overwhelmed. Gymer made it simple with step-by-step guidance. My blood pressure is normal for the first time in years.',
+    quote: 'After my doctor told me to get in shape, I was overwhelmed. GymFit made it simple with step-by-step guidance. My blood pressure is normal for the first time in years.',
     rating: 5,
     coach: 'GYMFIT Coaching Team',
   },
@@ -87,7 +87,7 @@ export default function SuccessStoriesPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-16 text-center">
           <h1 className="text-5xl font-bold text-white mb-4">Success Stories</h1>
           <p className="text-[#94a3b8] text-lg max-w-2xl mx-auto">
-            Real transformations from real people. See how Gymer has helped thousands achieve their fitness goals.
+              Real transformations from real people. See how GymFit has helped thousands achieve their fitness goals.
           </p>
         </motion.div>
 
@@ -158,7 +158,7 @@ export default function SuccessStoriesPage() {
           <div className="rounded-2xl border border-[#2563eb]/30 bg-gradient-to-r from-[#2563eb]/10 to-[#0ea5e9]/10 p-12">
             <h2 className="mb-4 text-3xl font-bold text-white">Ready to Write Your Success Story?</h2>
             <p className="mx-auto mb-8 max-w-xl text-[#94a3b8]">
-              Join thousands of members who have transformed their lives with Gymer. Your story could be next.
+              Join thousands of members who have transformed their lives with GymFit. Your story could be next.
             </p>
             <Link
               to="/register"

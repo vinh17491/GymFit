@@ -214,7 +214,7 @@ export default function VideosPreviewPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-16 text-center">
           <div className="rounded-2xl border border-[#2563eb]/30 bg-gradient-to-r from-[#2563eb]/10 to-[#0ea5e9]/10 p-12">
             <h2 className="mb-4 text-3xl font-bold text-white">Ready for Full Access?</h2>
-            <p className="mx-auto mb-8 max-w-xl text-[#94a3b8]">Get unlimited access to workout videos, personalized plans, and expert coaching with a Gymer membership.</p>
+            <p className="mx-auto mb-8 max-w-xl text-[#94a3b8]">Get unlimited access to workout videos, personalized plans, and expert coaching with a GymFit membership.</p>
             <Link to="/membership" className="inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-[#1d4ed8] hover:scale-105">
               View Membership Plans <ArrowRight size={20} />
             </Link>

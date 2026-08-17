@@ -7,6 +7,7 @@ import {
   markNotificationRead,
   NotificationPage,
 } from '../services/notifications';
+import { apiErrorMessage } from '../api/error';
 
 interface NotificationsState {
   items: AppNotification[];
@@ -28,11 +29,7 @@ let requestSequence = 0;
 const initialState = { items: [], page: 1, total: 0, totalPages: 0, unreadCount: 0, loading: false, loadingMore: false, error: null as string | null };
 
 const messageFrom = (error: unknown, fallback: string): string => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: unknown } } }).response;
-    if (typeof response?.data?.message === 'string') return response.data.message;
-  }
-  return fallback;
+  return apiErrorMessage(error, fallback);
 };
 
 const mergeItems = (previous: AppNotification[], next: AppNotification[]): AppNotification[] => {

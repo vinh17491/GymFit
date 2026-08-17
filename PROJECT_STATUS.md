@@ -1,58 +1,101 @@
 # GymFit Project Status
 
-Updated: 2026-08-04 (Asia/Saigon)
+Updated: 2026-08-18 (Asia/Saigon)
 
-## Snapshot
+## Current execution status
 
-- Working branch: `coach`.
-- Implementation audit baseline: `47417e26452cf4646ed51ec03a2891410e304823`.
-- Canonical database: `GYMFIT_DB`.
-- Canonical read-only migration status: `21 applied`, `1 pending` (`0010_coach_profiles.sql`), `0 checksum mismatches`; the canonical database was not mutated.
-- Coach migrations `0007`, `0008` and `0009` are applied and checksum-valid.
-- Acceptance databases are disposable, guarded by prefix and must be dropped after use.
-- No acceptance fixtures remain in `GYMFIT_DB`.
+- Working branch: `fix/gymfit-stabilization-chatbot-v2`.
+- Source baseline: `e7d2880855356cdfc31ef7bbeb035f80a3b7b609`.
+- No local commit or push has been made for this task.
+- PHASE 01–72 are source-complete. Manual verification remains required and no
+  production-safety conclusion is asserted.
+- Objective: demo/staging stable and production-oriented hardening while
+  preserving current business, Auth, API and database behavior.
 
-## Coach module
+## Evidence policy
 
-The Coach/Member Workout slice and bounded Admin Coach Management are implemented. The canonical handover is [`docs/coach/COACH_MODULE_HANDOVER.md`](docs/coach/COACH_MODULE_HANDOVER.md).
+- `DATABASE_STATUS_UNVERIFIED`: this execution has not connected to, queried,
+  migrated, reset or mutated a database. No live migration ledger state is
+  asserted here.
+- `MANUAL_CHECK_REQUIRED`: browser, Auth, Coach, Marketplace, Local Fallback
+  and any other manual checklist has not been performed in this execution.
+- Build, lint, typecheck and static inspection are evidence for their own
+  narrow checks only. They do not establish `PRODUCTION_SAFE`,
+  `PRODUCTION_READY`, `FULLY_SECURE` or `FULLY_VERIFIED`.
+- Historical handovers and release logs may contain earlier PASS claims. They
+  are not current verification until rechecked under this task's constraints.
 
-- Coach Workspace: implemented and scoped by JWT/CRM/assignment ownership.
-- Member Workout: Start Session, immutable snapshot, Set Logs, Complete/Abandon, history and progress.
-- Admin Coach: list/detail/status, assign/reassign and status token invalidation.
-- Admin Exercise Library: existing-schema CRUD and activate/deactivate.
-- Admin Workout Governance: read-only Programs, Assignments, Schedules, Sessions and Progress.
-- Coach appointments: canonical public DTOs, fixed 60-minute booking, ownership-safe state machine and normalized date/time output.
-- Coach self-profile: authenticated Coach-only GET/PATCH with booking toggle and no identity-field mutation.
-- Admin Program Builder: `BLOCKED_ADMIN_PROGRAM_OWNERSHIP_MODEL`.
+## Repository-level findings completed through PHASE 17
 
-## Verification
+- Repository inventory, source-of-truth review and database migration analysis
+  are recorded in the current database documentation.
+- The migration chain contains `0001`–`0017` and `0100`–`0111`; migration files
+  remain forward-only and applied/canonical content is treated as immutable.
+- `db/schema.sql` is explicitly marked as a destructive legacy snapshot/dev
+  seed artifact, not canonical provisioning.
+- Migration ownership and fail-closed ledger checks are documented. A table's
+  existence is not treated as migration application; incompatible adoption
+  must stop with `SCHEMA_MISMATCH` or `SCHEMA_ADOPTION_REQUIRED` as applicable.
+- Historical root prompts, plans, academic artifacts and the verified duplicate
+  bank image were archived without deleting their contents.
+- User-visible branding and package metadata now use GymFit where safe; database
+  names, environment keys, API paths, session/storage identifiers and legacy
+  seed data were preserved.
 
-- Backend build: PASS.
-- Backend lint: PASS, 0 errors with existing warnings.
-- Frontend TypeScript: PASS, 0 errors.
-- Frontend production build: PASS; existing large-chunk warning remains non-blocking.
-- Coach Role acceptance: PASS on `GYMFIT_DB_COACH_ACCEPTANCE_20260804215000`.
-- Coach Member E2E acceptance: PASS on `GYMFIT_DB_COACH_E2E_FIX_20260804215500`.
-- Admin Coach acceptance: PASS on `GYMFIT_DB_ADMIN_COACH_ACCEPTANCE_20260804220000`.
-- Coach Booking acceptance: PASS on `GYMFIT_DB_COACH_BOOKING_ACCEPTANCE_20260804212823`.
-- Regression-02/03 acceptance: PASS; disposable databases and regression storage were removed.
-- Isolated Admin–Coach–Member acceptance: PASS, including RBAC, IDOR, duplicate assignment, concurrent reassign, history preservation, Exercise status and suspended Coach denial.
-- Acceptance database cleanup/drop: PASS.
-- Browser visual verification: PASS for Guest, Member, Coach and Admin route flows at `375x812`, `768x1024` and `1440x900`; no horizontal overflow and no browser console errors.
+## Current application boundaries
 
-## Known blockers
+- Member, Coach, Seller/Marketplace and Admin modules remain in the existing
+  source structure.
+- Backend authorization remains the authority; frontend guards are UX only.
+- Auth behavior remains protected: `tokenVersion`, `AuthSessions`, revocation,
+  refresh rotation/replay detection, role authorization and inactive-user
+  checks. PHASE 25 now transports refresh tokens through an HttpOnly cookie;
+  PHASE 26 keeps access tokens in runtime memory and restores them after reload
+  through the cookie path.
+- The existing local/rule-based chatbot engine remains the fallback source and
+  has not been rewritten or duplicated.
+- Frontend API failures now cross one safe representation boundary. Status,
+  allowlisted codes, field errors and user-facing messages are normalized;
+  HTML, SQL, stack, token, cookie, secret and provider diagnostics are not
+  displayed. Existing API contracts are preserved.
+- Frontend quality commands preserve the existing Vite build and expose
+  `npm run typecheck` through the existing strict TypeScript configuration.
+  No new frontend lint stack or automated test command was added.
+- PHASE 71 froze the local chatbot engine and its single catalog, parser,
+  normalizer, suggestions, adapters, storage, types, delay and widget surface.
+- PHASE 72 now contains the Assistant API, backend AI provider, centralized
+  circuit breaker, strict read-only tool registry and frontend provider
+  abstraction. The Assistant uses backend identity and existing services only.
+- Before PHASE 72, Assistant backend/API/AI provider work was intentionally
+  absent. PHASE 72 now provides the real Assistant module and router; no
+  placeholder or fake router was used.
 
-- `FULL_PROJECT_CLEAN_INSTALL_BLOCKED_BY_MARKETPLACE_MIGRATION_0100`: a fresh baseline contains `SellerApplications` before migration `0100` creates it. This is owned by Marketplace/Seller work and is outside Coach scope.
-- Canonical `GYMFIT_DB` still requires a separately approved migration window for `0010_coach_profiles.sql`; no production data was changed by this task.
+## Known blockers and risks
 
-## Protected scope
+- Current static evidence: backend build passes; backend lint has zero errors
+  and legacy `no-explicit-any` warnings; frontend typecheck and build pass; and
+  `git diff --check` passes. These are narrow checks only and do not replace
+  manual verification or establish a production-safety conclusion.
+- `DATABASE_STATUS_UNVERIFIED`: the target database identity and live ledger
+  must be checked read-only before any migration decision.
+- Fresh-install/bootstrap behavior remains a design decision after the Phase
+  01–05 analysis; no `0000_baseline.sql` was created by assumption.
+- The current development cookie topology is same-site and defaults to Lax;
+  production topology still requires an explicit SameSite/Secure decision.
+  CORS credentials, explicit origin allowlisting and refresh/logout
+  CSRF/Origin boundaries are implemented at source level but remain
+  `MANUAL_CHECK_REQUIRED` in a real deployment.
+- The current task forbids new or executed business test suites. Existing
+  acceptance/integrity scripts are retained as historical/guarded artifacts.
+- AI provider configuration is backend-only. AI_BASE_URL is optional and
+  defaults through the provider implementation; no frontend AI secret exists.
 
-Marketplace documentation under `docs/marketplace/**`, Marketplace/Seller backend modules, Video and Auth architecture are protected and unchanged by this cleanup. See [`docs/README.md`](docs/README.md) for the canonical documentation index.
+## Current checkpoint
 
-## Next action
-
-Apply `0010_coach_profiles.sql` only through the normal approved production migration procedure. Resolve migration `0100` separately on a Marketplace-owned branch; do not alter it as part of Coach work.
-
-## Coach appointment update
-
-The implementation includes canonical public Coach APIs, real Member booking, `/appointments`, `/coach/appointments`, fixed `Asia/Ho_Chi_Minh` slots, overlap/concurrency guards, IDOR-safe ownership, normalized Booking DTOs and additive `CoachProfiles` migration `0010`. Backend build/lint/unit, frontend TypeScript/build, Coach Role, Member E2E, Admin Coach, Coach Booking, regression and browser acceptance all pass on disposable environments. The canonical database remains unchanged with `0010` pending by design.
+PHASE 72 Assistant API/AI architecture is source-complete: status is
+provider-independent, chat is optional-auth, tools are read-only and
+self-scoped, and the widget starts in Local Mode with silent fallback. Backend
+and frontend static checks pass in the current workspace; browser/provider
+checks remain manual. Auth and Marketplace verification remains
+`MANUAL_CHECK_REQUIRED`. No later implementation phase is authorized; any
+follow-up is verification or an explicitly approved change.

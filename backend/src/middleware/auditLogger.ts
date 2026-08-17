@@ -1,6 +1,7 @@
 // Simple audit logger without DailyRotateFile
 import * as winston from 'winston';
 import { Request, Response, NextFunction } from 'express';
+import { redactLogText, redactWinstonFormat } from '../utils/logRedaction';
 
 const logDir = 'logs';
 
@@ -8,6 +9,8 @@ const auditTransport = new winston.transports.File({
   filename: `${logDir}/audit.log`,
   format: winston.format.combine(
     winston.format.timestamp(),
+    winston.format.splat(),
+    redactWinstonFormat(),
     winston.format.json()
   ),
 });
@@ -16,6 +19,8 @@ const errorTransport = new winston.transports.File({
   filename: `${logDir}/error.log`,
   format: winston.format.combine(
     winston.format.timestamp(),
+    winston.format.splat(),
+    redactWinstonFormat(),
     winston.format.json()
   ),
 });
@@ -48,7 +53,7 @@ export function createAuditMiddleware() {
       const duration = Date.now() - start;
       const logData = {
         method: req.method,
-        url: req.originalUrl,
+        url: redactLogText(req.originalUrl),
         ip,
         userId: req.user?.userId,
         statusCode: res.statusCode,

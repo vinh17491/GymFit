@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'Gymer - Fitness Management',
-        short_name: 'Gymer',
+        name: 'GymFit - Fitness Management',
+        short_name: 'GymFit',
         description: 'Enterprise Gym Management System',
         theme_color: '#0f172a',
         background_color: '#0f172a',

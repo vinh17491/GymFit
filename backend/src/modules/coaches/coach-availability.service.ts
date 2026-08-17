@@ -12,6 +12,7 @@ import {
   timeToMinutes,
 } from '../../utils/coachBooking';
 import { todayInTimeZone } from '../../utils/timezone';
+import { bookingIntervalsOverlap } from '../bookings/bookings.time-policy';
 
 export const AVAILABILITY_MODES = ['ONLINE', 'IN_PERSON', 'BOTH'] as const;
 export type AvailabilityMode = (typeof AVAILABILITY_MODES)[number];
@@ -340,7 +341,7 @@ export async function getAvailabilitySnapshot(
   const today = todayInTimeZone(COACH_BOOKING_TIME_ZONE);
   const slots: AvailabilitySlot[] = coach.booking_enabled ? rawSlots.map(slot => ({
     ...slot,
-    booked: bookedIntervals.some(interval => interval.start < slot.end_time && interval.end > slot.start_time),
+    booked: bookedIntervals.some(interval => bookingIntervalsOverlap(slot.start_time, slot.end_time, interval.start, interval.end)),
     past: date === today && !isFutureLocalDateTime(date, slot.start_time),
   })) : [];
   const availableSlots = [...new Set(slots.filter(slot => !slot.booked && !slot.past).map(slot => slot.start_time))].sort();

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiErrorMessage } from "../api/error";
 import { create } from "zustand";
 import api from "../api/axios";
 import { cartApi } from "../services/cartApi";
@@ -90,9 +91,7 @@ const initialWishlist = (): number[] => {
   return Array.isArray(raw) ? raw.filter(validId) : [];
 };
 const message = (error: unknown): string => {
-  if (axios.isAxiosError(error) && typeof error.response?.data?.message === "string")
-    return error.response.data.message;
-  return error instanceof Error ? error.message : "Request failed";
+  return apiErrorMessage(error, "Request failed");
 };
 const minimalItems = (cart: ServerCart): VariantAwareCartItem[] =>
   cart.items.map(({ productId, variantId, quantity }) => ({

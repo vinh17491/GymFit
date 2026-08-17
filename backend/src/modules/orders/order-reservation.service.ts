@@ -24,7 +24,8 @@ async function releaseItems(
     const row=inventory.recordset[0];
     if(!row)throw new AppError(404,'Inventory not found');
     if(row.reserved<item.quantity)throw new AppError(409,'Inventory reservation is inconsistent');
-    await transaction.request().input('releaseInventoryId',sql.Int,row.id).input('releaseQuantity',sql.Int,item.quantity).query('UPDATE dbo.Inventory SET reserved=reserved-@releaseQuantity,updated_at=SYSUTCDATETIME() WHERE id=@releaseInventoryId');
+    const released=await transaction.request().input('releaseInventoryId',sql.Int,row.id).input('releaseQuantity',sql.Int,item.quantity).query('UPDATE dbo.Inventory SET reserved=reserved-@releaseQuantity,updated_at=SYSUTCDATETIME() WHERE id=@releaseInventoryId AND reserved>=@releaseQuantity');
+    if(released.rowsAffected[0]!==1)throw new AppError(409,'Inventory reservation is inconsistent');
     await transaction.request()
       .input('releasedItemId',sql.Int,item.id)
       .input('releasedBy',sql.Int,changedBy)
@@ -32,6 +33,15 @@ async function releaseItems(
       .query("UPDATE dbo.OrderItems SET reservation_released_at=SYSUTCDATETIME(),reservation_released_by=@releasedBy,reservation_release_reason=@releaseReason WHERE id=@releasedItemId AND reservation_released_at IS NULL; IF @@ROWCOUNT<>1 THROW 50701,'Concurrent reservation release detected.',1;");
   }
   return items.recordset.length;
+}
+
+export async function reserveInventory(transaction:Transaction,variantId:number,quantity:number):Promise<void>{
+  if(!Number.isSafeInteger(quantity)||quantity<=0)throw new AppError(400,'Inventory reservation quantity must be a positive integer');
+  const result=await transaction.request()
+    .input('reserveVariantId',sql.Int,variantId)
+    .input('reserveQuantity',sql.Int,quantity)
+    .query('UPDATE dbo.Inventory SET reserved=reserved+@reserveQuantity,updated_at=SYSUTCDATETIME() WHERE variant_id=@reserveVariantId AND reserved>=0 AND on_hand>=0 AND reserved+@reserveQuantity<=on_hand');
+  if(result.rowsAffected[0]!==1)throw new AppError(409,`Inventory reservation failed for variant ${variantId}`);
 }
 
 export async function releaseOrderReservation(transaction:Transaction,orderId:number,changedBy:number|null=null,reason='PARENT_CANCELLED'):Promise<number>{

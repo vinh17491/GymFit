@@ -1,5 +1,5 @@
 {
-  "name": "gymer-backend",
+  "name": "gymfit-backend",
   "version": "1.0.0",
   "description": "GymFit Enterprise - Full-stack Gym Management System",
   "main": "dist/server.js",

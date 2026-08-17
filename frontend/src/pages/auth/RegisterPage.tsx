@@ -147,7 +147,7 @@ export default function RegisterPage() {
             <div className="w-12 h-12 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-xl flex items-center justify-center">
               <Dumbbell className="text-white" size={24} />
             </div>
-            <span className="text-2xl font-bold text-white">GYMER</span>
+            <span className="text-2xl font-bold text-white">GYMFIT</span>
           </motion.div>
           
           <h1 className="text-3xl font-bold text-white mb-2">Create Your Account</h1>

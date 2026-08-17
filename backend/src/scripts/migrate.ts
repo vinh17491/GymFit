@@ -7,6 +7,59 @@ import { closePool, getPool, sql } from '../config/database';
 const MIGRATION_PATTERN = /^(\d{4})_(.+)\.sql$/;
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../../db/migrations');
 const REQUIRED_TABLES = ['Products', 'ProductVariants', 'ProductImages', 'Inventory', 'Brands', 'Categories'];
+const MIGRATION_TABLE_OWNERS: Record<string, string> = {
+  ProductOptions: '0001',
+  ProductOptionValues: '0001',
+  VariantOptionValues: '0001',
+  InventoryAdjustments: '0002',
+  Orders: '0003',
+  OrderItems: '0003',
+  OrderStatusHistory: '0003',
+  PaymentStatusHistory: '0004',
+  AuthSessions: '0006',
+  WorkoutPrograms: '0007',
+  WorkoutProgramDays: '0007',
+  WorkoutProgramExercises: '0007',
+  CoachProgramAssignments: '0007',
+  CoachProgramSchedules: '0007',
+  MemberWorkoutSessions: '0008',
+  MemberWorkoutSessionExercises: '0008',
+  MemberWorkoutSetLogs: '0008',
+  CoachProfiles: '0010',
+  CoachAvailabilityRules: '0011',
+  CoachAvailabilityExceptions: '0011',
+  PlanEntitlements: '0012',
+  CoachMemberContexts: '0013',
+  SellerApplications: '0100',
+  SellerApplicationStatusHistory: '0100',
+  Shops: '0101',
+  BrandRequests: '0102',
+  BrandRequestStatusHistory: '0102',
+  ProductModerationHistory: '0104',
+  ShopOrders: '0105',
+  ShopOrderStatusHistory: '0105',
+  Carts: '0106',
+  CartItems: '0106',
+  Refunds: '0107',
+  RefundStatusHistory: '0107',
+  CompensationVouchers: '0107',
+  MarketplaceSettings: '0107',
+  MarketplaceNotifications: '0107',
+  OrderLogisticsStatusHistory: '0108',
+  ShopOrderSettlements: '0109',
+  SettlementStatusHistory: '0109',
+  SettlementAdjustments: '0109',
+  SettlementAdjustmentHistory: '0109',
+  SettlementBatches: '0109',
+  SettlementBatchItems: '0109',
+  MarketplaceComplaints: '0110',
+  ComplaintEventHistory: '0110',
+  ComplaintReplacements: '0110',
+  ReplacementStatusHistory: '0110',
+  ProductReviews: '0111',
+  ShopReviews: '0111',
+  ReviewModerationHistory: '0111',
+};
 
 interface MigrationFile {
   version: string;
@@ -118,6 +171,73 @@ async function readApplied(pool: ConnectionPool, trackingPresent: boolean): Prom
     'SELECT version, name, checksum, applied_at FROM dbo.SchemaMigrations ORDER BY version',
   );
   return result.recordset;
+}
+
+async function validateTrackingTableShape(pool: ConnectionPool): Promise<void> {
+  const result = await pool.request().query(`
+    SELECT c.name,
+      LOWER(TYPE_NAME(c.user_type_id)) AS data_type,
+      c.max_length,
+      c.is_nullable,
+      CASE WHEN EXISTS (
+        SELECT 1
+        FROM sys.index_columns ic
+        JOIN sys.indexes i ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+        WHERE ic.object_id = c.object_id AND ic.column_id = c.column_id AND i.is_primary_key = 1
+      ) THEN 1 ELSE 0 END AS is_primary_key
+    FROM sys.columns c
+    WHERE c.object_id = OBJECT_ID(N'dbo.SchemaMigrations', N'U')
+    ORDER BY c.column_id`);
+
+  const expected: Record<string, { dataType: string; maxLength: number; nullable: number; primaryKey: number }> = {
+    version: { dataType: 'nvarchar', maxLength: 40, nullable: 0, primaryKey: 1 },
+    name: { dataType: 'nvarchar', maxLength: 510, nullable: 0, primaryKey: 0 },
+    checksum: { dataType: 'char', maxLength: 64, nullable: 0, primaryKey: 0 },
+    applied_at: { dataType: 'datetime2', maxLength: 8, nullable: 0, primaryKey: 0 },
+  };
+  const rows = result.recordset as Array<{ name: string; data_type: string; max_length: number; is_nullable: number; is_primary_key: number }>;
+  const valid = rows.length === Object.keys(expected).length
+    && rows.every((row) => {
+      const requirement = expected[row.name];
+      return requirement !== undefined
+        && row.data_type === requirement.dataType
+        && row.max_length === requirement.maxLength
+        && Number(row.is_nullable) === requirement.nullable
+        && Number(row.is_primary_key) === requirement.primaryKey;
+    });
+  if (!valid) throw new Error(`SCHEMA_MISMATCH: dbo.SchemaMigrations metadata does not match the canonical ledger contract: ${JSON.stringify(rows)}`);
+}
+
+function validateAppliedLedger(applied: AppliedMigration[], discovered: MigrationFile[]): void {
+  const discoveredByVersion = new Map(discovered.map((migration) => [migration.version, migration]));
+  for (const entry of applied) {
+    const migration = discoveredByVersion.get(entry.version);
+    if (!migration) throw new Error(`MIGRATION_LEDGER_UNKNOWN_VERSION: ${entry.version}`);
+    if (entry.name !== migration.filename) {
+      throw new Error(`SCHEMA_MISMATCH: SchemaMigrations ${entry.version}.name=${entry.name} expected ${migration.filename}`);
+    }
+  }
+}
+
+async function validateMigrationTableLedger(pool: ConnectionPool, appliedByVersion: Map<string, AppliedMigration>): Promise<void> {
+  const names = Object.keys(MIGRATION_TABLE_OWNERS);
+  const request = pool.request();
+  const placeholders = names.map((name, index) => {
+    request.input(`table${index}`, sql.NVarChar(128), name);
+    return `@table${index}`;
+  }).join(', ');
+  const result = await request.query<{ name: string }>(`
+    SELECT t.name
+    FROM sys.tables t
+    JOIN sys.schemas s ON s.schema_id = t.schema_id
+    WHERE s.name = N'dbo' AND t.name IN (${placeholders})
+    ORDER BY t.name`);
+  for (const row of result.recordset) {
+    const owner = MIGRATION_TABLE_OWNERS[row.name];
+    if (owner && !appliedByVersion.has(owner)) {
+      throw new Error(`SCHEMA_ADOPTION_REQUIRED: dbo.${row.name} exists but migration ${owner} is not recorded in dbo.SchemaMigrations`);
+    }
+  }
 }
 
 async function validateRequiredTables(pool: ConnectionPool): Promise<void> {
@@ -488,9 +608,15 @@ async function main(): Promise<void> {
   await validateRequiredTables(pool);
 
   const trackingPresent = await trackingTableExists(pool);
+  if (trackingPresent) await validateTrackingTableShape(pool);
   const applied = await readApplied(pool, trackingPresent);
+  validateAppliedLedger(applied, discoveredMigrations);
   const appliedByVersion = new Map(applied.map((item) => [item.version, item]));
-  const mismatches = migrations.filter((migration) => {
+  await validateMigrationTableLedger(pool, appliedByVersion);
+  // Applied migration immutability is a global ledger rule. Do not narrow
+  // checksum validation when an operator asks to plan/apply only through an
+  // earlier version.
+  const mismatches = discoveredMigrations.filter((migration) => {
     const current = appliedByVersion.get(migration.version);
     return current !== undefined && current.checksum !== migration.checksum;
   });

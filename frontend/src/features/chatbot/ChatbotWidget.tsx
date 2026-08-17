@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, ExternalLink, HelpCircle, Loader2, MessageCircle, Search, Send, Trash2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
-import { chatbotDataAdapters } from './chatbotDataAdapters';
-import { emptyChatbotContext, matchChatbotIntent, resolveChatbotMessage } from './chatbotEngine';
+import { emptyChatbotContext, matchChatbotIntent } from './chatbotEngine';
 import { chatbotDelayProvider, polishDelayMs, staticReplyDelayMs, waitForChatbotDelay } from './chatbotDelay';
+import { AIProvider, LocalProvider, type AssistantMode } from './chatbotProviders';
 import { categorySuggestionsForRole, initialSuggestionsForRole } from './chatbotSuggestions';
 import { clearChatbotState, loadChatbotState, saveChatbotState } from './chatbotStorage';
 import type { ChatbotContext, ChatbotMessage, ChatbotReply, ChatbotRole, ChatbotSuggestion } from './chatbotTypes';
@@ -43,6 +43,7 @@ export default function ChatbotWidget() {
   const [composing, setComposing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [indicator, setIndicator] = useState<'static' | 'lookup' | null>(null);
+  const [assistantMode, setAssistantMode] = useState<AssistantMode>('LOCAL_FALLBACK');
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const previousRoleRef = useRef<ChatbotRole>(role);
@@ -50,6 +51,17 @@ export default function ChatbotWidget() {
   useEffect(() => { saveChatbotState(messages, context); }, [messages, context]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages, indicator]);
   useEffect(() => () => { abortRef.current?.abort(); }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    void AIProvider.status(controller.signal).then(status => {
+      if (!active) return;
+      setAssistantMode(status.mode === 'AI_ONLINE' && status.circuit.state === 'CLOSED' && Boolean(status.circuit.lastKnownSuccessAt) ? 'AI_ONLINE' : 'LOCAL_FALLBACK');
+    }).catch(() => {
+      if (active) setAssistantMode('LOCAL_FALLBACK');
+    });
+    return () => { active = false; controller.abort(); };
+  }, []);
   useEffect(() => {
     if (previousRoleRef.current === role) return;
     previousRoleRef.current = role;
@@ -92,11 +104,44 @@ export default function ChatbotWidget() {
     setMessages(current => [...current, userMessage].slice(-40));
     const startedAt = performance.now();
     try {
-      const reply = await resolveChatbotMessage(text, role, context, {
-        adapterRegistry: chatbotDataAdapters,
+      let aiResult: Awaited<ReturnType<typeof AIProvider.chat>> | null = null;
+      try {
+        aiResult = await AIProvider.chat({
+          text,
+          role,
+          context,
+          routeContext: location.pathname,
+          history: messages,
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if (controller.signal.aborted || isAbort(error)) return;
+      }
+      if (controller.signal.aborted) return;
+      if (aiResult?.mode === 'AI_ONLINE' && aiResult.message) {
+        setAssistantMode('AI_ONLINE');
+        await waitForChatbotDelay(staticReplyDelayMs(chatbotDelayProvider), controller.signal, chatbotDelayProvider);
+        if (controller.signal.aborted) return;
+        const assistantMessage: ChatbotMessage = {
+          id: messageId('assistant'),
+          role: 'assistant',
+          text: aiResult.message,
+          createdAt: Date.now(),
+        };
+        setMessages(current => [...current, assistantMessage].slice(-40));
+        return;
+      }
+
+      setAssistantMode('LOCAL_FALLBACK');
+      const localResult = await LocalProvider.chat({
+        text,
+        role,
+        context,
         routeContext: location.pathname,
+        history: messages,
         signal: controller.signal,
       });
+      const reply = localResult.reply;
       if (controller.signal.aborted) return;
       if (reply.replyType === 'DYNAMIC_LOOKUP') {
         const elapsed = performance.now() - startedAt;
@@ -150,7 +195,7 @@ export default function ChatbotWidget() {
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-400 text-slate-950"><Bot size={19} aria-hidden="true" /></span>
               <div className="min-w-0"><strong className="block truncate text-sm">Hỗ trợ GYMFIT</strong><span className="block text-xs text-slate-400">Hướng dẫn & tra cứu · {roleName[role]}</span></div>
             </div>
-            <div className="flex items-center gap-1"><button type="button" onClick={() => { clearChatbotState(); cancelWork(); setContext(emptyChatbotContext()); setMessages([welcomeMessage(role)]); }} aria-label="Xóa cuộc trò chuyện" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><Trash2 size={16} aria-hidden="true" /></button><button type="button" onClick={() => { cancelWork(); setOpen(false); }} aria-label="Đóng trợ lý" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><X size={18} aria-hidden="true" /></button></div>
+            <div className="flex items-center gap-1"><span className={assistantMode === 'AI_ONLINE' ? 'text-[10px] text-emerald-300' : 'text-[10px] text-red-300'} aria-live="polite">{assistantMode === 'AI_ONLINE' ? '🟢 GYMFIT AI — Online' : '🔴 GYMFIT Assistant — Local Mode'}</span><button type="button" onClick={() => { clearChatbotState(); cancelWork(); setContext(emptyChatbotContext()); setMessages([welcomeMessage(role)]); }} aria-label="Xóa cuộc trò chuyện" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><Trash2 size={16} aria-hidden="true" /></button><button type="button" onClick={() => { cancelWork(); setOpen(false); }} aria-label="Đóng trợ lý" className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><X size={18} aria-hidden="true" /></button></div>
           </header>
 
           <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4" aria-live="polite">

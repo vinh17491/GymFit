@@ -1,11 +1,9 @@
-import axios from 'axios';
 import type {
   ExerciseDBExercise,
   ExerciseFilter,
   ExerciseListResponse,
 } from '../types/exercise';
-
-const API_BASE = 'http://localhost:5000/api';
+import api from '../api/axios';
 
 export async function getExercises(filter: ExerciseFilter = {}): Promise<ExerciseListResponse> {
   const params = new URLSearchParams();
@@ -18,7 +16,7 @@ export async function getExercises(filter: ExerciseFilter = {}): Promise<Exercis
   if (filter.page) params.set('page', String(filter.page));
   if (filter.limit) params.set('limit', String(filter.limit));
 
-  const response = await axios.get(`${API_BASE}/exercises?${params}`);
+  const response = await api.get(`/exercises?${params}`);
   const { data, pagination } = response.data;
   return {
     exercises: data ?? [],
@@ -29,31 +27,31 @@ export async function getExercises(filter: ExerciseFilter = {}): Promise<Exercis
 }
 
 export async function getExercise(id: number): Promise<ExerciseDBExercise> {
-  const response = await axios.get(`${API_BASE}/exercises/${id}`);
+  const response = await api.get(`/exercises/${id}`);
   return response.data.data;
 }
 
 export async function getCategories(): Promise<string[]> {
-  const response = await axios.get(`${API_BASE}/exercises/categories`);
+  const response = await api.get('/exercises/categories');
   return response.data.data;
 }
 
 export async function getDifficulties(): Promise<string[]> {
-  const response = await axios.get(`${API_BASE}/exercises/difficulties`);
+  const response = await api.get('/exercises/difficulties');
   return response.data.data;
 }
 
 export async function getBodyParts(): Promise<string[]> {
-  const response = await axios.get(`${API_BASE}/exercises/bodyParts`);
+  const response = await api.get('/exercises/bodyParts');
   return response.data.data;
 }
 
 export async function getTargetMuscles(): Promise<string[]> {
-  const response = await axios.get(`${API_BASE}/exercises/muscles`);
+  const response = await api.get('/exercises/muscles');
   return response.data.data;
 }
 
 export async function getEquipment(): Promise<string[]> {
-  const response = await axios.get(`${API_BASE}/exercises/equipment`);
+  const response = await api.get('/exercises/equipment');
   return response.data.data;
 }

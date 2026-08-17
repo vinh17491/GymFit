@@ -7,6 +7,7 @@ import { registerSchema, loginSchema } from './auth.validation';
 import { authLimiter } from '../../middleware/rateLimiter';
 import { z } from 'zod';
 import multer from 'multer';
+import { validateCookieAuthOrigin } from '../../middleware/cookieOrigin';
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 }, fileFilter: (_req, file, cb) => {
   const allowed = ['image/jpeg', 'image/png', 'image/webp'];
   allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('Only JPEG, PNG and WebP images are allowed'));
@@ -26,8 +27,8 @@ const changePasswordSchema = z.object({
 
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
-router.post('/logout', authenticate, logout);
-router.post('/refresh', authLimiter, validate(z.object({ refreshToken: z.string().min(32).max(256) }).strict()), refreshToken);
+router.post('/logout', validateCookieAuthOrigin, authenticate, logout);
+router.post('/refresh', authLimiter, validateCookieAuthOrigin, refreshToken);
 router.get('/me', authenticate, getMe);
 
 router.put('/me', authenticate, validate(updateProfileSchema), updateMe);

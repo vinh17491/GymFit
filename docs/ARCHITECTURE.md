@@ -2,41 +2,165 @@
 
 ## System flow
 
-`React/Vite UI -> Axios -> Express /api routes -> validation/auth -> controller or service -> SQL Server`
+The current request path is:
 
-JWT bearer authentication supplies `userId` and role. Roles are `ADMIN`, `COACH`, and `MEMBER`; backend middleware and ownership queries are authoritative. The frontend uses `ProtectedRoute` and `AdminRoute` for navigation UX, but these do not replace API authorization.
+```text
+React/Vite UI
+  -> Axios
+  -> Express /api routes
+  -> validation and authentication middleware
+  -> controller/service
+  -> repository/data access
+  -> SQL Server
+```
 
-The hardened flow is `JWT -> signature/issuer/audience -> live AuthSessions + Users token_version/role/is_active -> route role check -> controller ownership query`. Refresh credentials are opaque hashed database records and rotate atomically; logout/password/security changes revoke sessions. See [API and Authorization](API_AND_AUTHORIZATION.md) for the active route policy.
+Backend modules live under `backend/src/modules/`. `backend/src/app.ts`
+mounts middleware, static asset paths and health endpoints; the existing route
+set is registered through `backend/src/routes/registerRoutes.ts`, preserving
+the established prefixes and order. The frontend shell in `frontend/src/App.tsx`
+composes the ordered route groups from `frontend/src/routes/routeGroups.tsx`;
+lazy loading and grouping do not change public URLs.
 
-Backend features live under `backend/src/modules/`. Legacy modules commonly use route/controller pairs; current commerce modules add validation and service layers. `backend/src/app.ts` mounts middleware, `/uploads`, `/image`, `/media`, health/CSRF endpoints, and all API routers. Central not-found/error middleware formats failures; validation uses Zod or express-validator depending on module.
+JWT bearer authentication supplies the authenticated `userId`, role,
+`tokenVersion` and session identity. The backend checks signature,
+issuer/audience, live `AuthSessions`, `Users.token_version`, role, active-user
+state and Coach status before protected work. Owner-filtered service queries
+remain part of the authorization boundary. Frontend `ProtectedRoute`,
+`AccessRoute` and `Admin` navigation guards are UX only and never replace
+backend authorization.
 
-The frontend uses `frontend/src/App.tsx` for React Router 6 routes, layout guards under `components/layout`, Zustand auth/product state, `api/axios.ts`, typed service modules, and feature pages. Public marketing/catalog pages and protected member/admin pages coexist in the same app.
+## Actor boundaries
 
-## Catalog and commerce
+| Actor | Current responsibility | Boundary that must remain server-enforced |
+|---|---|---|
+| Guest | Public marketing, product/catalog, active Shops, Coach discovery, public exercise/video/plan views, register and login. | Public DTOs only; no private Member, Seller or Admin data. |
+| Member | Own profile, membership, workout execution/progress, appointments, cart/orders, complaints/reviews and other self-scoped features. | Identity comes from the authenticated JWT/session; request IDs cannot widen ownership. |
+| Coach | Coach profile/availability, appointments, programs, assignments, schedules, Member workout monitoring and Coach-scoped progress. | Live Coach status and CRM/assignment scope are checked by the backend; suspended/inactive Coaches are rejected. |
+| Seller | Seller application lifecycle and, after approval, own Shop, products, inventory adjustments, fulfillment, revenue, complaints and reviews. | Shop/product ownership is derived server-side; client owner IDs and cross-Shop IDs are not trusted. |
+| Admin | Global governance for users/roles, Coach and workout oversight, catalog, moderation, inventory, orders, refunds, complaints, reviews and settlements. | Backend `ADMIN` authorization and audit/transition rules remain authoritative. |
+| Marketplace | A domain spanning Guest catalog, Member buyer flows, Seller operations and Admin governance. | Inventory reservation, payment/refund, commission and settlement invariants stay transactional and idempotent. |
+| Assistant | Backend Assistant API, optional-auth chat, status snapshot, provider boundary and read-only tool registry are implemented in PHASE 72. | Backend JWT/session identity, RBAC, ownership, scope and the tool allowlist remain authoritative; Local Mode is a valid fallback. |
 
-Product catalog data uses Products, ProductImages, ProductVariants, option tables and per-variant Inventory. The invariant is:
+## Auth and session boundary
+
+The protected flow is:
+
+```text
+JWT
+  -> signature / issuer / audience
+  -> live AuthSessions + Users token_version / role / is_active
+  -> role check
+  -> ownership and scope query
+  -> controller/service
+```
+
+Auth behavior is preserved: `tokenVersion`, `AuthSessions`, session revocation,
+refresh rotation, refresh replay detection, role authorization and inactive-user
+checks. The PHASE 24–28 refresh-cookie flow uses Axios `withCredentials`,
+backend CORS credentials and an explicit origin allowlist. SameSite, Origin
+validation, refresh and logout CSRF boundaries remain deployment-topology
+decisions and are not hardcoded from this document.
+
+## Catalog and Marketplace boundary
+
+Product catalog data uses `Products`, `ProductImages`, `ProductVariants`, option
+tables and per-variant `Inventory`. The core inventory invariant is:
 
 `available = on_hand - reserved`
 
-The commerce chain is `Product -> Variant -> Cart -> Checkout -> Order -> Reservation -> Payment -> Fulfillment`. Cart identity is `(productId, variantId)` and current price/availability is reloaded from the API.
+The commerce chain is:
 
-Order lifecycle: `PENDING -> CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED`, with permitted cancellation from pre-delivery states subject to payment rules. Payment lifecycle supports `UNPAID -> PENDING -> PAID/FAILED`, `FAILED -> UNPAID`, direct `UNPAID -> PAID`, and `PAID -> REFUNDED`; unsupported/same-status transitions conflict. `OrderStatusHistory` and `PaymentStatusHistory` preserve actor, transition and time.
+```text
+Product -> Variant -> Cart -> Checkout -> Parent/ShopOrder
+  -> Reservation -> Payment -> Fulfillment -> Commission/Settlement
+```
 
-Creating an order reserves inventory. Expiration or valid cancellation releases reserved stock; delivery reduces both `reserved` and `on_hand`. A cron runner plus lazy expiration before relevant reads handles expired unpaid reservations. Bank readiness is derived from validated `BANK_*` configuration; mail readiness uses separate `MAIL_*` configuration. Mail occurs after database commit, so delivery failure does not undo committed payment/order state.
+Creating an order reserves inventory. Expiration or valid cancellation releases
+the reservation exactly once; delivery reduces both `reserved` and `on_hand`.
+Payment, refund, stock release, commission snapshot, pending/available balance
+and settlement retries must not create double credit, double debit or double
+release. No real bank integration is part of the current architecture.
 
-Static product uploads use the configured upload directory and `/uploads`; repository images use `/image`; media uses `/media`. Bank QR accepts a root-relative public URL or HTTPS and rejects unsafe/local schemes.
+Static product uploads use the configured upload directory and `/uploads`;
+repository images use `/image`; media uses `/media`. Bank QR configuration is
+validated as a root-relative public path or HTTPS URL.
 
-## Workout boundary
+## Coach and Member Workout boundary
 
-The Coach/Member Workout slice reuses `Users`, `CRMCustomers` and `Exercises`, extends the repository with Coach migrations `0007` and additive execution migration `0008`, and keeps legacy `WorkoutSessions` separate. Admin Coach Management is a separate Admin-only governance layer: migration `0009` adds bounded Coach status fields, Admin mutations use `CRMCustomers` and the existing reassignment service, and Workout Governance reads the existing `0007`/`0008` plus legacy session data without mutation. Commerce and Video remain outside this boundary.
+The Coach/Member Workout slice reuses `Users`, `CRMCustomers` and `Exercises`.
+Migrations `0007` and `0008` add the current Coach authoring and Member
+execution model while keeping legacy `WorkoutSessions` separate. Member start
+creates an immutable exercise snapshot; set logs and terminal session state are
+self-scoped. Coach monitoring uses the active CRM/assignment scope and remains
+read-only for Member-generated session data.
 
-Admin status is enforced in the backend live-user check as well as the frontend navigation: `SUSPENDED` and `INACTIVE` Coaches cannot enter Coach Workspace, while their historical programs, assignments, sessions and progress remain queryable by Admin. Admin Program ownership is intentionally read-only because the schema only models Coach-owned Programs.
-## Dashboard presentation boundary
+Admin Coach Management is an Admin-only governance layer. Migration `0009`
+owns bounded Coach status fields; Admin assignment/reassignment uses existing
+transactional scope services. Historical programs, assignments, sessions and
+progress are preserved when a Coach status or assignment changes. Admin Program
+ownership remains read-only while the current schema models Coach-owned
+Programs.
 
-The GYMFIT Command Center is a frontend presentation layer over existing API contracts. Role visibility remains centralized in `frontend/src/auth/accessPolicy.ts`; dashboard components must not widen Member or Coach data scope. Missing backend dashboard fields render as unavailable/empty states rather than fabricated values. The Member Workout widget has explicit loading, empty and retryable error states.
+## Frontend presentation boundary
 
-Dashboard authentication was accepted through three differential layers: direct backend, explicit Vite `/api` proxy, and the real React form/store/router flow. The earlier login timeout was isolated to the acceptance harness/process context; no auth or dashboard source change was required.
+`frontend/src/auth/accessPolicy.ts` maps UX route access for `member`, `coach`,
+`seller` and `admin`. `frontend/src/App.tsx` groups public routes, auth routes
+and protected routes under the existing layout. This mapping controls
+navigation only. Missing or unavailable backend data must render as an empty,
+loading or safe error state, never as fabricated authorization or business
+data.
 
-## Coach Member execution flow
+## Local chatbot and future Assistant boundary
 
-The execution path is `Member JWT -> /api/member/workouts -> active assignment/schedule scope -> transactional session start -> immutable snapshot -> set logs -> terminal session/schedule state -> Coach read-only monitoring`. `MemberWorkoutSessions`, `MemberWorkoutSessionExercises` and `MemberWorkoutSetLogs` are additive to the `0007` Coach tables and deliberately do not reuse the incompatible legacy `WorkoutSessions` contract. All member identity comes from the JWT; URL IDs are ownership-checked.
+The current local chatbot is a frontend feature under
+`frontend/src/features/chatbot/` and remains independent of Assistant backend
+availability. The following files are preserved and are not duplicated or
+rewritten before their assigned phase:
+
+- `chatbotEngine.ts`
+- `chatbotCatalog.ts`
+- `chatbotEntityParser.ts`
+- `chatbotNormalizer.ts`
+- `chatbotSuggestions.ts`
+- `chatbotDataAdapters.ts`
+- `chatbotStorage.ts`
+- `chatbotTypes.ts`
+
+Only PHASE 72 may create the Assistant backend module and register Assistant
+routes. The official name is `ASSISTANT API`, not “Public Assistant API”. The
+implemented endpoints are `GET /api/assistant/status` and
+`POST /api/assistant/chat`. Status is a provider-independent snapshot; chat is optional-auth and returns Local Mode when unavailable.
+
+The target boundary is:
+
+```text
+LLM/provider adapter
+  -> backend tool registry
+  -> existing GymFit service
+  -> repository/data layer
+  -> SQL Server
+```
+
+The model must never generate SQL, access SQL Server directly, choose user
+identity, or use a `userId` supplied by a prompt, frontend or tool argument.
+Private tools must derive identity from `req.user`/the authenticated session
+and enforce RBAC, ownership, scope, allowlist and secret boundaries. Version one
+is read-only (`searchProducts`, `getCoachAvailability`, `getMyAppointments`,
+`getMyOrders`, `getWorkoutContext`); booking, order, payment, refund,
+replacement, settlement, role, inventory and database mutations are not tools.
+Prompt injection is not claimed to be detectable or blockable with 100%
+certainty; it must not bypass those backend/tool boundaries. Fitness guidance
+must not become medical diagnosis.
+
+PHASE 72 provides the Assistant status endpoint, provider call, centralized
+circuit breaker and Assistant router. Status reports configured/circuit/last-
+known state without polling the provider on every request. The existing local
+chatbot remains the independent fallback and mode switching preserves
+conversation history.
+
+## Verification boundary
+
+This document describes source-level architecture. It does not assert live
+database state, browser behavior, production readiness or full security. Manual
+verification remains `MANUAL_CHECK_REQUIRED` until the user performs the
+relevant checklist.

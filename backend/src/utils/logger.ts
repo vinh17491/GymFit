@@ -1,11 +1,14 @@
 import * as winston from 'winston';
 import { config } from '../config/config';
+import { redactWinstonFormat } from './logRedaction';
 
 export const logger = winston.createLogger({
   level: config.nodeEnv === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    redactWinstonFormat(),
     winston.format.json()
   ),
   defaultMeta: { service: 'gymer-api' },

@@ -21,7 +21,7 @@ Findings:
 Files inspected:
 
 - Repository status, recent history, root/frontend/backend manifests.
-- `MASTER_TASK_COACH3_PROJECT_TEXT_ENCODING_RECOVERY.txt` (all 1,406 lines).
+- `docs/archive/2026-08/prompts/MASTER_TASK_COACH3_PROJECT_TEXT_ENCODING_RECOVERY.txt` (all 1,406 lines).
 
 Files changed:
 

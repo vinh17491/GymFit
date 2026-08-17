@@ -1,25 +1,46 @@
 # GymFit
 
-GymFit is a full-stack gym-management and commerce platform with Member, Coach, Admin and Seller surfaces. The maintained documentation index is [`docs/README.md`](docs/README.md); source code, migration files and verified database state are authoritative over prose.
+GymFit is a full-stack fitness, coaching, membership and marketplace platform
+with Member, Coach, Seller and Admin surfaces. The current stabilization target
+is demo/staging stable with production-oriented hardening while preserving the
+existing business, authentication, API and database contracts.
 
-## Roles and current status
+This repository is being implemented through the approved sequential plan:
+PHASE 01 → PHASE 02 → … → PHASE 72. A phase-range heading is only a summary;
+implementation and review remain one phase at a time.
 
-- Member: self-scoped workout execution, session history and progress.
-- Coach: Program/Day/Exercise authoring, Member assignment/schedules and scoped monitoring.
-- Admin: Coach status and Member scope management, shared Exercise Library and read-only Workout Governance.
-- Seller/Marketplace: maintained in the protected Marketplace documentation set and outside the Coach cleanup scope.
+## Source of truth and current boundaries
 
-Coach migrations `0007`, `0008`, `0009` and the additive `0010_coach_profiles.sql` contract are verified on isolated acceptance databases. Coach Role, Member Workout, Admin Coach and Coach Booking runtime acceptance all pass; the browser checklist also passes at the required responsive viewports. The canonical `GYMFIT_DB` remains read-only with `0010` intentionally pending until an approved production migration window.
+- Source code, migration files and verified database state override prose when
+  they disagree.
+- Backend authorization is authoritative. Frontend guards provide navigation
+  UX only and do not replace RBAC or ownership checks.
+- Auth behavior is preserved, including `tokenVersion`, `AuthSessions`, session
+  revocation, refresh rotation/replay detection, role authorization and inactive
+  user checks. Refresh-token transport changes are restricted to PHASE 24–28.
+- The current chatbot is a frontend local/rule-based engine. Its catalog,
+  parser, normalizer, adapters, storage and types are retained.
+- PHASE 72 now provides the Assistant API, backend-only provider, centralized
+  circuit breaker, strict read-only tool layer and LocalProvider/AIProvider
+  fallback boundary. No frontend AI secret is used.
+- Manual/browser verification that has not actually been performed remains
+  `MANUAL_CHECK_REQUIRED`.
 
 ## Technology
 
-- Frontend: React 18, TypeScript, Vite, React Router, Zustand, Axios and Tailwind CSS.
-- Backend: Node.js, Express, TypeScript, SQL Server (`mssql`), Zod, JWT and Nodemailer.
-- Database: SQL Server with ordered, checksummed migrations.
+- Frontend: React 18, TypeScript, Vite, React Router, Zustand, Axios and
+  Tailwind CSS.
+- Backend: Node.js, Express, TypeScript, SQL Server (`mssql`), Zod, JWT and
+  Nodemailer.
+- Database: SQL Server with ordered, checksummed migrations from
+  `db/migrations/0001` through `0017` and `0100` through `0111`.
 
-## Quick start
+## Local setup
 
-Configure local variables with [`docs/SETUP_AND_ENVIRONMENT.md`](docs/SETUP_AND_ENVIRONMENT.md); never commit `.env` or secrets.
+Prerequisites are Node.js/npm, SQL Server access and Git. Keep secrets in the
+ignored `backend/.env`; never commit or copy real credentials into docs, logs or
+issues. See [`docs/SETUP_AND_ENVIRONMENT.md`](docs/SETUP_AND_ENVIRONMENT.md) for
+the configuration matrix.
 
 ```powershell
 cd backend
@@ -36,16 +57,79 @@ npm install
 npm run dev
 ```
 
-Read [`docs/DATABASE_AND_MIGRATIONS.md`](docs/DATABASE_AND_MIGRATIONS.md) before migration work. Acceptance mutations must use a guarded disposable database, never the canonical database.
+Static quality commands available in the repository include:
 
-## Contribution and security
+```powershell
+cd backend
+npm run build
+npm run lint
 
-Use explicit branches and explicit staging. Backend authorization is authoritative; frontend guards are navigation UX only. The completed Coach work is on branch `coach`; see [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/README.md`](docs/README.md).
+cd ..\frontend
+npm run build
+npm run typecheck
 
-## Coach appointments
+cd ..
+npm run check:encoding
+```
 
-The public Coach catalog is backed by `GET /api/coaches` and `GET /api/coaches/:id`. Booking availability is served by `GET /api/coaches/:id/availability?date=YYYY-MM-DD`; the legacy `/api/bookings/coaches` paths delegate to the same controller/query.
+The repository contains legacy `test:*`, `acceptance:*`, `integrity:*` and
+verification scripts. The current execution policy does not create or run
+business test suites; those scripts must not be treated as evidence for a
+manual or production conclusion.
 
-Member booking uses `POST /api/bookings` with `{ coachId, date, startTime, note }`. Appointments are fixed at 60 minutes in `Asia/Ho_Chi_Minh` and start as lowercase `pending`. Members use `/appointments`; Coaches use `/coach/appointments`. Appointment data is intentionally separate from Workout Schedule data.
+## Database safety
 
-Apply `db/migrations/0010_coach_profiles.sql` on an isolated or explicitly approved database before using the new public profile fields. The guarded checks are `npm run test:coach-booking-unit`, `npm run verify:coach-migration` and `npm run acceptance:coach-booking`; the latter requires `COACH_BOOKING_ACCEPTANCE=1`, an isolated `GYMFIT_DB_COACH_BOOKING_ACCEPTANCE_*` database, and a running API. Booking remains a 60-minute `Asia/Ho_Chi_Minh` appointment with lowercase `pending`/`confirmed`/`cancelled`/`completed`/`no_show` states, separate from Workout Schedule and without implicit Coach–Member assignment.
+Read [`docs/DATABASE_AND_MIGRATIONS.md`](docs/DATABASE_AND_MIGRATIONS.md) and
+[`docs/DATABASE_MIGRATION_OWNERSHIP.md`](docs/DATABASE_MIGRATION_OWNERSHIP.md)
+before database work.
+
+- `db/migrations` is the forward migration source of truth.
+- `TABLE EXISTS != MIGRATION APPLIED`; adoption requires full schema metadata
+  compatibility and otherwise stops with `SCHEMA_MISMATCH`.
+- Applied/canonical migrations are immutable. Schema changes require a new
+  ordered migration unless a not-yet-canonical file is proven safe to edit.
+- `db/schema.sql` is a destructive legacy snapshot/dev-seed artifact, not the
+  canonical provisioning path. Never run it against a canonical or shared
+  database.
+- Never use `DROP DATABASE`, `DROP TABLE` or `TRUNCATE` on canonical business
+  data. If a disposable target has not been explicitly identified, use static
+  inspection only.
+
+## Health, auth and Assistant boundaries
+
+The health boundary exposes `GET /health/live` for process liveness,
+`GET /health/ready` for minimal SQL readiness and the existing
+`GET /api/health` compatibility response. A process-live response must not be
+interpreted as database readiness.
+
+The implemented refresh-cookie flow uses Axios `withCredentials`, backend CORS
+credentials and an explicit origin allowlist. SameSite is selected from the
+deployment topology, with CSRF/Origin boundaries reviewed at refresh and
+logout. Browser and deployment verification remain `MANUAL_CHECK_REQUIRED`.
+
+The official name is `ASSISTANT API`, not “Public Assistant API”. Its read-only
+tools run through the backend tool registry and existing GymFit services; the
+model does not generate SQL, choose user identity, or perform booking, order,
+payment, refund, settlement, role, inventory or database mutations. Local
+fallback remains a valid operating mode.
+
+## Documentation
+
+Start with [`docs/README.md`](docs/README.md), then consult:
+
+- [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for current evidence and blockers;
+- [`ROADMAP.md`](ROADMAP.md) for workstream sequencing;
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries;
+- [`docs/API_AND_AUTHORIZATION.md`](docs/API_AND_AUTHORIZATION.md) for API and
+  authorization contracts;
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) for branch, safety and review rules.
+
+Historical prompts, superseded plans and academic artifacts are retained under
+`docs/archive/` and must not be used as current implementation truth.
+
+## Completion language
+
+Build, lint, typecheck and static inspection do not establish
+`PRODUCTION_SAFE`, `PRODUCTION_READY`, `FULLY_SECURE` or `FULLY_VERIFIED`.
+Until the user performs the relevant manual checks, the result is
+`MANUAL_CHECK_REQUIRED`.

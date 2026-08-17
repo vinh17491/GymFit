@@ -1,4 +1,6 @@
 import rateLimit from 'express-rate-limit';
+import { config } from '../../config/config';
+import { rateLimitHandler } from '../../middleware/rateLimiter';
 
 function mutationLimiter(windowMs: number, max: number, message: string) {
   return rateLimit({
@@ -7,27 +9,22 @@ function mutationLimiter(windowMs: number, max: number, message: string) {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: req => `${req.user?.userId ?? 'anonymous'}:${req.ip ?? 'unknown'}`,
-    message: { success: false, message },
+    handler: rateLimitHandler(message, Math.ceil(windowMs / 1000)),
   });
 }
 
-const positive=(name:string,fallback:number)=>{
-  const value=Number(process.env[name]);
-  return Number.isSafeInteger(value)&&value>0?value:fallback;
-};
-
 export const sellerApplicationWriteLimiter = mutationLimiter(
-  positive('SELLER_APPLICATION_WRITE_RATE_LIMIT_WINDOW_MS',15*60*1000),
-  positive('SELLER_APPLICATION_WRITE_RATE_LIMIT_MAX',30),
+  config.rateLimit.sellerApplication.write.windowMs,
+  config.rateLimit.sellerApplication.write.max,
   'Too many seller application changes. Please try again later.',
 );
 export const sellerApplicationSubmitLimiter = mutationLimiter(
-  positive('SELLER_APPLICATION_SUBMIT_RATE_LIMIT_WINDOW_MS',24*60*60*1000),
-  positive('SELLER_APPLICATION_SUBMIT_RATE_LIMIT_MAX',5),
+  config.rateLimit.sellerApplication.submit.windowMs,
+  config.rateLimit.sellerApplication.submit.max,
   'Seller application submit limit reached. Please try again later.',
 );
 export const sellerApplicationWithdrawLimiter = mutationLimiter(
-  positive('SELLER_APPLICATION_WITHDRAW_RATE_LIMIT_WINDOW_MS',24*60*60*1000),
-  positive('SELLER_APPLICATION_WITHDRAW_RATE_LIMIT_MAX',10),
+  config.rateLimit.sellerApplication.withdraw.windowMs,
+  config.rateLimit.sellerApplication.withdraw.max,
   'Seller application withdraw limit reached. Please try again later.',
 );

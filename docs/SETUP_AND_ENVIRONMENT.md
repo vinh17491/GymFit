@@ -1,36 +1,129 @@
 # Setup and Environment
 
-Prerequisites: Node.js/npm, SQL Server access, and Git. Clone the repository, run `npm install` separately in `backend/` and `frontend/`, configure a local ignored `backend/.env`, and check the selected database with `npm run db:migrate:status` from `backend/`.
+Prerequisites are Node.js/npm, SQL Server access and Git. Install dependencies
+separately in `backend/` and `frontend/`, configure a local ignored
+`backend/.env`, and verify the selected database target before any migration
+operation.
 
-Keep `backend/.env` local and ignored. `.env.example` must contain placeholders only. Never copy real values into docs, commits, issues, or logs.
+Keep `backend/.env` local and ignored. `.env.example` contains placeholders
+only. Never copy real values into docs, commits, issues or logs.
+
+## Backend configuration
 
 | Group | Variable names | Purpose |
 |---|---|---|
-| Server | `PORT`, `NODE_ENV` | API port and runtime mode |
-| Database | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_TRUSTED_CONNECTION`, `DB_TRUST_SERVER_CERTIFICATE` | SQL Server connection mode/target |
+| Server | `PORT`, `NODE_ENV`, `TRUST_PROXY` | API port, runtime mode and explicit reverse-proxy trust boundary |
+| Database | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_TRUSTED_CONNECTION`, `DB_ENCRYPT`, `DB_TRUST_SERVER_CERTIFICATE` | SQL Server connection mode, encryption policy and explicit target |
 | JWT | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES`, `JWT_REFRESH_EXPIRES`, `JWT_ISSUER`, `JWT_AUDIENCE` | Token signing, validation and lifetime |
-| CORS/session | `CORS_ORIGIN`, `REDIS_URL` | Allowed frontend and optional Redis session/rate-limit backing |
+| CORS/session support | `CORS_ORIGIN`, `REFRESH_COOKIE_NAME`, `REFRESH_COOKIE_SAMESITE`, `REFRESH_COOKIE_SECURE`, `REDIS_URL`, `DISABLE_BACKGROUND_RUNNERS` | Explicit CORS allowlist, HttpOnly refresh-cookie policy, optional Redis backing and controlled runner lifecycle |
+| Core rate limits | `API_RATE_LIMIT_*`, `AUTH_RATE_LIMIT_*`, `UPLOAD_RATE_LIMIT_*` | Centralized in-memory single-instance request thresholds |
 | Upload | `UPLOAD_DIR`, `MAX_FILE_SIZE` | Upload location and byte limit |
-| Backup | `BACKUP_DIR`, `BACKUP_RETENTION_DAYS` | Local backup location/retention |
+| Backup | `BACKUP_DIR`, `BACKUP_RETENTION_DAYS` | Local backup location and retention |
 | Legacy mail | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Legacy membership/module SMTP |
 | Product Order mail | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SECURE`, `MAIL_USER`, `MAIL_APP_PASSWORD`, `ADMIN_NOTIFICATION_EMAIL` | Order notification transport/readiness |
 | Bank | `BANK_NAME`, `BANK_ACCOUNT_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_QR_IMAGE_URL` | Manual bank-transfer instructions/readiness |
-| Order | `ORDER_RESERVATION_MINUTES`, `ORDER_EXPIRATION_CRON` | Reservation deadline and expiration schedule |
-| Acceptance only | `MAIL_MODE=acceptance` | Deterministic no-network mail adapter; requires `NODE_ENV=test` and a guarded acceptance DB name |
+| Order | `ORDER_RESERVATION_MINUTES`, `ORDER_EXPIRATION_CRON`, `ORDER_EXPIRATION_BATCH_SIZE`, `ORDER_EXPIRATION_INTERVAL_SECONDS` | Reservation and expiration runner settings |
 | Marketplace limits | `SELLER_APPLICATION_*_RATE_LIMIT_MAX`, `SELLER_APPLICATION_*_RATE_LIMIT_WINDOW_MS`, `BRAND_REQUEST_RATE_LIMIT_MAX`, `BRAND_REQUEST_RATE_LIMIT_WINDOW_MS` | Backend user+IP mutation thresholds |
 
-`MAIL_*` is deliberately separate from legacy `SMTP_*`. For Gmail, use an App Password, not the normal Gmail login password. Common transport combinations are port 465 with secure enabled or port 587 with secure disabled; use provider requirements. `MAIL_SECURE` must be exactly `true` or `false` and ports must be valid.
+Rate-limit thresholds and windows are resolved once in
+`backend/src/config/config.ts` and consumed by the individual limiters. The
+default store is process memory: it is suitable for a single demo/staging
+instance only and does not coordinate limits across multiple processes or
+hosts. Redis is not added automatically; a distributed limiter requires a
+separate operational decision.
 
-`BANK_QR_IMAGE_URL` must be a public root-relative path (for example a deployed `/image/...` asset) or HTTPS URL. Windows paths, protocol-relative URLs and `file:`, `javascript:` or `data:` schemes are invalid.
+The current config requires `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` when
+`NODE_ENV=production`; development fallbacks are not production security
+evidence. Set `DB_NAME` explicitly for every non-local target. The legacy
+default database name is preserved for compatibility and must not be treated as
+the canonical target without a read-only identity check.
 
-Start locally with `npm run dev` in both `backend/` and `frontend/`. Production scripts verified from package files are backend `npm run build` then `npm start`, and frontend `npm run build` then `npm run preview`.
+`TRUST_PROXY` is disabled by default. If the API is behind a reviewed reverse
+proxy, configure `loopback` or an explicit comma-separated proxy/CIDR value.
+The configuration rejects bare `TRUST_PROXY=true`; forwarded IP, protocol and
+secure-cookie decisions must not trust an unspecified network boundary.
 
-Troubleshooting: verify `/api/health`, `CORS_ORIGIN`, JWT expiry, SQL Server host/database identity, upload directory permissions and the distinction between `MAIL_*` readiness and legacy `SMTP_*`. Never print the environment file while diagnosing.
+SQL Server transport is environment-sensitive. Development defaults preserve
+the current local setup (`DB_ENCRYPT=false` and certificate trust enabled when
+not overridden). Production requires `DB_ENCRYPT=true` and rejects
+`DB_TRUST_SERVER_CERTIFICATE=true`; use a certificate chain trusted by the
+runtime instead. These settings do not prove that a live database connection
+has been verified.
 
-Acceptance uses a separately verified isolated `DB_NAME`; temporary services must be stopped and the database dropped after acceptance.
+Helmet CSP now restricts executable scripts to same-origin sources and blocks
+inline script attributes. The current React/Framer Motion UI still uses
+dynamic style attributes, so `style-src` retains its narrowly documented
+compatibility exception until a separate style migration is justified. This
+is a PHASE 30 hardening boundary, not a claim of complete CSP verification.
 
-SELLER-013 commands from `backend/` are `npm run acceptance:seller-013:final -- <security|historical|marketplace|legacy|integrity|all>`. The direct security entry point additionally requires `SELLER013_SECURITY_ACCEPTANCE=1`. Historical backfill uses `npm run db:migrate -- --historical-pre-0105` only on a disposable database, seeds the pre-0105 row, and then migrates forward. Never use partial migration modes to mutate the canonical database.
+`CORS_ORIGIN` is parsed as an explicit comma-separated origin allowlist. The
+PHASE 25 transport sends the refresh cookie through Axios `withCredentials`;
+backend CORS enables `credentials:true` and rejects wildcard origins. Refresh
+and logout also require an `Origin` value in that explicit allowlist. The
+current local Vite `/api` proxy is same-site, so development defaults to
+`SameSite=Lax`; production must explicitly choose `REFRESH_COOKIE_SAMESITE`
+for its actual deployment topology. `SameSite=None` is accepted only with
+`REFRESH_COOKIE_SECURE=true`. This is a focused CSRF/Origin boundary review,
+not a claim that a full CSRF framework is present.
 
-Canonical migration operations require a verified SQL Server backup outside the workspace before applying a pending migration. Do not log credentials, tokens or environment contents.
+`VITE_API_PROXY_TARGET` is a frontend development proxy target only. It must
+not be treated as a production API authorization or CORS control. Production
+deployment must provide an explicit frontend/backend topology and origin
+configuration.
 
-Set `CORS_ORIGIN` to an exact comma-separated allowlist; bearer-token mode does not use browser sessions. Never log access/refresh tokens or any environment secret.
+`UPLOAD_DIR` and `BACKUP_DIR` may be relative to the backend process working
+directory. Verify their resolved locations and permissions before use; never
+point them at a canonical database backup or business-data directory without an
+approved operational decision.
+
+`MAIL_*` is separate from legacy `SMTP_*`. For Gmail, use an App Password, not
+the normal account password. `MAIL_MODE=acceptance` is test-only and must not be
+enabled in production. `BANK_QR_IMAGE_URL` must be a root-relative public path
+or HTTPS URL; Windows paths and `file:`, `javascript:` or `data:` schemes are
+invalid.
+
+## Assistant configuration
+
+PHASE 72 consumes the following backend-only settings. AI provider keys never
+belong in frontend VITE_* configuration:
+
+- `AI_ENABLED`
+- `AI_API_KEY`
+- `AI_MODEL`
+- `AI_TIMEOUT_MS`
+
+`AI_BASE_URL` is optional when the provider implementation has a valid default
+endpoint. A provider SDK or HTTP client may be used according to the existing
+architecture; an unnecessary heavy dependency is not required. Never expose
+`AI_API_KEY`, `VITE_AI_API_KEY`, `VITE_OPENAI_API_KEY` or equivalent secrets to
+the frontend.
+
+## Local commands
+
+Start the backend and frontend separately:
+
+```powershell
+cd backend
+npm install
+npm run db:migrate:status
+npm run dev
+```
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Static commands available for the current task are backend build/lint,
+frontend build/typecheck where dependencies are installed, encoding/import/
+secret scans and `git diff --check`. Do not use business acceptance,
+integrity or test scripts as automatic evidence under the current execution
+policy.
+
+Troubleshooting may inspect `/api/health`, CORS configuration, JWT expiry,
+SQL Server host/database identity, upload permissions and mail readiness, but
+must not print `.env`, credentials, tokens, cookies, raw provider errors or
+private conversation data.
+
+Manual browser and deployment verification remains `MANUAL_CHECK_REQUIRED`.

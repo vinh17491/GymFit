@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:5000/api';
+import api from '../api/axios';
 
 export interface Video {
   id: number;
@@ -47,7 +45,7 @@ export async function getVideos(params?: {
     if (params?.search) queryParams.set('search', params.search);
     if (params?.limit) queryParams.set('limit', String(params.limit));
     
-    const res = await axios.get(`${API_BASE}/videos/public?${queryParams}`);
+    const res = await api.get(`/videos/public?${queryParams}`);
     const data = res.data?.data ?? [];
     return Array.isArray(data) ? data.map(mapWorkoutToVideo).filter(v => v.isActive) : [];
   } catch {

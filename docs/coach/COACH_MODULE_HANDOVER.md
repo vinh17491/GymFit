@@ -1,8 +1,14 @@
 # GymFit Coach Module Handover
 
-Status: `COACH_MODULE_OPERATIONAL_CAPACITY_COMPLETE`
+Status: `IMPLEMENTED_BY_SOURCE_REVIEW`; current verification: `MANUAL_CHECK_REQUIRED`
 
-The Coach/Member/Admin Coach and Coach Appointment implementation is verified through migration evidence, builds, TypeScript, lint, isolated runtime acceptance and the required browser checklist. This document is the single current handover for the Coach, Member Workout, Admin Coach and appointment slices.
+> Historical verification notice: the PASS statements in this handover belong
+> to earlier task evidence. They have not been re-run under the current
+> stabilization execution and must not be treated as current database, build,
+> acceptance or browser evidence.
+
+The Coach/Member/Admin Coach and Coach Appointment implementation remains
+documented here. Current task status is tracked in the root `PROJECT_STATUS.md`.
 
 ## 1. Current status
 
@@ -11,7 +17,7 @@ The Coach/Member/Admin Coach and Coach Appointment implementation is verified th
 - Admin Coach Management: implemented with Admin-only list/detail/status and Member assign/reassign.
 - Admin Exercise Library: implemented against the existing `Exercises` schema.
 - Admin Workout Governance: implemented as read-only visibility.
-- Browser verdict: `PASS` for Guest, Member, Coach and Admin flows at `375x812`, `768x1024` and `1440x900`.
+- Historical browser verdict: `PASS` for Guest, Member, Coach and Admin flows at `375x812`, `768x1024` and `1440x900`; current verification remains `MANUAL_CHECK_REQUIRED`.
 - Admin Program Builder: intentionally blocked because the existing ownership model is Coach-owned only.
 - Full-project clean install: blocked by the pre-existing Marketplace/Seller migration `0100` conflict; this is outside Coach scope.
 
@@ -19,7 +25,7 @@ The Coach/Member/Admin Coach and Coach Appointment implementation is verified th
 
 Repository: `https://github.com/vinh17491/GymFit`
 
-Current branch: `coach1`
+Historical verification branch: `coach1`
 
 Relevant implementation history:
 

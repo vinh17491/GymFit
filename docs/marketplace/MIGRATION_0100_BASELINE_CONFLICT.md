@@ -1,12 +1,18 @@
-# Migration 0100 Baseline Conflict
+# Migration 0100 Baseline Conflict (Historical Record)
 
-Status: `FULL_PROJECT_CLEAN_INSTALL_BLOCKED_BY_MARKETPLACE_MIGRATION_0100`
-Date: 2026-08-04 (Asia/Saigon)
+Status: `HISTORICAL_REPRODUCTION`
+Date of original reproduction: 2026-08-04 (Asia/Saigon)
 Repository: `vinh17491/GymFit`
 Branch: `coach1`
 Verification commit: `232df83e4dfc5766b65289e925f25cf8d4f6914d`
 
-## Reproduction
+This file preserves an earlier clean-install conflict for traceability. It is
+not current execution evidence. In the current worktree, `db/schema.sql` no
+longer creates the migration-owned Seller objects, migration `0100` remains
+immutable, and the runner fails closed when a legacy object has no matching
+ledger entry. No database was connected to or changed in the current task.
+
+## Historical reproduction
 
 On a fresh database created from the repository baseline schema, the normal migration runner applied migrations `0001` through `0009` successfully. Migration `0100_seller_application_role_foundation.sql` then failed because the baseline schema already contains the `SellerApplications` table:
 

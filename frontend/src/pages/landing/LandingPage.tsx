@@ -211,7 +211,7 @@ function Features() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#020617] via-[#0a1628] to-[#020617]" />
       <div className="premium-container relative z-10">
         <Reveal className="text-center mb-16">
-          <span className="premium-badge mb-4 inline-flex">Why Choose Gymer</span>
+          <span className="premium-badge mb-4 inline-flex">Why Choose GymFit</span>
           <h2 className="heading-2 mb-4">Everything You Need to<br /><span className="text-gradient">Transform Your Life</span></h2>
           <p className="text-[#94A3B8] max-w-2xl mx-auto text-lg">
             The complete fitness platform designed for people who take their health seriously.
@@ -308,7 +308,7 @@ function TransformationStories() {
           <span className="premium-badge mb-4 inline-flex"><TrendingUp size={14} /> Transformations</span>
           <h2 className="heading-2 mb-4">Real People. <span className="text-gradient">Real Results.</span></h2>
           <p className="text-[#94A3B8] max-w-2xl mx-auto text-lg">
-            See how our members have transformed their lives with Gymer.
+            See how our members have transformed their lives with GymFit.
           </p>
         </Reveal>
 
@@ -412,7 +412,7 @@ function MembershipPreview() {
 /* ──────────── TESTIMONIALS ──────────── */
 function Testimonials() {
   const testimonials = [
-    { name: 'Sarah J.', role: 'Lost 20 lbs in 3 months', avatar: 'SJ', text: 'Gymer completely changed my life. The coaches are incredible and the community keeps me motivated every single day.' },
+    { name: 'Sarah J.', role: 'Lost 20 lbs in 3 months', avatar: 'SJ', text: 'GymFit completely changed my life. The coaches are incredible and the community keeps me motivated every single day.' },
     { name: 'Mike T.', role: 'Completed half marathon', avatar: 'MT', text: 'I went from couch to marathon in 6 months. The personalized training plans made all the difference.' },
     { name: 'Emma R.', role: 'Gained 15 lbs of muscle', avatar: 'ER', text: 'The video library is amazing. I learned proper form and technique from world-class coaches.' },
   ];
@@ -459,10 +459,10 @@ function Testimonials() {
 function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const faqs = [
-    { q: 'How does the free trial work?', a: 'Start with a 7-day free trial. No credit card required. Access all features and decide if Gymer is right for you.' },
+    { q: 'How does the free trial work?', a: 'Start with a 7-day free trial. No credit card required. Access all features and decide if GymFit is right for you.' },
     { q: 'Can I cancel anytime?', a: 'Yes! Cancel anytime from your account settings. No questions asked, no hidden fees.' },
     { q: 'Are the coaches certified?', a: 'All our coaches hold nationally recognized certifications (NASM, ACE, ACSM) and have 5+ years of experience.' },
-    { q: 'Is there a mobile app?', a: 'Yes! Gymer is available on iOS and Android. Download it from the App Store or Google Play.' },
+    { q: 'Is there a mobile app?', a: 'Yes! GymFit is available on iOS and Android. Download it from the App Store or Google Play.' },
     { q: 'What payment methods do you accept?', a: 'We accept all major credit cards, debit cards, and bank transfers via VietQR.' },
   ];
 
@@ -559,7 +559,7 @@ function Footer() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#22C55E] to-[#16A34A] flex items-center justify-center shadow-lg">
                 <Dumbbell size={20} className="text-white" />
               </div>
-              <span className="text-xl font-bold text-white">Gymer</span>
+              <span className="text-xl font-bold text-white">GymFit</span>
             </Link>
             <p className="text-[#94A3B8] mb-6 max-w-sm leading-relaxed">
               The premium fitness platform helping thousands achieve their fitness goals through expert coaching and personalized training.
@@ -617,7 +617,7 @@ function Footer() {
         </div>
 
         <div className="border-t border-[#1e293b] mt-12 pt-8 text-center text-sm text-[#64748b]">
-          &copy; {new Date().getFullYear()} Gymer. All rights reserved.
+          &copy; {new Date().getFullYear()} GymFit. All rights reserved.
         </div>
       </div>
     </footer>
