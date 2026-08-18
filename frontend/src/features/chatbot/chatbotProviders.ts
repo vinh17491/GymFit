@@ -4,6 +4,8 @@ import { resolveChatbotMessage } from './chatbotEngine';
 import type { ChatbotContext, ChatbotMessage, ChatbotReply, ChatbotRole } from './chatbotTypes';
 
 export type AssistantMode = 'AI_ONLINE' | 'LOCAL_FALLBACK';
+export const AI_INTERACTIVE_TIMEOUT_MS = 7_000;
+export const AI_RETRY_COOLDOWN_MS = 30_000;
 
 export interface AssistantStatus {
   enabled: boolean;
@@ -43,22 +45,30 @@ export interface AIProviderResult {
 function statusFrom(value: unknown): AssistantStatus {
   const raw = value as Partial<AssistantStatus>;
   const circuit = raw.circuit as Partial<AssistantStatus['circuit']> | undefined;
+  const normalizedCircuit: AssistantStatus['circuit'] = {
+    state: circuit?.state === 'OPEN' || circuit?.state === 'HALF_OPEN' ? circuit.state : 'CLOSED',
+    failureCount: Number.isSafeInteger(circuit?.failureCount) ? Number(circuit?.failureCount) : 0,
+    // The backend status is authoritative; do not duplicate circuit policy
+    // defaults in the browser when a malformed/partial status is received.
+    failureThreshold: Number.isSafeInteger(circuit?.failureThreshold) ? Number(circuit?.failureThreshold) : 0,
+    cooldownMs: Number.isSafeInteger(circuit?.cooldownMs) ? Number(circuit?.cooldownMs) : 0,
+    lastKnownSuccessAt: typeof circuit?.lastKnownSuccessAt === 'string' ? circuit.lastKnownSuccessAt : null,
+    lastKnownFailureAt: typeof circuit?.lastKnownFailureAt === 'string' ? circuit.lastKnownFailureAt : null,
+    recoveryProbeAvailable: circuit?.recoveryProbeAvailable === true,
+  };
+  const successAt = normalizedCircuit.lastKnownSuccessAt ? Date.parse(normalizedCircuit.lastKnownSuccessAt) : Number.NaN;
+  const failureAt = normalizedCircuit.lastKnownFailureAt ? Date.parse(normalizedCircuit.lastKnownFailureAt) : 0;
+  const healthy = raw.mode === 'AI_ONLINE'
+    && normalizedCircuit.state === 'CLOSED'
+    && normalizedCircuit.failureCount === 0
+    && Number.isFinite(successAt)
+    && successAt > failureAt;
   return {
     enabled: raw.enabled === true,
     configured: raw.configured === true,
     model: typeof raw.model === 'string' ? raw.model : null,
-    mode: raw.mode === 'AI_ONLINE' ? 'AI_ONLINE' : 'LOCAL_FALLBACK',
-    circuit: {
-      state: circuit?.state === 'OPEN' || circuit?.state === 'HALF_OPEN' ? circuit.state : 'CLOSED',
-      failureCount: Number.isSafeInteger(circuit?.failureCount) ? Number(circuit?.failureCount) : 0,
-      // The backend status is authoritative; do not duplicate circuit policy
-      // defaults in the browser when a malformed/partial status is received.
-      failureThreshold: Number.isSafeInteger(circuit?.failureThreshold) ? Number(circuit?.failureThreshold) : 0,
-      cooldownMs: Number.isSafeInteger(circuit?.cooldownMs) ? Number(circuit?.cooldownMs) : 0,
-      lastKnownSuccessAt: typeof circuit?.lastKnownSuccessAt === 'string' ? circuit.lastKnownSuccessAt : null,
-      lastKnownFailureAt: typeof circuit?.lastKnownFailureAt === 'string' ? circuit.lastKnownFailureAt : null,
-      recoveryProbeAvailable: circuit?.recoveryProbeAvailable === true,
-    },
+    mode: healthy ? 'AI_ONLINE' : 'LOCAL_FALLBACK',
+    circuit: normalizedCircuit,
   };
 }
 

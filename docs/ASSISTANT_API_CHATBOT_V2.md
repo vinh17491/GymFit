@@ -105,6 +105,14 @@ available if the Assistant backend is unreachable. Switching modes preserves
 conversation, input context and history; it does not close or reset the
 widget.
 
+The frontend gives an interactive AI attempt a separate 7-second abort budget;
+the backend provider keeps its own technical timeout. After an AI failure or
+Local Mode decision, the next AI attempt is held for the client cooldown rather
+than retrying on every message. The next message after the cooldown is the
+controlled recovery probe; success returns to `AI_ONLINE`, while failure keeps
+`LOCAL_FALLBACK` and starts the cooldown again. Local responses use the main
+request signal and do not wait for the AI timer.
+
 Fitness guidance remains general information. The Assistant is not a disease
 diagnosis or medical treatment subsystem.
 
