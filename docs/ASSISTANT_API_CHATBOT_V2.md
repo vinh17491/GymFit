@@ -47,6 +47,23 @@ The circuit breaker is centralized at three provider failures followed by a
 30-second cooldown and one controlled half-open probe. These values are held
 in backend config, not scattered through request code.
 
+## Request limits and status truth
+
+`POST /api/assistant/chat` runs optional authentication, then the dedicated
+Assistant limiter, then body validation. Guests are limited by
+`ip:<request-ip>` to 10 requests per minute by default; authenticated users are
+limited by `user:<authenticated-user-id>` to 30 requests per minute by default.
+The thresholds and windows are environment-overridable through the centralized
+`ASSISTANT_*_RATE_LIMIT_*` settings. `GET /api/assistant/status` is not subject
+to this chat limiter because it does not call the provider; the global API
+limiter still applies.
+
+Rate exhaustion returns HTTP `429` with a safe retry-later message. Provider
+quota, key, configuration and stack details never cross the response boundary.
+The backend reports `AI_ONLINE` only when the circuit is `CLOSED`,
+`failureCount` is zero and a known successful provider call exists. Otherwise
+the status is `LOCAL_FALLBACK`.
+
 ## Read-only tool allowlist
 
 - searchProducts

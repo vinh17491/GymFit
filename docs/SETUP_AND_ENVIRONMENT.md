@@ -17,6 +17,7 @@ only. Never copy real values into docs, commits, issues or logs.
 | JWT | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES`, `JWT_REFRESH_EXPIRES`, `JWT_ISSUER`, `JWT_AUDIENCE` | Token signing, validation and lifetime |
 | CORS/session support | `CORS_ORIGIN`, `REFRESH_COOKIE_NAME`, `REFRESH_COOKIE_SAMESITE`, `REFRESH_COOKIE_SECURE`, `REDIS_URL`, `DISABLE_BACKGROUND_RUNNERS` | Explicit CORS allowlist, HttpOnly refresh-cookie policy, optional Redis backing and controlled runner lifecycle |
 | Core rate limits | `API_RATE_LIMIT_*`, `AUTH_RATE_LIMIT_*`, `UPLOAD_RATE_LIMIT_*` | Centralized in-memory single-instance request thresholds |
+| Assistant chat limits | `ASSISTANT_GUEST_RATE_LIMIT_*`, `ASSISTANT_AUTHENTICATED_RATE_LIMIT_*` | Guest IP and authenticated user chat thresholds; status is not given this limiter |
 | Upload | `UPLOAD_DIR`, `MAX_FILE_SIZE` | Upload location and byte limit |
 | Backup | `BACKUP_DIR`, `BACKUP_RETENTION_DAYS` | Local backup location and retention |
 | Legacy mail | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Legacy membership/module SMTP |

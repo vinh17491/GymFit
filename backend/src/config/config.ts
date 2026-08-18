@@ -117,6 +117,10 @@ export const config = {
       withdraw: { windowMs: positiveInteger('SELLER_APPLICATION_WITHDRAW_RATE_LIMIT_WINDOW_MS',24*60*60*1000), max: positiveInteger('SELLER_APPLICATION_WITHDRAW_RATE_LIMIT_MAX',10) },
     },
     brandRequest: { windowMs: positiveInteger('BRAND_REQUEST_RATE_LIMIT_WINDOW_MS',24*60*60*1000), max: positiveInteger('BRAND_REQUEST_RATE_LIMIT_MAX',10) },
+    assistant: {
+      guest: { windowMs: positiveInteger('ASSISTANT_GUEST_RATE_LIMIT_WINDOW_MS',60*1000), max: positiveInteger('ASSISTANT_GUEST_RATE_LIMIT_MAX',10) },
+      authenticated: { windowMs: positiveInteger('ASSISTANT_AUTHENTICATED_RATE_LIMIT_WINDOW_MS',60*1000), max: positiveInteger('ASSISTANT_AUTHENTICATED_RATE_LIMIT_MAX',30) },
+    },
   },
   refreshCookie: {
     name: process.env.REFRESH_COOKIE_NAME || 'gymfit_refresh_token',

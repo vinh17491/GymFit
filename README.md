@@ -24,6 +24,8 @@ and review remain one phase at a time.
 - PHASE 72 now provides the Assistant API, backend-only provider, centralized
   circuit breaker, strict read-only tool layer and LocalProvider/AIProvider
   fallback boundary. No frontend AI secret is used.
+- Assistant chat has separate guest-IP and authenticated-user rate limits;
+  Assistant status is a read-only snapshot and remains lighter than chat.
 - Manual/browser verification that has not actually been performed remains
   `MANUAL_CHECK_REQUIRED`.
 

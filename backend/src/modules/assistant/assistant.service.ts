@@ -73,7 +73,7 @@ function failureClass(error: unknown): AssistantFailureClass {
 
 function currentMode(): 'AI_ONLINE' | 'LOCAL_FALLBACK' {
   const snapshot = circuit.snapshot();
-  return snapshot.state === 'CLOSED' && Boolean(snapshot.lastKnownSuccessAt) ? 'AI_ONLINE' : 'LOCAL_FALLBACK';
+  return snapshot.state === 'CLOSED' && snapshot.failureCount === 0 && Boolean(snapshot.lastKnownSuccessAt) ? 'AI_ONLINE' : 'LOCAL_FALLBACK';
 }
 
 async function complete(messages: AssistantProviderMessage[]) {

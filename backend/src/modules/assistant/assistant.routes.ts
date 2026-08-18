@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../../middleware/auth';
+import { assistantChatLimiter } from '../../middleware/rateLimiter';
 import { validate } from '../../middleware/validate';
 import { chat } from './assistant.controller';
 import { getStatus } from './assistant.controller';
@@ -21,6 +22,6 @@ function optionalAuthenticate(req: Request, res: Response, next: NextFunction): 
 }
 
 router.get('/status', getStatus);
-router.post('/chat', optionalAuthenticate, validate(chatInput), chat);
+router.post('/chat', optionalAuthenticate, assistantChatLimiter, validate(chatInput), chat);
 
 export default router;

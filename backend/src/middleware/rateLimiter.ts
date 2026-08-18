@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import type { Request, Response } from 'express';
+import type { Request, RequestHandler, Response } from 'express';
 import { config } from '../config/config';
 import { sendError } from '../utils/response';
 
@@ -38,3 +38,26 @@ export const uploadLimiter = rateLimit({
   legacyHeaders: false,
   handler: rateLimitHandler('Too many file uploads, please try again later.', Math.ceil(config.rateLimit.upload.windowMs / 1000)),
 });
+
+const assistantGuestLimiter = rateLimit({
+  windowMs: config.rateLimit.assistant.guest.windowMs,
+  max: config.rateLimit.assistant.guest.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
+  handler: rateLimitHandler('Too many assistant requests, please try again later.', Math.ceil(config.rateLimit.assistant.guest.windowMs / 1000)),
+});
+
+const assistantAuthenticatedLimiter = rateLimit({
+  windowMs: config.rateLimit.assistant.authenticated.windowMs,
+  max: config.rateLimit.assistant.authenticated.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `user:${req.user?.userId ?? 'unknown'}`,
+  handler: rateLimitHandler('Too many assistant requests, please try again later.', Math.ceil(config.rateLimit.assistant.authenticated.windowMs / 1000)),
+});
+
+export const assistantChatLimiter: RequestHandler = (req, res, next) => {
+  if (req.user) return assistantAuthenticatedLimiter(req, res, next);
+  return assistantGuestLimiter(req, res, next);
+};
