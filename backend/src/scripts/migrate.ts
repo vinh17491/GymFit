@@ -7,6 +7,7 @@ import { closePool, getPool, sql } from '../config/database';
 const MIGRATION_PATTERN = /^(\d{4})_(.+)\.sql$/;
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../../db/migrations');
 const REQUIRED_TABLES = ['Products', 'ProductVariants', 'ProductImages', 'Inventory', 'Brands', 'Categories'];
+const BOOTSTRAP_COMMAND = 'npm run db:bootstrap';
 const MIGRATION_TABLE_OWNERS: Record<string, string> = {
   ProductOptions: '0001',
   ProductOptionValues: '0001',
@@ -244,7 +245,9 @@ async function validateRequiredTables(pool: ConnectionPool): Promise<void> {
   const missing: string[] = [];
   for (const table of REQUIRED_TABLES) if (!(await tableExists(pool, table))) missing.push(table);
   console.log(`Required foundation tables: ${missing.length === 0 ? 'PRESENT' : 'MISSING'}`);
-  if (missing.length > 0) throw new Error(`Missing required foundation table(s): ${missing.join(', ')}`);
+  if (missing.length > 0) {
+    throw new Error(`BOOTSTRAP_REQUIRED: canonical foundation is missing (${missing.join(', ')}). Run ${BOOTSTRAP_COMMAND} against the explicitly verified target database, then rerun migration status.`);
+  }
 }
 
 async function collectProfile(pool: ConnectionPool): Promise<PreflightProfile> {

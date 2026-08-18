@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
+    "db:bootstrap": "tsx src/scripts/bootstrap.ts",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:migrate:status": "tsx src/scripts/migrate.ts --status",
     "acceptance:seller-001": "tsx src/scripts/seller-001-acceptance.ts",
