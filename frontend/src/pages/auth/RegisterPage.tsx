@@ -113,7 +113,8 @@ export default function RegisterPage() {
     setIsLoading(true);
     
     try {
-      const current = await register({email:formData.email,password:formData.password,name:`${formData.firstName} ${formData.lastName}`.trim(),phone:formData.phone});
+      const referralCode = new URLSearchParams(location.search).get('ref')?.trim();
+      const current = await register({email:formData.email,password:formData.password,name:`${formData.firstName} ${formData.lastName}`.trim(),phone:formData.phone,...(referralCode ? { referral_code: referralCode } : {})});
       const pendingCheckout = current.role === 'member' ? getPendingPlanCheckoutPath() : null;
       if (current.role !== 'member') clearPendingPlan();
       navigate(pendingCheckout || roleHome(current.role),{replace:true});

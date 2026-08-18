@@ -78,8 +78,8 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `ProductReviews` | TABLE | buyer/seller/admin reviews and product services | product, review, seller/admin review pages | - | `0111_product_shop_reviews.sql` | - | `MIGRATION_CANONICAL` | P1 trust | preserve verified-purchase scope |
 | `ShopReviews` | TABLE | buyer/seller/admin reviews and shop services | shop and review pages | - | `0111_product_shop_reviews.sql` | - | `MIGRATION_CANONICAL` | P1 trust | preserve moderation scope |
 | `ReviewModerationHistory` | TABLE | seller/admin review services | seller/admin review pages | - | `0111_product_shop_reviews.sql` | - | `MIGRATION_CANONICAL` | P1 moderation | retain history |
-| `ReferralCodes` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 registration | add a forward-only referral owner after column-contract review |
-| `ReferralTransactions` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 registration | add forward-only owner; preserve transaction scoping and invalid-referral behavior |
+| `ReferralCodes` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | `0112_referral_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 registration | `KEEP_AND_MIGRATE`; preserve Users compatibility code and active canonical code |
+| `ReferralTransactions` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | `0112_referral_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 registration | `KEEP_AND_MIGRATE`; enforce one registration transaction per pair/type |
 | `Coupons` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 pricing | recover current validation/usage contract before migration |
 | `CouponUsages` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 pricing | migrate only after usage-limit semantics are explicit |
 | `Points` | TABLE | loyalty controller and `sp_SpendPoints` | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 balance integrity | canonicalize with transaction/concurrency review |
@@ -120,3 +120,19 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 6. A live SQL Server check is required after each relevant migration:
    `DATABASE_MANUAL_CHECK_REQUIRED`. This static matrix does not connect to,
    mutate or certify a database.
+
+## Orphan priority and canonicalization decisions
+
+| Orphan or duplicate family | Priority | Decision |
+| --- | --- | --- |
+| `ReferralCodes`, `ReferralTransactions` | P0 | `KEEP_AND_MIGRATE` in `0112`; active registration and referral UI depend on them |
+| `Payments`, `Invoices` | P0 for membership payment; P1 for invoice UI | `KEEP_AND_MIGRATE` as a separate membership billing domain; never merge with marketplace order payment |
+| `Coupons`, `CouponUsages` | P1 | `KEEP_AND_MIGRATE` using only the current route contract |
+| `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions`, `sp_SpendPoints` | P1 | `KEEP_AND_MIGRATE`; unresolved stock/status/idempotency semantics remain `BUSINESS_RULE_REQUIRES_CONFIRMATION` |
+| `Tickets`, `TicketMessages` | P1 | `KEEP_AND_MIGRATE` with role-scope and message ordering preserved |
+| `CRMNotes`, `CRMTasks` | P1 | `KEEP_AND_MIGRATE` as CRMCustomers child tables |
+| `ProductTags`, `ExerciseMedia` | P1 | `REQUIRES_CONFIRMATION` until the source/schema contract is recovered |
+| `Workouts`, `WorkoutSessions`, `WorkoutExercises` | P1 | `REQUIRES_CONFIRMATION`; retain active legacy reads while comparing with canonical program/session snapshots |
+| `AuditLogs`, `BackupLogs` | P2 | `KEEP_AND_MIGRATE` under operations ownership; keep backup filesystem behavior |
+| `AnalyticsDaily`, `AnalyticsRetention` | P2 | `REQUIRES_CONFIRMATION` until stored-projection versus derived-report ownership is explicit |
+| `AffiliatePayouts`, `Affiliates`, `ReferralClicks`, `ReferralRewards`, `NutritionEntries`, `NutritionPlans`, `Promotions`, `TicketAttachments` | P3 | `ARCHIVE_UNUSED` review only; no table recreation or deletion in this pass |

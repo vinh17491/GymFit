@@ -60,6 +60,8 @@ const MIGRATION_TABLE_OWNERS: Record<string, string> = {
   ProductReviews: '0111',
   ShopReviews: '0111',
   ReviewModerationHistory: '0111',
+  ReferralCodes: '0112',
+  ReferralTransactions: '0112',
 };
 
 interface MigrationFile {
