@@ -180,7 +180,7 @@ function requireActor(actor: AssistantActor | null): AssistantActor {
 
 async function myAppointments(actor: AssistantActor | null) {
   const current = requireActor(actor);
-  if (![UserRole.MEMBER, UserRole.COACH, UserRole.ADMIN].includes(current.role)) throw new Error('TOOL_NOT_AVAILABLE_FOR_ROLE');
+  if (![UserRole.MEMBER, UserRole.COACH].includes(current.role)) throw new Error('TOOL_NOT_AVAILABLE_FOR_ROLE');
   const result = await listBookings({
     actor: { userId: current.userId, role: current.role },
     filters: { statusFilter: '', dateFilter: '', params: {} },

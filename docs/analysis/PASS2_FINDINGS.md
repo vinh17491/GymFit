@@ -18,7 +18,7 @@ remains outstanding.
 | Assistant status can report AI online after a failure. | **FIXED IN PASS 2** | `currentMode()` now requires `state === 'CLOSED'`, `failureCount === 0` and a known success timestamp before reporting `AI_ONLINE`. |
 | The closed chatbot icon has no status dot. | **FIXED IN PASS 2** | The closed `MessageCircle` button now has a small ringed green/red status dot, an accessible mode label and a matching title; the existing open-header text remains. |
 | The widget always attempted AI before Local. | **FIXED IN PASS 2** | The widget now keeps one assistant state object, skips AI when configuration is unavailable or the local cooldown is active, gives AI a separate interactive timeout, and falls through to `LocalProvider` without waiting for the provider technical timeout. Recovery is attempted only on a later message after the cooldown. |
-| Assistant tool definitions are shared across actors. | **FIXED IN PASS 2** | Tool definitions are selected by the authenticated actor: guests receive public tools, members receive their private tools, coaches receive appointment/order tools, and sellers/admins receive public tools only. The executor applies the same allowlist instead of trusting model-supplied tool names. |
+| Admin can receive the private `getMyAppointments` assistant tool. | **FIXED IN PASS 2** | Admin is excluded from the actor-specific definitions and the executor allowlist; the private implementation itself now accepts only Member or Coach actors. Admin UI/API behavior is unchanged. |
 
 ## Scope decision
 

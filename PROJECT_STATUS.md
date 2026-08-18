@@ -7,7 +7,12 @@ Updated: 2026-08-19 (Asia/Saigon)
 - Working branch: `phan-tich-lan-2`.
 - Pass 2 checkpoint commits are pushed to `origin/phan-tich-lan-2` as each
   stable phase range completes.
-- PHASE 01–72 are source-complete; Pass 2 phases 73–126 are source-complete.
+- Pass 1 source reviewed: `phan-tich-lan-1` at `f80c4e3fbb3e8379303ceb6a46e4788f5cdb14f2`.
+- Pass 2 pre-handoff checkpoint: `4ff9d85`; the final handoff commit is the
+  checkpoint containing `PHAN_TICH_LAN_2_RESULT.md`. Its exact hash is reported
+  from `git log -1` at delivery time because a commit cannot contain its own
+  hash.
+- PHASE 01–72 are source-complete; Pass 2 phases 73–132 are source-complete.
   Manual verification remains required and no production-safety conclusion is
   asserted.
 - Objective: demo/staging stable and production-oriented hardening while
@@ -92,12 +97,12 @@ Updated: 2026-08-19 (Asia/Saigon)
   the payment endpoint, released reservations cannot be paid, and failed-flow
   state changes remain transactional. Legacy inconsistent finance states are
   `LEGACY_PAYMENT_STATE_REQUIRES_REVIEW`; no startup repair was added.
-- Pass 2 Assistant hardening is source-complete through phase 126: chat has a
+- Pass 2 Assistant hardening is source-complete through phase 132: chat has a
   dedicated guest-IP/authenticated-user limiter with safe 429 output, status is
   not given the chat limiter, `AI_ONLINE` requires a closed circuit, zero
   failures and a successful timestamp newer than the last failure, and tool
   definitions/execution are constrained by the verified actor.
-- Pass 2 chatbot fallback/recovery is source-complete through phase 126: the
+- Pass 2 chatbot fallback/recovery is source-complete through phase 132: the
   frontend keeps explicit mode/status/retry state in the extracted
   orchestrator, uses LocalProvider directly during disabled/open/cooldown paths,
   limits interactive AI waits to 7 seconds, permits only controlled
@@ -116,7 +121,7 @@ Updated: 2026-08-19 (Asia/Saigon)
 ## Current checkpoint
 
 Pass 2 database foundation, payment/order integrity, Assistant hardening and
-chatbot fallback/recovery are source-complete through phase 126. The repository
+chatbot fallback/recovery are source-complete through phase 132. The repository
 now has an explicit empty-database sequence: create an empty SQL Server
 database, configure and verify `DB_*`, run guarded `db:bootstrap`, review
 `db:migrate:status`, then run `db:migrate`. The legacy `db/schema.sql` path
@@ -128,6 +133,7 @@ include guest/authenticated limit keys, safe 429 responses, status reads without
 provider calls and recovery-status predicates. Chatbot manual cases include
 fast Local fallback, cooldown suppression, controlled recovery, stale-request
 cancellation, mode-preserving history and the closed-button status dot. Actor
-tool availability and executor denial are source-level checks; live browser,
-provider and database checks remain manual. No database was connected to or
-mutated.
+tool availability, executor denial and data minimization are source-level
+checks. The final manual QA package is in
+`docs/analysis/PASS2_FINAL_MANUAL_QA_CHECKLIST.md`; live browser, provider and
+database checks remain manual. No database was connected to or mutated.
