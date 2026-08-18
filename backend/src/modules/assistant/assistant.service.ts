@@ -1,7 +1,7 @@
 import { config } from '../../config/config';
 import { AssistantCircuitBreaker, AssistantCircuitOpenError } from './assistant.circuit-breaker';
 import { AssistantProvider, AssistantProviderError, type AssistantProviderMessage } from './assistant.provider';
-import { assistantToolDefinitions, executeAssistantTool } from './assistant.tools';
+import { assistantToolDefinitionsForActor, executeAssistantTool } from './assistant.tools';
 import type {
   AssistantActor,
   AssistantChatInput,
@@ -83,8 +83,8 @@ function currentMode(): 'AI_ONLINE' | 'LOCAL_FALLBACK' {
     : 'LOCAL_FALLBACK';
 }
 
-async function complete(messages: AssistantProviderMessage[]) {
-  return circuit.execute(() => provider.complete(messages, assistantToolDefinitions));
+async function complete(messages: AssistantProviderMessage[], actor: AssistantActor | null) {
+  return circuit.execute(() => provider.complete(messages, assistantToolDefinitionsForActor(actor)));
 }
 
 async function runAi(input: AssistantChatInput, actor: AssistantActor | null): Promise<AssistantChatResponse> {
@@ -95,7 +95,7 @@ async function runAi(input: AssistantChatInput, actor: AssistantActor | null): P
     { role: 'user', content: input.message.slice(0, 2000) },
   ];
 
-  let completion = await complete(messages);
+  let completion = await complete(messages, actor);
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
     const assistantMessage = completion.message;
     if (!assistantMessage.tool_calls?.length) {
@@ -107,7 +107,7 @@ async function runAi(input: AssistantChatInput, actor: AssistantActor | null): P
       const result = await executeAssistantTool(toolCall.function.name, toolCall.function.arguments, actor);
       messages.push({ role: 'tool', content: result, tool_call_id: toolCall.id, name: toolCall.function.name });
     }
-    completion = await complete(messages);
+    completion = await complete(messages, actor);
   }
   return fallback();
 }

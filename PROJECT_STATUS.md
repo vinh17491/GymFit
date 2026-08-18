@@ -7,7 +7,7 @@ Updated: 2026-08-19 (Asia/Saigon)
 - Working branch: `phan-tich-lan-2`.
 - Pass 2 checkpoint commits are pushed to `origin/phan-tich-lan-2` as each
   stable phase range completes.
-- PHASE 01–72 are source-complete; Pass 2 phases 73–118 are source-complete.
+- PHASE 01–72 are source-complete; Pass 2 phases 73–126 are source-complete.
   Manual verification remains required and no production-safety conclusion is
   asserted.
 - Objective: demo/staging stable and production-oriented hardening while
@@ -92,14 +92,17 @@ Updated: 2026-08-19 (Asia/Saigon)
   the payment endpoint, released reservations cannot be paid, and failed-flow
   state changes remain transactional. Legacy inconsistent finance states are
   `LEGACY_PAYMENT_STATE_REQUIRES_REVIEW`; no startup repair was added.
-- Pass 2 Assistant hardening is source-complete through phase 110: chat has a
+- Pass 2 Assistant hardening is source-complete through phase 126: chat has a
   dedicated guest-IP/authenticated-user limiter with safe 429 output, status is
-  not given the chat limiter, and `AI_ONLINE` requires a closed circuit, zero
-  failures and a known successful provider call.
-- Pass 2 chatbot fallback/recovery is source-complete through phase 118: the
-  frontend keeps explicit mode/status/retry state, uses LocalProvider directly
-  during disabled/open/cooldown paths, limits interactive AI waits to 7 seconds
-  and permits only controlled message-driven recovery attempts.
+  not given the chat limiter, `AI_ONLINE` requires a closed circuit, zero
+  failures and a successful timestamp newer than the last failure, and tool
+  definitions/execution are constrained by the verified actor.
+- Pass 2 chatbot fallback/recovery is source-complete through phase 126: the
+  frontend keeps explicit mode/status/retry state in the extracted
+  orchestrator, uses LocalProvider directly during disabled/open/cooldown paths,
+  limits interactive AI waits to 7 seconds, permits only controlled
+  message-driven recovery attempts, and exposes an accessible green/red dot on
+  the closed widget button.
 - The current development cookie topology is same-site and defaults to Lax;
   production topology still requires an explicit SameSite/Secure decision.
   CORS credentials, explicit origin allowlisting and refresh/logout
@@ -113,7 +116,7 @@ Updated: 2026-08-19 (Asia/Saigon)
 ## Current checkpoint
 
 Pass 2 database foundation, payment/order integrity, Assistant hardening and
-chatbot fallback/recovery are source-complete through phase 118. The repository
+chatbot fallback/recovery are source-complete through phase 126. The repository
 now has an explicit empty-database sequence: create an empty SQL Server
 database, configure and verify `DB_*`, run guarded `db:bootstrap`, review
 `db:migrate:status`, then run `db:migrate`. The legacy `db/schema.sql` path
@@ -123,6 +126,8 @@ cancellation/release, no failed reset, no cancelled-order notification or
 payment confirmation, and no implicit re-reservation. Assistant manual cases
 include guest/authenticated limit keys, safe 429 responses, status reads without
 provider calls and recovery-status predicates. Chatbot manual cases include
-fast Local fallback, cooldown suppression, controlled recovery and stale-request
-cancellation. No database was connected to or mutated; live bootstrap,
-migration, browser and provider checks remain manual.
+fast Local fallback, cooldown suppression, controlled recovery, stale-request
+cancellation, mode-preserving history and the closed-button status dot. Actor
+tool availability and executor denial are source-level checks; live browser,
+provider and database checks remain manual. No database was connected to or
+mutated.

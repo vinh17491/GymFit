@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { emptyChatbotContext, matchChatbotIntent } from './chatbotEngine';
 import { chatbotDelayProvider, polishDelayMs, staticReplyDelayMs, waitForChatbotDelay } from './chatbotDelay';
-import { AI_INTERACTIVE_TIMEOUT_MS, AIProvider, AI_RETRY_COOLDOWN_MS, LocalProvider, type AssistantMode, type AssistantStatus } from './chatbotProviders';
+import { getAssistantModeStatus, initialAssistantState, retryAtAfterStatusFailure, retryAtFromStatus, runChatbotOrchestrator, type AssistantClientState } from './chatbotOrchestrator';
 import { categorySuggestionsForRole, initialSuggestionsForRole } from './chatbotSuggestions';
 import { clearChatbotState, loadChatbotState, saveChatbotState } from './chatbotStorage';
 import type { ChatbotContext, ChatbotMessage, ChatbotReply, ChatbotRole, ChatbotSuggestion } from './chatbotTypes';
@@ -28,41 +28,6 @@ function welcomeMessage(role: ChatbotRole): ChatbotMessage {
 
 function isAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
-}
-
-interface AssistantClientState {
-  assistantMode: AssistantMode;
-  configured: boolean | null;
-  circuit: AssistantStatus['circuit'] | null;
-  lastStatusCheck: number | null;
-  nextAiAttemptAt: number;
-}
-
-const initialAssistantState: AssistantClientState = {
-  assistantMode: 'LOCAL_FALLBACK',
-  configured: null,
-  circuit: null,
-  lastStatusCheck: null,
-  nextAiAttemptAt: 0,
-};
-
-function retryAtFromStatus(status: AssistantStatus, now: number): number {
-  if (!status.configured) return 0;
-  const cooldownMs = Math.max(status.circuit.cooldownMs, AI_RETRY_COOLDOWN_MS);
-  const failureAt = status.circuit.lastKnownFailureAt ? Date.parse(status.circuit.lastKnownFailureAt) : Number.NaN;
-  if (status.circuit.state === 'OPEN' || status.circuit.failureCount > 0)
-    return Number.isFinite(failureAt) ? failureAt + cooldownMs : now + cooldownMs;
-  if (status.circuit.state === 'HALF_OPEN' && !status.circuit.recoveryProbeAvailable)
-    return now + cooldownMs;
-  return 0;
-}
-
-function retryAtAfterFailure(state: AssistantClientState, now: number): number {
-  return now + Math.max(state.circuit?.cooldownMs ?? 0, AI_RETRY_COOLDOWN_MS);
-}
-
-function canAttemptAi(state: AssistantClientState, now: number): boolean {
-  return state.configured === true && state.nextAiAttemptAt <= now;
 }
 
 export default function ChatbotWidget() {
@@ -91,7 +56,7 @@ export default function ChatbotWidget() {
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    void AIProvider.status(controller.signal).then(status => {
+    void getAssistantModeStatus(controller.signal).then(status => {
       if (!active) return;
       const now = Date.now();
       const statusRetryAt = retryAtFromStatus(status, now);
@@ -111,7 +76,7 @@ export default function ChatbotWidget() {
           configured: chatActivityRef.current ? previous.configured : null,
           circuit: chatActivityRef.current ? previous.circuit : null,
           lastStatusCheck: now,
-          nextAiAttemptAt: Math.max(previous.nextAiAttemptAt, now + AI_RETRY_COOLDOWN_MS),
+          nextAiAttemptAt: Math.max(previous.nextAiAttemptAt, retryAtAfterStatusFailure(now)),
         }));
       }
     });
@@ -162,58 +127,31 @@ export default function ChatbotWidget() {
     setMessages(current => [...current, userMessage].slice(-40));
     const startedAt = performance.now();
     try {
-      let aiResult: Awaited<ReturnType<typeof AIProvider.chat>> | null = null;
-      if (canAttemptAi(assistantState, Date.now())) {
-        const aiController = new AbortController();
-        const abortAi = () => aiController.abort();
-        controller.signal.addEventListener('abort', abortAi, { once: true });
-        const aiTimeout = window.setTimeout(() => aiController.abort(), AI_INTERACTIVE_TIMEOUT_MS);
-        try {
-          aiResult = await AIProvider.chat({
-            text,
-            role,
-            context,
-            routeContext: location.pathname,
-            history: messages,
-            signal: aiController.signal,
-          });
-        } catch (error) {
-          if (controller.signal.aborted) return;
-          setAssistantState(previous => ({ ...previous, assistantMode: 'LOCAL_FALLBACK', nextAiAttemptAt: retryAtAfterFailure(previous, Date.now()) }));
-        } finally {
-          window.clearTimeout(aiTimeout);
-          controller.signal.removeEventListener('abort', abortAi);
-        }
-        if (controller.signal.aborted) return;
-      }
-      if (aiResult?.mode === 'AI_ONLINE' && aiResult.message) {
-        setAssistantState(previous => ({ ...previous, assistantMode: 'AI_ONLINE', configured: true, nextAiAttemptAt: 0 }));
+      const orchestrated = await runChatbotOrchestrator({
+        text,
+        role,
+        context,
+        routeContext: location.pathname,
+        history: messages,
+        assistantState,
+        signal: controller.signal,
+      });
+      setAssistantState(orchestrated.assistantState);
+      if (orchestrated.mode === 'AI_ONLINE' && orchestrated.message) {
         await waitForChatbotDelay(staticReplyDelayMs(chatbotDelayProvider), controller.signal, chatbotDelayProvider);
         if (controller.signal.aborted) return;
         const assistantMessage: ChatbotMessage = {
           id: messageId('assistant'),
           role: 'assistant',
-          text: aiResult.message,
+          text: orchestrated.message,
           createdAt: Date.now(),
         };
         setMessages(current => [...current, assistantMessage].slice(-40));
         return;
       }
 
-      if (aiResult) {
-        setAssistantState(previous => ({ ...previous, assistantMode: 'LOCAL_FALLBACK', nextAiAttemptAt: retryAtAfterFailure(previous, Date.now()) }));
-      } else {
-        setAssistantState(previous => ({ ...previous, assistantMode: 'LOCAL_FALLBACK' }));
-      }
-      const localResult = await LocalProvider.chat({
-        text,
-        role,
-        context,
-        routeContext: location.pathname,
-        history: messages,
-        signal: controller.signal,
-      });
-      const reply = localResult.reply;
+      const reply = orchestrated.reply;
+      if (!reply) throw new Error('LOCAL_REPLY_UNAVAILABLE');
       if (controller.signal.aborted) return;
       if (reply.replyType === 'DYNAMIC_LOOKUP') {
         const elapsed = performance.now() - startedAt;
@@ -246,6 +184,7 @@ export default function ChatbotWidget() {
 
   const onSubmit = (event: React.FormEvent) => { event.preventDefault(); void sendMessage(input); };
   const categorySuggestions = categorySuggestionsForRole(role);
+  const assistantModeLabel = assistantMode === 'AI_ONLINE' ? 'GYMFIT AI Online' : 'GYMFIT Assistant Local Mode';
 
   return (
     <>
@@ -253,10 +192,15 @@ export default function ChatbotWidget() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Mở trợ lý GYMFIT"
-          className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500 text-slate-950 shadow-2xl shadow-emerald-950/40 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:bottom-6"
+          aria-label={assistantModeLabel}
+          title={assistantModeLabel}
+          className="fixed bottom-20 right-4 z-40 relative inline-flex h-14 w-14 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-500 text-slate-950 shadow-2xl shadow-emerald-950/40 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:bottom-6"
         >
           <MessageCircle size={24} aria-hidden="true" />
+          <span
+            aria-hidden="true"
+            className={`absolute right-0.5 top-0.5 h-3.5 w-3.5 rounded-full border-2 border-slate-950 ring-1 ring-white/50 ${assistantMode === 'AI_ONLINE' ? 'bg-emerald-300' : 'bg-red-500'}`}
+          />
         </button>
       )}
 

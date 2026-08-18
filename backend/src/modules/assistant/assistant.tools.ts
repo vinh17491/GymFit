@@ -18,6 +18,22 @@ export const assistantToolNames = [
 
 export type AssistantToolName = (typeof assistantToolNames)[number];
 
+const publicAssistantToolNames = ['searchProducts', 'getCoachAvailability'] as const satisfies readonly AssistantToolName[];
+
+export function assistantToolNamesForActor(actor: AssistantActor | null): AssistantToolName[] {
+  if (!actor) return [...publicAssistantToolNames];
+  switch (actor.role) {
+    case UserRole.MEMBER:
+      return [...publicAssistantToolNames, 'getMyAppointments', 'getMyOrders', 'getWorkoutContext'];
+    case UserRole.COACH:
+      return [...publicAssistantToolNames, 'getMyAppointments', 'getMyOrders'];
+    case UserRole.ADMIN:
+    case UserRole.SELLER:
+    default:
+      return [...publicAssistantToolNames];
+  }
+}
+
 const searchProductsSchema = z.object({
   query: z.string().trim().max(120).optional(),
   category: z.string().trim().max(120).optional(),
@@ -93,6 +109,11 @@ export const assistantToolDefinitions: AssistantProviderToolDefinition[] = [
     },
   },
 ];
+
+export function assistantToolDefinitionsForActor(actor: AssistantActor | null): AssistantProviderToolDefinition[] {
+  const allowed = new Set(assistantToolNamesForActor(actor));
+  return assistantToolDefinitions.filter(definition => allowed.has(definition.function.name as AssistantToolName));
+}
 
 function safeNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -247,7 +268,7 @@ function boundedJson(value: unknown): string {
 }
 
 export async function executeAssistantTool(name: string, rawArguments: string, actor: AssistantActor | null): Promise<string> {
-  if (!assistantToolNames.includes(name as AssistantToolName)) return boundedJson({ ok: false, error: 'TOOL_NOT_ALLOWED' });
+  if (!assistantToolNamesForActor(actor).includes(name as AssistantToolName)) return boundedJson({ ok: false, error: 'TOOL_NOT_ALLOWED' });
   let parsedArguments: unknown;
   try { parsedArguments = JSON.parse(rawArguments || '{}'); } catch { return boundedJson({ ok: false, error: 'INVALID_ARGUMENTS' }); }
 

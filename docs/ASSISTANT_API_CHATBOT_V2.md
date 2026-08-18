@@ -66,11 +66,12 @@ the status is `LOCAL_FALLBACK`.
 
 ## Read-only tool allowlist
 
-- searchProducts
-- getCoachAvailability
-- getMyAppointments
-- getMyOrders
-- getWorkoutContext
+Definitions are actor-specific. Guests receive `searchProducts` and
+`getCoachAvailability`; members receive those public tools plus
+`getMyAppointments`, `getMyOrders` and `getWorkoutContext`; coaches receive the
+public tools plus `getMyAppointments` and `getMyOrders`. Sellers and admins
+receive public tools only. The executor applies the same backend allowlist
+before running a model-supplied tool name.
 
 Tool arguments use strict schemas. Private tools derive identity only from
 req.user populated by the existing JWT/session middleware. userId from a
@@ -101,9 +102,11 @@ AI_ONLINE green indicator
 Provider timeout, credentials, quota, 401/429/5xx, connection and circuit
 failures are classified internally and fall back silently to the local engine.
 Raw provider diagnostics are not shown. The frontend local engine remains
-available if the Assistant backend is unreachable. Switching modes preserves
+available if the Assistant backend is unreachable. The closed chat button shows
+the same mode through a small green/red status dot, accessible label and title;
+the open header retains its text indicator. Switching modes preserves
 conversation, input context and history; it does not close or reset the
-widget.
+widget. Identity changes may reset the conversation to preserve privacy.
 
 The frontend gives an interactive AI attempt a separate 7-second abort budget;
 the backend provider keeps its own technical timeout. After an AI failure or
