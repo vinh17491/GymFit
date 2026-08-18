@@ -41,6 +41,52 @@ const mailSubject = (subject: string): string => {
   return prefix ? `${prefix} ${subject}` : subject;
 };
 
+function assertOrderPaymentMutable(
+  order: Pick<PaymentOrder, "order_status">,
+  nextStatus: PaymentStatus,
+): void {
+  if (order.order_status === "CANCELLED" && nextStatus === "PAID")
+    throw new AppError(409, "Cancelled orders cannot be marked as PAID");
+}
+
+function assertCustomerPaymentNotificationAllowed(
+  order: Pick<PaymentOrder, "order_status">,
+): void {
+  assertOrderPaymentMutable(order, "PENDING");
+  if (order.order_status !== "PENDING")
+    throw new AppError(409, "This order is no longer awaiting payment");
+}
+
+async function assertOrderReservationActive(
+  transaction: Transaction,
+  orderId: number,
+): Promise<void> {
+  const result = await transaction
+    .request()
+    .input("reservationOrderId", sql.Int, orderId)
+    .query<{
+      itemId: number;
+      quantity: number;
+      releasedAt: Date | null;
+      reserved: number | null;
+    }>(
+      "SELECT oi.id AS itemId,oi.quantity,oi.reservation_released_at AS releasedAt,i.reserved FROM dbo.OrderItems oi WITH (UPDLOCK,HOLDLOCK) LEFT JOIN dbo.Inventory i WITH (UPDLOCK,HOLDLOCK) ON i.variant_id=oi.variant_id WHERE oi.order_id=@reservationOrderId ORDER BY oi.id",
+    );
+  if (
+    result.recordset.length === 0 ||
+    result.recordset.some(
+      (item) =>
+        item.releasedAt !== null ||
+        item.reserved === null ||
+        item.reserved < item.quantity,
+    )
+  )
+    throw new AppError(
+      409,
+      "Payment cannot be confirmed because this order reservation is no longer active. Start a new checkout.",
+    );
+}
+
 async function insertPaymentStatusHistory(
   transaction: Transaction,
   input: {
@@ -99,6 +145,7 @@ export async function notifyPayment(
     if (!order) throw new AppError(404, "Order not found");
     if (order.user_id !== userId)
       throw new AppError(403, "You may only update your own order");
+    assertCustomerPaymentNotificationAllowed(order);
     const mailStatus = mailService.configurationStatus();
     if (order.payment_status === "PENDING") {
       await tx.commit();
@@ -119,7 +166,7 @@ export async function notifyPayment(
     if (order.payment_status === "FAILED")
       throw new AppError(
         409,
-        "Payment must be reset to UNPAID by Admin before it can be submitted again",
+        "This payment attempt has failed and is final for this order. Start a new checkout to try again.",
       );
     if (order.payment_status !== "UNPAID")
       throw new AppError(
@@ -200,6 +247,8 @@ export async function updatePaymentStatus(
     const order = result.recordset[0];
     if (!order) throw new AppError(404, "Order not found");
     const previous = order.payment_status;
+    if (input.status === "PAID")
+      assertOrderPaymentMutable(order, input.status);
     if (previous === input.status) {
       await tx.commit();
       started = false;
@@ -214,7 +263,6 @@ export async function updatePaymentStatus(
     const allowed =
       (previous === "PENDING" &&
         (input.status === "PAID" || input.status === "FAILED")) ||
-      (previous === "FAILED" && input.status === "UNPAID") ||
       (previous === "UNPAID" && input.status === "PAID") ||
       (previous === "PAID" && input.status === "REFUNDED");
     if (!allowed)
@@ -233,6 +281,8 @@ export async function updatePaymentStatus(
         400,
         `Note is required for payment status transition: ${previous} to ${input.status}`,
       );
+    if (input.status === "PAID" && previous !== "PAID")
+      await assertOrderReservationActive(tx, orderId);
     await tx
       .request()
       .input("orderId", sql.Int, orderId)
@@ -323,4 +373,3 @@ export async function updatePaymentStatus(
     throw error;
   }
 }
-

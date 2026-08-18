@@ -55,11 +55,15 @@ direction. Metadata derives `AUTO_EXPIRED`, `CUSTOMER_CANCELLED` or
 ### Payment (`notifyPayment`, `updatePaymentStatus`)
 
 - Customer notification locks the order, is idempotent when already `PENDING`,
-  rejects invalid states, writes payment history and sends the Admin email only
-  after commit.
+  requires the Parent Order to remain `PENDING`, rejects cancelled or otherwise
+  invalid states, writes payment history and sends the Admin email only after
+  commit.
 - Admin transitions are explicitly limited by the current state machine and
-  require notes for failure/reset/refund-sensitive transitions.
+  require notes for failure/refund-sensitive transitions. `FAILED -> UNPAID` is
+  not supported; a failed order is terminal and requires a new checkout.
 - `PAID` advances pending ShopOrders to `PENDING_STOCK_CHECK`.
+- `PAID` is rejected for a cancelled Parent Order or a released/inconsistent
+  item reservation; the payment path never re-reserves inventory.
 - `FAILED` releases the Parent reservation, cancels child ShopOrders and
   cancels the Parent when needed, with status history.
 - `REFUNDED` records the payment status transition; external bank movement is
@@ -68,9 +72,10 @@ direction. Metadata derives `AUTO_EXPIRED`, `CUSTOMER_CANCELLED` or
 ### Cancellation (`cancelCustomerOrder`)
 
 The current customer path requires owner identity, Parent `PENDING` status and
-payment `UNPAID` or `FAILED`. It releases item reservations, marks the Parent
-cancelled, writes history and cancels active child ShopOrders in the same
-transaction.
+payment `UNPAID` or `FAILED` for cancellation. It releases item reservations,
+marks the Parent cancelled, writes history and cancels active child ShopOrders
+in the same transaction. A customer payment notification after cancellation is
+rejected with a safe `409`; a failed payment remains terminal for that order.
 
 ## Connected financial/inventory boundaries
 
