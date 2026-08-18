@@ -45,16 +45,10 @@ function assertOrderPaymentMutable(
   order: Pick<PaymentOrder, "order_status">,
   nextStatus: PaymentStatus,
 ): void {
+  if (nextStatus === "PENDING" && order.order_status !== "PENDING")
+    throw new AppError(409, "This order is no longer awaiting payment");
   if (order.order_status === "CANCELLED" && nextStatus === "PAID")
     throw new AppError(409, "Cancelled orders cannot be marked as PAID");
-}
-
-function assertCustomerPaymentNotificationAllowed(
-  order: Pick<PaymentOrder, "order_status">,
-): void {
-  assertOrderPaymentMutable(order, "PENDING");
-  if (order.order_status !== "PENDING")
-    throw new AppError(409, "This order is no longer awaiting payment");
 }
 
 async function assertOrderReservationActive(
@@ -145,7 +139,7 @@ export async function notifyPayment(
     if (!order) throw new AppError(404, "Order not found");
     if (order.user_id !== userId)
       throw new AppError(403, "You may only update your own order");
-    assertCustomerPaymentNotificationAllowed(order);
+    assertOrderPaymentMutable(order, "PENDING");
     const mailStatus = mailService.configurationStatus();
     if (order.payment_status === "PENDING") {
       await tx.commit();
@@ -295,15 +289,16 @@ export async function updatePaymentStatus(
       .query(
         "UPDATE dbo.Orders SET payment_status=@status,reservation_expires_at=CASE WHEN @status=N'UNPAID' THEN DATEADD(MINUTE,@reservationMinutes,SYSUTCDATETIME()) ELSE NULL END,updated_at=SYSUTCDATETIME() WHERE id=@orderId",
       );
-    await insertPaymentStatusHistory(tx, {
-      orderId,
-      previousStatus: previous,
-      newStatus: input.status,
-      changedBy: adminId,
-      actorType: "ADMIN",
-      note,
-      paymentReference: order.payment_reference,
-    });
+    if (input.status !== "FAILED")
+      await insertPaymentStatusHistory(tx, {
+        orderId,
+        previousStatus: previous,
+        newStatus: input.status,
+        changedBy: adminId,
+        actorType: "ADMIN",
+        note,
+        paymentReference: order.payment_reference,
+      });
     if (input.status === "PAID") {
       const children = await tx
         .request()
@@ -338,6 +333,15 @@ export async function updatePaymentStatus(
           note: note || "PAYMENT_FAILED",
         });
       }
+      await insertPaymentStatusHistory(tx, {
+        orderId,
+        previousStatus: previous,
+        newStatus: input.status,
+        changedBy: adminId,
+        actorType: "ADMIN",
+        note,
+        paymentReference: order.payment_reference,
+      });
     }
     await tx.commit();
     started = false;

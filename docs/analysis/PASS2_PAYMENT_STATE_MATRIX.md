@@ -48,7 +48,21 @@ Documented policy: `LEGACY_PAYMENT_STATE_REQUIRES_REVIEW`.
 - Confirmation never re-reserves inventory and never reconstructs an order.
 - `FAILED` processing remains one transaction in this order: payment `FAILED`,
   reservation release, ShopOrder cancellation, Parent Order cancellation and
-  history.
+  final payment/order history writes. A failure cannot commit a half-cancelled
+  state.
+
+## Phase 97-104 source closure
+
+- Admin `UNPAID -> PAID` and `PENDING -> PAID` are rejected for a cancelled
+  Parent Order, including repeated `PAID` requests against that invalid state.
+- The paid transition locks and checks every order item plus its inventory
+  reservation. Missing inventory, released markers or insufficient reserved
+  quantity return a safe `409` and do not re-reserve anything.
+- The failed transition keeps payment update, reservation release, ShopOrder
+  cancellation, Parent cancellation and history in one transaction, with the
+  final history writes occurring after the state sequence.
+- Existing legacy combinations are not repaired during startup. They remain
+  `LEGACY_PAYMENT_STATE_REQUIRES_REVIEW` until an operator reviews them.
 
 ## Manual verification required
 
