@@ -1,6 +1,8 @@
 # GymFit Database Migration Ownership
 
-Status: canonical ownership map
+Status: canonical ownership map / `BOOTSTRAP_SOURCE_COMPLETE`
+
+Live database status: `DATABASE_MANUAL_CHECK_REQUIRED`
 
 This file records schema ownership only. It does not assert that a migration is
 applied in any particular database. Applied state remains the responsibility of
@@ -19,7 +21,24 @@ applied in any particular database. Applied state remains the responsibility of
 - Applied/canonical migration files are immutable. Later changes require a new
   ordered migration.
 
-## Legacy foundation
+## Foundation bootstrap and legacy foundation
+
+The non-destructive empty-database foundation is owned by
+`db/bootstrap/foundation.sql` and executed only through the guarded
+`backend/src/scripts/bootstrap.ts` command. It creates exactly these 13 root
+tables and no migration ledger, numbered migration object, demo row or
+post-foundation migration column:
+
+`Users`, `Plans`, `Brands`, `Categories`, `Products`, `ProductVariants`,
+`ProductImages`, `Inventory`, `Exercises`, `Bookings`, `Notifications`,
+`CRMCustomers`, `Memberships`.
+
+This source contract is complete, but the first live bootstrap and migration
+run remain `DATABASE_MANUAL_CHECK_REQUIRED`.
+
+The broader legacy foundation/runtime inventory below includes tables that may
+be consumed by historical code or later migration references. Their presence
+does not authorize a bootstrap, migration adoption or demo-data load.
 
 These tables predate the ordered migration chain and are required as foundation
 for the current migrations and legacy runtime. Their presence does not mark any
@@ -77,8 +96,9 @@ columns.
 
 ## Collision result
 
-After PHASE 07, `db/schema.sql` no longer creates migration-owned tables or
-post-foundation Marketplace columns. Migration files remain unchanged. Any
-legacy database that already contains an object without a matching ledger entry
-still requires strict metadata verification before an adoption decision; this
-registry does not authorize automatic adoption.
+`db/schema.sql` remains a destructive legacy/history artifact and is not part of
+the canonical bootstrap path. The foundation bootstrap does not create
+migration-owned tables or post-foundation Marketplace columns. Migration files
+remain unchanged. Any legacy database that already contains an object without a
+matching ledger entry still requires strict metadata verification before an
+adoption decision; this registry does not authorize automatic adoption.

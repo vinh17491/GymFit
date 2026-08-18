@@ -1,8 +1,12 @@
--- LEGACY SNAPSHOT / DEV SEED ARTIFACT — NOT CANONICAL PROVISIONING
+-- DESTRUCTIVE
+-- LEGACY
+-- NOT CANONICAL
+-- NOT FOR SHARED DATABASE
+-- LEGACY SNAPSHOT / DEV SEED ARTIFACT - NOT CANONICAL PROVISIONING
 -- WARNING: this script drops and recreates GYMFIT_DB and contains demo data.
 -- Never run it against a canonical or shared database.
 -- Forward schema changes are owned by db/migrations and the migration runner.
--- Fresh-install/bootstrap policy must be resolved before using this artifact.
+-- Fresh-install bootstrap is separate; this artifact remains historical only.
 
 -- ============================================
 -- GYMER DATABASE — Full Schema + Procs + Demo Data

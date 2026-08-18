@@ -1,7 +1,10 @@
 # Database and Migrations
 
 Status: REPOSITORY CONTRACT / LIVE DATABASE UNVERIFIED
-Last repository audit: 2026-08-18
+Last repository audit: 2026-08-19
+
+Bootstrap source status: `BOOTSTRAP_SOURCE_COMPLETE`
+Live database status: `DATABASE_MANUAL_CHECK_REQUIRED`
 
 GymFit uses SQL Server. The database target must be explicitly verified before
 any operation; historical documentation may refer to `GYMFIT_DB`, but this
@@ -9,46 +12,52 @@ execution does not assert a live database identity or migration ledger state.
 The runner in `backend/src/scripts/migrate.ts` reads ordered
 `db/migrations/NNNN_description.sql` files, applies each migration
 transactionally and records filename/version/SHA-256 in `SchemaMigrations`.
-`npm run db:migrate:status` is read-only.
+`npm run db:migrate:status` is read-only. The guarded `npm run db:bootstrap`
+command and `db/bootstrap/foundation.sql` provide the non-destructive foundation
+for an explicitly created empty database; neither command creates the database
+itself.
 
 ## Role of `db/schema.sql`
 
-`db/schema.sql` is a legacy snapshot and development seed artifact, not the
-canonical provisioning source. It drops and recreates `GYMFIT_DB`, contains
-demo data, and must never be run against a canonical or shared database. It is
-not evidence that any migration is applied. Forward schema ownership belongs to
-the ordered migration chain; existing objects still require strict metadata
-comparison before any adoption decision. The empty-database bootstrap policy
-remains separate from this destructive snapshot until the runner lifecycle is
-explicitly aligned.
+`db/schema.sql` is explicitly `DESTRUCTIVE`, `LEGACY`, `NOT CANONICAL` and
+`NOT FOR SHARED DATABASE`. It drops and recreates `GYMFIT_DB`, contains demo data, and
+must never be run against a canonical or shared database. It is not evidence
+that any migration is applied. Forward schema ownership belongs to the ordered
+migration chain; the empty-database foundation belongs to
+`db/bootstrap/foundation.sql` and the guarded `db:bootstrap` command. Existing
+objects still require strict metadata comparison before any adoption decision.
 
 ## Database creation and migration order
 
-The normal forward path is:
+The normal empty-database forward path is:
 
-1. Select and verify an explicitly approved target database.
-2. Provide the legacy foundation tables required by the runner; the runner does
-   not create a SQL Server database and `0001` does not provision those tables.
-3. Run the ordered migration chain from `db/migrations` through the normal
-   runner.
-4. Re-check `dbo.SchemaMigrations`, checksums and schema invariants.
+1. Create an empty SQL Server database outside the repository.
+2. Configure and verify the `DB_*` target identity.
+3. Run `npm run db:bootstrap` from `backend/`.
+4. Run `npm run db:migrate:status` and review the read-only result.
+5. Run `npm run db:migrate` through the normal runner.
+6. Re-check `dbo.SchemaMigrations`, checksums and schema invariants.
 
 Phase 01–05 analysis results in `BASELINE_NOT_REQUIRED` for this stabilization:
-the current ordered chain explicitly consumes a verified legacy foundation, so
+the current ordered chain explicitly consumes the foundation contract, so
 no `0000_baseline.sql` is assumed or created. A future empty-database bootstrap
-would require a separately approved foundation design and target decision. A
-database with migration-owned objects but no matching ledger entry must stop
-with `SCHEMA_ADOPTION_REQUIRED`; object existence is not an applied-migration
-record.
+is now source-complete through the guarded `db:bootstrap` contract, but its live
+first-run result remains unverified. A database with migration-owned objects but
+no matching ledger entry must stop with `SCHEMA_ADOPTION_REQUIRED`; object
+existence is not an applied-migration record.
 
 ## Seed and legacy path
 
+Foundation DDL != seed/demo data != numbered migration history.
+
 `db/schema.sql` retains legacy/demo seed data for historical and development
 contexts only. It is destructive and is not a migration prerequisite by itself.
-`backend/seed_data.json` is retained pending a separate reference/archive
-decision. Deterministic seed/backfill statements already inside canonical
-migrations remain part of those immutable migrations; no new business seed is
-added to migration history by this stabilization work.
+`backend/seed_data.json` is retained as a separate data asset. The repository
+has no canonical automatic demo-seed command; any demo data load requires a
+separate operator decision on an approved disposable target. Deterministic
+seed/backfill statements already inside canonical migrations remain part of
+those immutable migrations; no new business seed is added to migration history
+by this stabilization work.
 
 ## Rollback and recovery limitation
 
@@ -75,9 +84,9 @@ the blocker rather than selecting a database by assumption.
 
 No live `SchemaMigrations` result is asserted by this task. Earlier acceptance
 and browser statements belong to historical task evidence and require a new
-authorized verification before being treated as current. Fresh-install
-bootstrap remains unresolved until the runner lifecycle and required legacy
-foundation are explicitly aligned; see the migration ownership document.
+authorized verification before being treated as current. Fresh-install source
+is aligned through the guarded foundation contract, but the first live run
+remains `DATABASE_MANUAL_CHECK_REQUIRED`; see the migration ownership document.
 
 ## Coach/Member data model
 

@@ -98,14 +98,37 @@ architecture; an unnecessary heavy dependency is not required. Never expose
 `AI_API_KEY`, `VITE_AI_API_KEY`, `VITE_OPENAI_API_KEY` or equivalent secrets to
 the frontend.
 
+## Database initialization
+
+The canonical empty-database sequence is operator-controlled and must target an
+explicitly verified SQL Server database:
+
+1. Create an empty SQL Server database outside this repository.
+2. Configure `DB_HOST`, `DB_PORT`, `DB_NAME` and the remaining `DB_*` values in
+   the ignored `backend/.env`.
+3. From `backend/`, run `npm run db:bootstrap`.
+4. Run `npm run db:migrate:status` and review the read-only result.
+5. Run `npm run db:migrate` to apply the ordered chain.
+6. Seed demo data only when an operator deliberately chooses it for an approved
+   disposable target.
+
+`db:bootstrap` is guarded and non-destructive: it creates foundation tables only,
+does not create the database, does not create the migration ledger, does not run
+migrations and does not insert demo data. It refuses an ambiguous or already
+populated target. `db/schema.sql` is explicitly `DESTRUCTIVE`, `LEGACY`,
+`NOT CANONICAL` and `NOT FOR SHARED DATABASE`; it is never the canonical install
+path.
+The repository has no canonical automatic demo-seed command. `db/schema.sql` and
+`backend/seed_data.json` remain separate historical/data assets and require a
+separate operator decision.
+
 ## Local commands
 
-Start the backend and frontend separately:
+Start the backend and frontend separately after the database sequence:
 
 ```powershell
 cd backend
 npm install
-npm run db:migrate:status
 npm run dev
 ```
 

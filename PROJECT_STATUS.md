@@ -1,14 +1,15 @@
 # GymFit Project Status
 
-Updated: 2026-08-18 (Asia/Saigon)
+Updated: 2026-08-19 (Asia/Saigon)
 
 ## Current execution status
 
-- Working branch: `fix/gymfit-stabilization-chatbot-v2`.
-- Source baseline: `e7d2880855356cdfc31ef7bbeb035f80a3b7b609`.
-- No local commit or push has been made for this task.
-- PHASE 01–72 are source-complete. Manual verification remains required and no
-  production-safety conclusion is asserted.
+- Working branch: `phan-tich-lan-2`.
+- Pass 2 checkpoint commits are pushed to `origin/phan-tich-lan-2` as each
+  stable phase range completes.
+- PHASE 01–72 are source-complete; Pass 2 phases 73–90 are source-complete.
+  Manual verification remains required and no production-safety conclusion is
+  asserted.
 - Objective: demo/staging stable and production-oriented hardening while
   preserving current business, Auth, API and database behavior.
 
@@ -17,6 +18,10 @@ Updated: 2026-08-18 (Asia/Saigon)
 - `DATABASE_STATUS_UNVERIFIED`: this execution has not connected to, queried,
   migrated, reset or mutated a database. No live migration ledger state is
   asserted here.
+- `BOOTSTRAP_SOURCE_COMPLETE`: the guarded non-destructive foundation source and
+  operator sequence are complete at repository level.
+- `DATABASE_MANUAL_CHECK_REQUIRED`: no live empty-database bootstrap or ordered
+  migration run has been performed in this execution.
 - `MANUAL_CHECK_REQUIRED`: browser, Auth, Coach, Marketplace, Local Fallback
   and any other manual checklist has not been performed in this execution.
 - Build, lint, typecheck and static inspection are evidence for their own
@@ -78,8 +83,10 @@ Updated: 2026-08-18 (Asia/Saigon)
   manual verification or establish a production-safety conclusion.
 - `DATABASE_STATUS_UNVERIFIED`: the target database identity and live ledger
   must be checked read-only before any migration decision.
-- Fresh-install/bootstrap behavior remains a design decision after the Phase
-  01–05 analysis; no `0000_baseline.sql` was created by assumption.
+- The guarded empty-database foundation bootstrap and setup contract are
+  source-complete after Pass 2 phases 73–90, but the first live bootstrap and
+  migration run remain
+  `DATABASE_MANUAL_CHECK_REQUIRED`; no `0000_baseline.sql` was created.
 - The current development cookie topology is same-site and defaults to Lax;
   production topology still requires an explicit SameSite/Secure decision.
   CORS credentials, explicit origin allowlisting and refresh/logout
@@ -92,10 +99,10 @@ Updated: 2026-08-18 (Asia/Saigon)
 
 ## Current checkpoint
 
-PHASE 72 Assistant API/AI architecture is source-complete: status is
-provider-independent, chat is optional-auth, tools are read-only and
-self-scoped, and the widget starts in Local Mode with silent fallback. Backend
-and frontend static checks pass in the current workspace; browser/provider
-checks remain manual. Auth and Marketplace verification remains
-`MANUAL_CHECK_REQUIRED`. No later implementation phase is authorized; any
-follow-up is verification or an explicitly approved change.
+Pass 2 database foundation and migration contract work is source-complete
+through phase 90. The repository now has an explicit empty-database sequence:
+create an empty SQL Server database, configure and verify `DB_*`, run guarded
+`db:bootstrap`, review `db:migrate:status`, then run `db:migrate`. The legacy
+`db/schema.sql` path remains destructive, legacy, non-canonical and not for a
+shared database. No database was connected to or mutated; live bootstrap,
+migration, browser and provider checks remain manual.

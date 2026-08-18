@@ -6,8 +6,9 @@ is demo/staging stable with production-oriented hardening while preserving the
 existing business, authentication, API and database contracts.
 
 This repository is being implemented through the approved sequential plan:
-PHASE 01 → PHASE 02 → … → PHASE 72. A phase-range heading is only a summary;
-implementation and review remain one phase at a time.
+PHASE 01 → PHASE 02 → … → PHASE 72, followed by the Pass 2 stabilization range
+PHASE 73 → PHASE 132. A phase-range heading is only a summary; implementation
+and review remain one phase at a time.
 
 ## Source of truth and current boundaries
 
@@ -40,14 +41,34 @@ implementation and review remain one phase at a time.
 Prerequisites are Node.js/npm, SQL Server access and Git. Keep secrets in the
 ignored `backend/.env`; never commit or copy real credentials into docs, logs or
 issues. See [`docs/SETUP_AND_ENVIRONMENT.md`](docs/SETUP_AND_ENVIRONMENT.md) for
-the configuration matrix.
+the configuration matrix and the complete database contract.
+
+For a new target, the operator-controlled sequence is:
+
+1. Create an empty SQL Server database outside this repository.
+2. Configure and verify `DB_*` in the ignored `backend/.env`.
+3. Run the guarded foundation bootstrap.
+4. Run migration status and review the result.
+5. Run the ordered migration chain.
+6. Add demo data only as a separate, deliberate operator action on an approved
+   disposable target.
 
 ```powershell
 cd backend
 npm install
+npm run db:bootstrap
 npm run db:migrate:status
+npm run db:migrate
 npm run dev
 ```
+
+`db:bootstrap` creates foundation tables only; it does not create a database,
+run migrations, or add demo data. It refuses an ambiguous or already-populated
+target. Do not use `db/schema.sql` for canonical setup: it is a destructive
+legacy/dev-seed artifact and is not for a shared database. The repository has no
+canonical automatic demo-seed step; `db/schema.sql` and `backend/seed_data.json`
+remain separate historical/data assets that require an explicit operator
+decision.
 
 In another terminal:
 
@@ -84,6 +105,8 @@ Read [`docs/DATABASE_AND_MIGRATIONS.md`](docs/DATABASE_AND_MIGRATIONS.md) and
 before database work.
 
 - `db/migrations` is the forward migration source of truth.
+- `db/bootstrap/foundation.sql` plus the guarded `db:bootstrap` command is the
+  non-destructive empty-database foundation source of truth.
 - `TABLE EXISTS != MIGRATION APPLIED`; adoption requires full schema metadata
   compatibility and otherwise stops with `SCHEMA_MISMATCH`.
 - Applied/canonical migrations are immutable. Schema changes require a new
