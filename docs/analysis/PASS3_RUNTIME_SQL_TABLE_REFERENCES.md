@@ -54,6 +54,7 @@ or indexes, but the bootstrap remains the root owner.
 | `0112` | `ReferralCodes`, `ReferralTransactions` |
 | `0113` | `Coupons`, `CouponUsages` |
 | `0114` | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` |
+| `0115` | `Tickets`, `TicketMessages` |
 
 ## Canonicalized active objects
 
@@ -66,13 +67,12 @@ column/constraint evidence; it is not required for a canonical installation.
 | `ReferralCodes`, `ReferralTransactions` | `0112_referral_runtime_schema.sql` | auth accepts active ReferralCodes plus the existing Users compatibility code; registration writes are transaction-scoped |
 | `Coupons`, `CouponUsages` | `0113_coupon_runtime_schema.sql` | validation/admin/stats only; no new checkout usage integration |
 | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | `0114_loyalty_runtime_schema.sql` | redemption is one controlled TypeScript SQL transaction; no new stored procedure |
+| `Tickets`, `TicketMessages` | `0115_support_runtime_schema.sql` | member/coach/admin role scopes and internal-message filtering remain source-owned |
 
 ## Remaining active objects without a current owner
 
 | Object | Runtime callers or SQL domain | Legacy evidence | Classification | Next ownership work |
 | --- | --- | --- | --- | --- |
-| `Tickets` | support ticket list/create/update | `db/schema.sql` | `LEGACY_REQUIRED` | support migration after role-scope and message contract review |
-| `TicketMessages` | support ticket message list/create | `db/schema.sql` | `LEGACY_REQUIRED` | support migration with attachment/history review |
 | `Payments` | membership payment, invoice, revenue and analytics controllers | `db/schema.sql` | `LEGACY_REQUIRED` | create a separate membership billing owner; do not merge with Marketplace Orders payment |
 | `Invoices` | invoice list/create/read/mark-sent | `db/schema.sql` | `LEGACY_REQUIRED` | billing migration; retain current payment-to-invoice relationship |
 | `AnalyticsDaily` | admin analytics range endpoint | `db/schema.sql` | `LEGACY_REQUIRED` pending model review | decide whether this is stored reporting data or a derived projection before migration |

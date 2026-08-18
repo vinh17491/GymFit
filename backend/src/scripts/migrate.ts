@@ -68,6 +68,8 @@ const MIGRATION_TABLE_OWNERS: Record<string, string> = {
   PointTransactions: '0114',
   RewardsCatalog: '0114',
   RewardRedemptions: '0114',
+  Tickets: '0115',
+  TicketMessages: '0115',
 };
 
 interface MigrationFile {

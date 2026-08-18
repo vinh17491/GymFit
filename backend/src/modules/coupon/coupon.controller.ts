@@ -10,14 +10,16 @@ export async function validateCoupon(req: Request, _res: Response, next: NextFun
     if (r.recordset.length === 0) throw new AppError(404, 'Invalid or expired coupon');
     const coupon = r.recordset[0];
     const usage = await query('SELECT COUNT(*) as cnt FROM CouponUsages WHERE coupon_id=@id', { id: coupon.id });
-    if (coupon.usage_limit && usage.recordset[0].cnt >= coupon.usage_limit) throw new AppError(400, 'Coupon usage limit reached');
+    if (coupon.usage_limit !== null && Number(usage.recordset[0].cnt) >= Number(coupon.usage_limit)) throw new AppError(400, 'Coupon usage limit reached');
     const userUsage = await query('SELECT COUNT(*) as cnt FROM CouponUsages WHERE coupon_id=@id AND user_id=@uid', { id: coupon.id, uid: req.user!.userId });
-    if (userUsage.recordset[0].cnt >= coupon.user_limit) throw new AppError(400, 'You have used this coupon already');
+    if (Number(userUsage.recordset[0].cnt) >= Number(coupon.user_limit)) throw new AppError(400, 'You have used this coupon already');
     const plan = await query('SELECT price FROM Plans WHERE id=@pid', { pid: plan_id });
     if (plan.recordset.length === 0) throw new AppError(404, 'Plan not found');
-    if (plan.recordset[0].price < coupon.min_purchase) throw new AppError(400, 'Minimum purchase not met');
-    const discount = coupon.type === 'percentage' ? plan.recordset[0].price * coupon.value / 100 : coupon.value;
-    sendSuccess(_res, { coupon, discount: Math.min(discount, plan.recordset[0].price) });
+    const price=Number(plan.recordset[0].price), minimum=Number(coupon.min_purchase), value=Number(coupon.value);
+    if (![price,minimum,value].every(Number.isFinite) || price<0 || minimum<0 || value<0) throw new AppError(503, 'Coupon configuration unavailable');
+    if (price < minimum) throw new AppError(400, 'Minimum purchase not met');
+    const discount = coupon.type === 'percentage' ? Math.min(price, price * value / 100) : Math.min(price, value);
+    sendSuccess(_res, { coupon, discount: Math.max(0, discount) });
   } catch (err) { next(err); }
 }
 

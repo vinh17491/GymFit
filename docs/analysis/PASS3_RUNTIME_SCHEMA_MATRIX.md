@@ -86,8 +86,8 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `PointTransactions` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 auditability | `KEEP_AND_MIGRATE`; keep earn/spend history append-only |
 | `RewardsCatalog` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 catalog | `KEEP_AND_MIGRATE`; enforce non-negative stock without seed data |
 | `RewardRedemptions` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 balance and stock | `KEEP_AND_MIGRATE`; one serializable transaction covers the full redemption |
-| `Tickets` | TABLE | ticket controller | `/tickets` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 support | add support owner after role/message contract review |
-| `TicketMessages` | TABLE | ticket controller | `/tickets` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 support privacy | preserve ticket scope and message ordering |
+| `Tickets` | TABLE | ticket controller | `/tickets` | - | `0115_support_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 support | `KEEP_AND_MIGRATE`; preserve member/coach/admin scopes |
+| `TicketMessages` | TABLE | ticket controller | `/tickets` | - | `0115_support_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 support privacy | `KEEP_AND_MIGRATE`; preserve admin-only internal visibility |
 | `Payments` | TABLE | plans/membership, invoices, revenue, analytics | membership account, invoices, admin revenue/analytics | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 billing | create separate membership billing owner; do not merge with marketplace payment |
 | `Invoices` | TABLE | invoice controller | `/invoices` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 billing | preserve payment link and current invoice number contract |
 | `AnalyticsDaily` | TABLE | analytics controller | `/admin/analytics` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P2 reporting | decide stored projection vs derived report before migration |
@@ -109,9 +109,9 @@ uncertain business semantics are `UNCLEAR_OWNER` or
    into `foundation.sql`.
 2. Applied migrations `0001` through `0111` remain immutable. New owners are
    additive migrations after `0111` and must be domain-specific.
-3. Referral, coupon, loyalty, support and membership billing objects are
-   active runtime dependencies, not dead legacy merely because the canonical
-   installation does not yet create them.
+3. Referral, coupon, loyalty and support objects are active runtime
+   dependencies with forward-only ownership; membership billing remains an
+   active runtime dependency awaiting its dedicated billing migration.
 4. `Workouts`/`WorkoutSessions`/`WorkoutExercises` are active duplicate-model
    dependencies. They cannot be deleted or silently replaced by the newer
    program/session model.
@@ -129,7 +129,7 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `Payments`, `Invoices` | P0 for membership payment; P1 for invoice UI | `KEEP_AND_MIGRATE` as a separate membership billing domain; never merge with marketplace order payment |
 | `Coupons`, `CouponUsages` | P1 | `KEEP_AND_MIGRATE` using only the current route contract |
 | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | P1 | `KEEP_AND_MIGRATE` in `0114`; redemption uses one serializable TypeScript transaction |
-| `Tickets`, `TicketMessages` | P1 | `KEEP_AND_MIGRATE` with role-scope and message ordering preserved |
+| `Tickets`, `TicketMessages` | P1 | `KEEP_AND_MIGRATE` in `0115` with role-scope and message ordering preserved |
 | `CRMNotes`, `CRMTasks` | P1 | `KEEP_AND_MIGRATE` as CRMCustomers child tables |
 | `ProductTags`, `ExerciseMedia` | P1 | `REQUIRES_CONFIRMATION` until the source/schema contract is recovered |
 | `Workouts`, `WorkoutSessions`, `WorkoutExercises` | P1 | `REQUIRES_CONFIRMATION`; retain active legacy reads while comparing with canonical program/session snapshots |

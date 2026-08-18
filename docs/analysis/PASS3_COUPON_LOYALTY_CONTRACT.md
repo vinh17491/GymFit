@@ -60,5 +60,10 @@ stock and partial mutations while preserving the existing `201` success and
 normal application error messages. `sp_SpendPoints` is now a legacy-only
 definition from `db/schema.sql`, not a second authority.
 
+Known domain failures use `AppError` messages. Unexpected database errors still
+flow through the existing error boundary, which logs diagnostics server-side
+and returns a generic client-safe error rather than a SQL Server message or
+constraint name.
+
 `DATABASE_MANUAL_CHECK_REQUIRED`: migration/index/lock behavior still needs a
 connected SQL Server check. No database was connected or mutated here.
