@@ -80,12 +80,12 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `ReviewModerationHistory` | TABLE | seller/admin review services | seller/admin review pages | - | `0111_product_shop_reviews.sql` | - | `MIGRATION_CANONICAL` | P1 moderation | retain history |
 | `ReferralCodes` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | `0112_referral_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 registration | `KEEP_AND_MIGRATE`; preserve Users compatibility code and active canonical code |
 | `ReferralTransactions` | TABLE | auth registration, referral controller | `/referral`, `/register` | - | `0112_referral_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 registration | `KEEP_AND_MIGRATE`; enforce one registration transaction per pair/type |
-| `Coupons` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 pricing | recover current validation/usage contract before migration |
-| `CouponUsages` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 pricing | migrate only after usage-limit semantics are explicit |
-| `Points` | TABLE | loyalty controller and `sp_SpendPoints` | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 balance integrity | canonicalize with transaction/concurrency review |
-| `PointTransactions` | TABLE | loyalty controller and `sp_SpendPoints` | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 auditability | keep earn/spend history append-only |
-| `RewardsCatalog` | TABLE | loyalty controller | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 catalog | recover status/stock columns; no invented semantics |
-| `RewardRedemptions` | TABLE | loyalty controller | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 balance and stock | migration requires `BUSINESS_RULE_REQUIRES_CONFIRMATION` for concurrency/status semantics |
+| `Coupons` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | `0113_coupon_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 pricing | `KEEP_AND_MIGRATE`; preserve current validation/admin/stats contract |
+| `CouponUsages` | TABLE | coupon controller | `/coupons`, checkout-related UI | - | `0113_coupon_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 pricing | `KEEP_AND_MIGRATE`; index current count lookups without adding checkout integration |
+| `Points` | TABLE | loyalty controller | `/loyalty` and member dashboard | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 balance integrity | `KEEP_AND_MIGRATE`; lock balance in redemption/daily-login paths |
+| `PointTransactions` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 auditability | `KEEP_AND_MIGRATE`; keep earn/spend history append-only |
+| `RewardsCatalog` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 catalog | `KEEP_AND_MIGRATE`; enforce non-negative stock without seed data |
+| `RewardRedemptions` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 balance and stock | `KEEP_AND_MIGRATE`; one serializable transaction covers the full redemption |
 | `Tickets` | TABLE | ticket controller | `/tickets` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 support | add support owner after role/message contract review |
 | `TicketMessages` | TABLE | ticket controller | `/tickets` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 support privacy | preserve ticket scope and message ordering |
 | `Payments` | TABLE | plans/membership, invoices, revenue, analytics | membership account, invoices, admin revenue/analytics | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 billing | create separate membership billing owner; do not merge with marketplace payment |
@@ -101,7 +101,7 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `Workouts` | TABLE | videos, coach workspace, admin workout/coach summaries | `/videos`, coach/admin workout surfaces | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | retain until explicit repoint decision; label any unresolved semantics `BUSINESS_RULE_REQUIRES_CONFIRMATION` |
 | `WorkoutSessions` | TABLE | analytics, coach workspace, admin workout/coach summaries | `/admin/analytics`, coach/admin workout surfaces | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | compare with MemberWorkoutSessions before any migration or repoint |
 | `WorkoutExercises` | TABLE | coach workspace legacy session detail | coach member session detail | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | compare with WorkoutProgramExercises and snapshots; no wholesale copy |
-| `sp_SpendPoints` | PROCEDURE | loyalty redemption via `executeProc` | `/loyalty` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 concurrency | give the procedure the same canonical loyalty owner as Points; preserve current error/atomicity contract |
+| `sp_SpendPoints` | PROCEDURE | baseline loyalty redemption caller; no current caller after phase 159 | `/loyalty` | - | - | `db/schema.sql` | `DEAD_LEGACY` | P2 legacy compatibility | `ARCHIVE_UNUSED`; TypeScript transaction is the sole spend authority |
 
 ## Matrix decisions and gates
 
@@ -128,7 +128,7 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `ReferralCodes`, `ReferralTransactions` | P0 | `KEEP_AND_MIGRATE` in `0112`; active registration and referral UI depend on them |
 | `Payments`, `Invoices` | P0 for membership payment; P1 for invoice UI | `KEEP_AND_MIGRATE` as a separate membership billing domain; never merge with marketplace order payment |
 | `Coupons`, `CouponUsages` | P1 | `KEEP_AND_MIGRATE` using only the current route contract |
-| `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions`, `sp_SpendPoints` | P1 | `KEEP_AND_MIGRATE`; unresolved stock/status/idempotency semantics remain `BUSINESS_RULE_REQUIRES_CONFIRMATION` |
+| `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | P1 | `KEEP_AND_MIGRATE` in `0114`; redemption uses one serializable TypeScript transaction |
 | `Tickets`, `TicketMessages` | P1 | `KEEP_AND_MIGRATE` with role-scope and message ordering preserved |
 | `CRMNotes`, `CRMTasks` | P1 | `KEEP_AND_MIGRATE` as CRMCustomers child tables |
 | `ProductTags`, `ExerciseMedia` | P1 | `REQUIRES_CONFIRMATION` until the source/schema contract is recovered |

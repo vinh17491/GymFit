@@ -6,7 +6,7 @@ import { AppError } from '../../middleware/errorHandler';
 
 export async function getMyCode(req: Request, _res: Response, next: NextFunction) {
   try {
-    const r = await query('SELECT * FROM ReferralCodes WHERE user_id=@uid', { uid: req.user!.userId });
+    const r = await query('SELECT id,code,status,created_at FROM ReferralCodes WHERE user_id=@uid', { uid: req.user!.userId });
     sendSuccess(_res, r.recordset);
   } catch (err) { next(err); }
 }
@@ -24,7 +24,8 @@ export async function createCode(req: Request, _res: Response, next: NextFunctio
 export async function getReferrals(req: Request, _res: Response, next: NextFunction) {
   try {
     const r = await query(
-      `SELECT rt.*, u.name as referred_name, u.email as referred_email
+      `SELECT rt.id, rt.commission_amount, rt.transaction_type, rt.status, rt.created_at,
+              u.name as referred_name
        FROM ReferralTransactions rt JOIN Users u ON rt.referred_id = u.id
        WHERE rt.referrer_id=@uid ORDER BY rt.created_at DESC`, { uid: req.user!.userId });
     sendSuccess(_res, r.recordset);

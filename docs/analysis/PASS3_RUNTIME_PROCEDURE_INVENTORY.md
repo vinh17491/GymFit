@@ -6,20 +6,21 @@ legacy schema snapshot as a runtime caller.
 
 | Procedure | Caller | Domain | Legacy definition | Canonical owner at baseline | Classification / risk |
 | --- | --- | --- | --- | --- | --- |
-| `sp_SpendPoints` | `backend/src/modules/loyalty/loyalty.controller.ts` through `executeProc` in `backend/src/config/database.ts` | loyalty reward redemption | `db/schema.sql` (`CREATE OR ALTER PROCEDURE`) | none; Points and PointTransactions are also legacy-only | `LEGACY_REQUIRED`; concurrency, insufficient-balance and redemption atomicity require a Senior review |
+| `sp_SpendPoints` | baseline caller was `backend/src/modules/loyalty/loyalty.controller.ts`; no caller after phase 159 | loyalty reward redemption | `db/schema.sql` (`CREATE OR ALTER PROCEDURE`) | intentionally none; `0114_loyalty_runtime_schema.sql` owns the tables and TypeScript transaction | `DEAD_LEGACY` for active runtime; archive review only, do not create a second authority |
 
-`executeProc` is the only active runtime stored-procedure invocation found in
-the scoped search. The procedure reads and updates `Points` and inserts a
-`PointTransactions` row. Its eventual owner must be the same canonical loyalty
-domain migration that owns those tables. The current source behavior is not
-rewritten or semantically expanded by this inventory.
+`executeProc` was the only active runtime stored-procedure invocation at the
+phase 133 baseline. Phase 157 selected the smallest controlled change: move
+the spend behavior into the same serializable TypeScript transaction that
+locks the reward and points rows, records the PointTransaction, decrements
+stock and inserts the redemption. `executeProc` remains a generic database
+helper for any future explicitly owned procedure, but it is not used by
+loyalty after phase 159.
 
 Other `EXEC`/`EXECUTE` matches were comments, generic request `.execute`
 methods or non-database code rather than stored-procedure dependencies. No
 procedure is created by `db/bootstrap/foundation.sql` or migrations `0001`
-through `0111`.
+through `0114`.
 
-The following questions remain `BUSINESS_RULE_REQUIRES_CONFIRMATION` until the
-loyalty design pass: whether reward stock is reserved inside the same database
-transaction, whether a failed redemption may leave a pending row, and the
-authoritative idempotency key for repeated redemption requests.
+The redemption transaction now locks reward stock and the member balance in a
+single database transaction. There is no new reward seed, no second stored
+procedure implementation and no gateway or reward fulfillment redesign.

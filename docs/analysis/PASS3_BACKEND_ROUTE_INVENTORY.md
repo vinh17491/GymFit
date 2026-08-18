@@ -10,7 +10,7 @@ inside one mount may be narrower.
 | `/api/auth` | `auth.routes` / auth controller | guest + authenticated | Users, AuthSessions, ReferralCodes, ReferralTransactions, AuditLogs | Login, Register, Profile, Settings |
 | `/api/referral` | `referral.routes` / referral controller | authenticated; Admin for `/all` | ReferralCodes, ReferralTransactions, Users | ReferralPage |
 | `/api/coupons` | `coupon.routes` / coupon controller | Member validate; Admin management | Coupons, CouponUsages | CouponPage / admin menu |
-| `/api/loyalty` | `loyalty.routes` / loyalty controller | Member; Admin adjustment; authenticated catalog | Points, PointTransactions, RewardsCatalog, RewardRedemptions, `sp_SpendPoints` | LoyaltyPage |
+| `/api/loyalty` | `loyalty.routes` / loyalty controller | Member; Admin adjustment; authenticated catalog | Points, PointTransactions, RewardsCatalog, RewardRedemptions; transaction-owned redemption | LoyaltyPage |
 | `/api/audit` | `audit.routes` / audit controller | Admin | AuditLogs, Users | AuditPage |
 | `/api/analytics` | `analytics.routes` / analytics controller | Admin | AnalyticsDaily, AnalyticsRetention, Payments, WorkoutSessions | AnalyticsPage / admin analytics |
 | `/api/crm` | `crm.routes` / CRM controller | Admin, Coach | CRMCustomers, CRMNotes, CRMTasks, Users | CRMPage |

@@ -55,10 +55,9 @@ export default function ReferralPage() {
         ) : (
           <div className="mt-5 space-y-2">
             {referrals.map((r: any) => (
-              <div key={r.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-4 transition-colors hover:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
+                <div key={r.id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/45 p-4 transition-colors hover:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-100">{r.referred_name}</p>
-                  <p className="truncate text-xs text-slate-500">{r.referred_email}</p>
                 </div>
                 <span className="shrink-0 font-mono text-sm font-semibold text-emerald-300">+${Number(r.commission_amount).toFixed(2)}</span>
               </div>

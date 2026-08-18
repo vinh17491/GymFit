@@ -51,19 +51,26 @@ or indexes, but the bootstrap remains the root owner.
 | `0109` | `ShopOrderSettlements`, `SettlementStatusHistory`, `SettlementAdjustments`, `SettlementAdjustmentHistory`, `SettlementBatches`, `SettlementBatchItems` |
 | `0110` | `MarketplaceComplaints`, `ComplaintEventHistory`, `ComplaintReplacements`, `ReplacementStatusHistory` |
 | `0111` | `ProductReviews`, `ShopReviews`, `ReviewModerationHistory` |
+| `0112` | `ReferralCodes`, `ReferralTransactions` |
+| `0113` | `Coupons`, `CouponUsages` |
+| `0114` | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` |
 
-## Active objects without a current owner
+## Canonicalized active objects
+
+The following objects were runtime orphans at the phase 133 baseline and now
+have forward-only owners. `db/schema.sql` is retained only as historical
+column/constraint evidence; it is not required for a canonical installation.
+
+| Object family | Canonical owner | Runtime notes |
+| --- | --- | --- |
+| `ReferralCodes`, `ReferralTransactions` | `0112_referral_runtime_schema.sql` | auth accepts active ReferralCodes plus the existing Users compatibility code; registration writes are transaction-scoped |
+| `Coupons`, `CouponUsages` | `0113_coupon_runtime_schema.sql` | validation/admin/stats only; no new checkout usage integration |
+| `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | `0114_loyalty_runtime_schema.sql` | redemption is one controlled TypeScript SQL transaction; no new stored procedure |
+
+## Remaining active objects without a current owner
 
 | Object | Runtime callers or SQL domain | Legacy evidence | Classification | Next ownership work |
 | --- | --- | --- | --- | --- |
-| `ReferralCodes` | auth registration and referral controller | `db/schema.sql` | `LEGACY_REQUIRED` | canonical referral migration after the matrix; preserve current valid/invalid referral behavior |
-| `ReferralTransactions` | auth registration and referral controller | `db/schema.sql` | `LEGACY_REQUIRED` | canonical referral migration; preserve transaction scoping and no duplicate registration side effect |
-| `Coupons` | coupon validation and admin coupon management | `db/schema.sql` | `LEGACY_REQUIRED` | recover column/constraint contract before additive coupon migration |
-| `CouponUsages` | coupon validation and usage recording | `db/schema.sql` | `LEGACY_REQUIRED` | preserve current usage-limit semantics; no invented business rules |
-| `Points` | loyalty balance and daily/login adjustment paths | `db/schema.sql` | `LEGACY_REQUIRED` | loyalty migration with concurrency review |
-| `PointTransactions` | loyalty earn/spend history | `db/schema.sql` | `LEGACY_REQUIRED` | loyalty migration; preserve existing transaction type/source contract |
-| `RewardsCatalog` | loyalty reward catalog | `db/schema.sql` | `LEGACY_REQUIRED` | loyalty migration after source-column review |
-| `RewardRedemptions` | loyalty redemption history/status | `db/schema.sql` | `LEGACY_REQUIRED` | loyalty migration; `BUSINESS_RULE_REQUIRES_CONFIRMATION` for unresolved status/stock semantics |
 | `Tickets` | support ticket list/create/update | `db/schema.sql` | `LEGACY_REQUIRED` | support migration after role-scope and message contract review |
 | `TicketMessages` | support ticket message list/create | `db/schema.sql` | `LEGACY_REQUIRED` | support migration with attachment/history review |
 | `Payments` | membership payment, invoice, revenue and analytics controllers | `db/schema.sql` | `LEGACY_REQUIRED` | create a separate membership billing owner; do not merge with Marketplace Orders payment |
@@ -93,5 +100,5 @@ review only. No table is deleted, dropped, or copied as part of this inventory.
 Generic SQL-token matches such as `database`, `today`, `session_rows`, `this`
 and `x` were excluded after source-context inspection. Names from scripts,
 tests and the destructive legacy snapshot were not counted as runtime callers.
-The stored procedure call is recorded separately in
+The baseline stored-procedure call and its post-0114 disposition are recorded in
 `PASS3_RUNTIME_PROCEDURE_INVENTORY.md`.
