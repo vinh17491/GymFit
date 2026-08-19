@@ -255,6 +255,9 @@ async function validateMigrationTableLedger(pool: ConnectionPool, appliedByVersi
   for (const row of result.recordset) {
     const owner = MIGRATION_TABLE_OWNERS[row.name];
     if (owner && !appliedByVersion.has(owner)) {
+      // Only a strict, read-only compatibility contract may admit an existing
+      // table into the forward path; the pending migration still owns the
+      // actual DDL and ledger/checksum record.
       const contract = getMigrationCompatibilityContract(row.name, owner);
       if (!contract) {
         throw new Error(`SCHEMA_ADOPTION_REQUIRED: dbo.${row.name} exists but migration ${owner} is not recorded in dbo.SchemaMigrations and no approved compatibility contract exists`);
