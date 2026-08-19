@@ -1410,7 +1410,7 @@ export async function listSessions(coachId: number, memberId: number, page: numb
   return { items, page, limit, total, totalPages: Math.ceil(total / limit) };
 }
 
-export async function getSession(coachId: number, memberId: number, sessionId: number, source?: CoachSessionSource) {
+export async function getSession(coachId: number, memberId: number, sessionId: number, _source?: CoachSessionSource) {
   await assertMemberScope(coachId, memberId);
   const memberResult = await query(`SELECT ms.id FROM dbo.MemberWorkoutSessions ms JOIN dbo.CoachProgramAssignments a ON a.id=ms.assignment_id AND a.coach_id=@coachId WHERE ms.id=@sessionId AND ms.member_id=@memberId`, { coachId, memberId, sessionId });
   if (!memberResult.recordset[0]) throw new AppError(404, 'Session not found');
