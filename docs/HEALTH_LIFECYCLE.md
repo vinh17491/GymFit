@@ -8,15 +8,20 @@ business tables or claim that the application is ready for traffic.
 
 The existing `/api/health` response shape is preserved on success, but it now
 checks the same database readiness boundary and returns HTTP 503/not-ready
-when SQL Server is unavailable; it must not report healthy in that state.
-`GET /health/ready` performs a minimal `SELECT 1` through the existing SQL
-Server pool. It returns HTTP 200 with `status: ready` only when that check
-succeeds; database failure returns HTTP 503 with a safe `not_ready` response.
-It does not expose connection errors or SQL details.
+when SQL Server is unavailable or the migration ledger is behind the deployed
+head; it must not report healthy in either state. `GET /health/ready` performs
+a minimal `SELECT 1` through the existing SQL Server pool and then verifies
+that `dbo.SchemaMigrations` contains every deployed migration with the
+expected filename and SHA-256 checksum. It returns HTTP 200 with
+`status: ready` only when both checks succeed; database or migration failure
+returns HTTP 503 with a safe `not_ready` response. It does not expose
+connection errors, SQL details or migration filenames/checksums.
 
-The process may remain running while the database is unavailable so
-`/health/live` can report process liveness. Deployment routing must use
-`/health/ready` (or the DB-aware `/api/health`) for application readiness.
+The process may remain running while the database or migration ledger is
+unavailable so `/health/live` can report process liveness. Deployment routing
+must use `/health/ready` (or the DB-aware `/api/health`) for application
+readiness. Normal server startup does not create a database, bootstrap schema
+or apply migrations; those remain explicit operator commands.
 
 On `SIGINT` or `SIGTERM`, the server performs an idempotent graceful shutdown:
 background runner timers are stopped and any current batch is drained, the

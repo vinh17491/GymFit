@@ -28,9 +28,14 @@ client responses. If an error occurs after response headers are sent, the
 server logs the boundary event and ends the response without appending a raw
 error body.
 
+Missing expected schema objects and other unexpected SQL failures remain
+internal errors: the backend logs only safe diagnostic metadata and returns a
+generic 500 response. Health endpoints retain their explicit DB-aware and
+migration-aware 503 response because readiness is a separate lifecycle
+contract; they do not expose SQL or migration details.
+
 This phase does not redesign service error semantics, invent business rules or
-add a new test suite. Health endpoints retain their explicit DB-aware 503
-response because readiness is a separate lifecycle contract.
+add a new test suite.
 
 Verification status: source/static review complete;
 `MANUAL_CHECK_REQUIRED` for HTTP status mapping and user-visible error flows.

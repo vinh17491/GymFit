@@ -4,6 +4,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { config } from './config/config';
 import { query } from './config/database';
+import { checkMigrationReadiness } from './config/migrationReadiness';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import { sanitizeMiddleware } from './middleware/sanitize';
@@ -51,16 +52,20 @@ app.use('/media', express.static('public/media', {
   }
 }));
 
-const databaseReady = async (): Promise<boolean> => {
-  try { await query('SELECT 1 AS ok'); return true; } catch { return false; }
+const applicationReadiness = async (): Promise<{ ready: boolean; dependency: 'database' | 'migrations' }> => {
+  try { await query('SELECT 1 AS ok'); } catch { return { ready: false, dependency: 'database' }; }
+  const migrations = await checkMigrationReadiness();
+  return { ready: migrations.ready, dependency: 'migrations' };
 };
 app.get('/api/health', async (_req, res) => {
-  if (!await databaseReady()) return res.status(503).json({ success: false, status: 'not_ready', message: 'GymFit API not ready', dependency: 'database', timestamp: new Date().toISOString() });
+  const readiness = await applicationReadiness();
+  if (!readiness.ready) return res.status(503).json({ success: false, status: 'not_ready', message: 'GymFit API not ready', dependency: readiness.dependency, timestamp: new Date().toISOString() });
   return res.json({ success: true, message: 'GymFit API running', status: 'ready', timestamp: new Date().toISOString() });
 });
 app.get('/health/live', (_req, res) => res.status(200).json({ success: true, status: 'live', timestamp: new Date().toISOString() }));
 app.get('/health/ready', async (_req, res) => {
-  if (!await databaseReady()) return res.status(503).json({ success: false, status: 'not_ready', dependency: 'database', timestamp: new Date().toISOString() });
+  const readiness = await applicationReadiness();
+  if (!readiness.ready) return res.status(503).json({ success: false, status: 'not_ready', dependency: readiness.dependency, timestamp: new Date().toISOString() });
   return res.status(200).json({ success: true, status: 'ready', timestamp: new Date().toISOString() });
 });
 

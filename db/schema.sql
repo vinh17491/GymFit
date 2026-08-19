@@ -7,6 +7,9 @@
 -- Never run it against a canonical or shared database.
 -- Forward schema changes are owned by db/migrations and the migration runner.
 -- Fresh-install bootstrap is separate; this artifact remains historical only.
+-- Canonical fresh-install path: db/bootstrap/foundation.sql, then migrations
+-- through 0119. This file must never be executed automatically or used to
+-- infer that any numbered migration is applied.
 
 -- ============================================
 -- GYMER DATABASE — Full Schema + Procs + Demo Data

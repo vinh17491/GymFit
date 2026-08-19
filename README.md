@@ -36,14 +36,16 @@ and review remain one phase at a time.
 - Backend: Node.js, Express, TypeScript, SQL Server (`mssql`), Zod, JWT and
   Nodemailer.
 - Database: SQL Server with ordered, checksummed migrations from
-  `db/migrations/0001` through `0017` and `0100` through `0111`.
+  `db/migrations/0001` through `0017`, `0100` through `0111`, and `0112`
+  through `0119`.
 
 ## Local setup
 
 Prerequisites are Node.js/npm, SQL Server access and Git. Keep secrets in the
 ignored `backend/.env`; never commit or copy real credentials into docs, logs or
-issues. See [`docs/SETUP_AND_ENVIRONMENT.md`](docs/SETUP_AND_ENVIRONMENT.md) for
-the configuration matrix and the complete database contract.
+issues. See [`docs/SETUP_AND_ENVIRONMENT.md`](docs/SETUP_AND_ENVIRONMENT.md) and
+[`docs/analysis/PASS3_DATABASE_INSTALLATION_CONTRACT.md`](docs/analysis/PASS3_DATABASE_INSTALLATION_CONTRACT.md)
+for the configuration matrix and complete database installation contract.
 
 For a new target, the operator-controlled sequence is:
 
@@ -123,9 +125,9 @@ before database work.
 ## Health, auth and Assistant boundaries
 
 The health boundary exposes `GET /health/live` for process liveness,
-`GET /health/ready` for minimal SQL readiness and the existing
+`GET /health/ready` for SQL plus migration-ledger readiness and the existing
 `GET /api/health` compatibility response. A process-live response must not be
-interpreted as database readiness.
+interpreted as application readiness; normal startup never auto-migrates.
 
 The implemented refresh-cookie flow uses Axios `withCredentials`, backend CORS
 credentials and an explicit origin allowlist. SameSite is selected from the

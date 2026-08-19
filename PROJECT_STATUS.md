@@ -4,7 +4,9 @@ Updated: 2026-08-19 (Asia/Saigon)
 
 ## Current execution status
 
-- Working branch: `phan-tich-lan-2`.
+- Working branch: `phan-tich-lan-3`.
+- Pass 3 is the active stabilization pass; its checkpoint commits are pushed
+  to `origin/phan-tich-lan-3` as each stable phase range completes.
 - Pass 2 checkpoint commits are pushed to `origin/phan-tich-lan-2` as each
   stable phase range completes.
 - Pass 1 source reviewed: `phan-tich-lan-1` at `f80c4e3fbb3e8379303ceb6a46e4788f5cdb14f2`.
@@ -79,6 +81,13 @@ Updated: 2026-08-19 (Asia/Saigon)
 - Before PHASE 72, Assistant backend/API/AI provider work was intentionally
   absent. PHASE 72 now provides the real Assistant module and router; no
   placeholder or fake router was used.
+- Pass 3 runtime ownership work has added canonical referral, coupon, loyalty,
+  support, membership billing, operations and analytics migration contracts
+  through `0119`. Active analytics DAU/MAU reads use
+  `MemberWorkoutSessions`; marketplace payment behavior remains separate.
+- Pass 3 readiness work now distinguishes process liveness, SQL connectivity
+  and a complete checksum-matching migration ledger. Normal server startup does
+  not bootstrap or migrate the database.
 
 ## Known blockers and risks
 
@@ -117,6 +126,10 @@ Updated: 2026-08-19 (Asia/Saigon)
   acceptance/integrity scripts are retained as historical/guarded artifacts.
 - AI provider configuration is backend-only. AI_BASE_URL is optional and
   defaults through the provider implementation; no frontend AI secret exists.
+- Pass 3 chatbot recovery is source-complete through phase 201: a failed
+  initial Assistant status can recover on a later bounded user message, with
+  no polling loop; authenticated history is identity-scoped and private
+  intents remain redacted.
 
 ## Current checkpoint
 
@@ -137,3 +150,9 @@ tool availability, executor denial and data minimization are source-level
 checks. The final manual QA package is in
 `docs/analysis/PASS2_FINAL_MANUAL_QA_CHECKLIST.md`; live browser, provider and
 database checks remain manual. No database was connected to or mutated.
+
+Pass 3 ownership closure is source-complete through phase 189, with migrations
+`0112` through `0119` and route/schema coverage recorded in the Pass 3 analysis
+documents. Readiness now requires SQL connectivity plus a complete
+checksum-matching migration ledger; phases 190-204 remain in progress until
+final review and permitted static checks are recorded.
