@@ -26,9 +26,10 @@ export const initialAssistantState: AssistantClientState = {
 };
 
 const UNKNOWN_STATUS_PROBE_TIMEOUT_MS = 3_000;
+const LOCAL_INTERACTIVE_TIMEOUT_MS = 5_000;
 
 export function retryAtFromStatus(status: AssistantStatus, now: number): number {
-  if (!status.configured) return 0;
+  if (!status.configured) return now + AI_RETRY_COOLDOWN_MS;
   const cooldownMs = Math.max(status.circuit.cooldownMs, AI_RETRY_COOLDOWN_MS);
   const failureAt = status.circuit.lastKnownFailureAt ? Date.parse(status.circuit.lastKnownFailureAt) : Number.NaN;
   if (status.circuit.state === 'OPEN' || status.circuit.failureCount > 0)
@@ -39,7 +40,23 @@ export function retryAtFromStatus(status: AssistantStatus, now: number): number 
 }
 
 export function getAssistantModeStatus(signal?: AbortSignal): Promise<AssistantStatus> {
-  return AIProvider.status(signal);
+  const controller = new AbortController();
+  let rejectGuard: ((reason?: unknown) => void) | undefined;
+  const guard = new Promise<never>((_, reject) => { rejectGuard = reject; });
+  const forwardAbort = () => {
+    controller.abort();
+    rejectGuard?.(abortError());
+  };
+  if (signal?.aborted) return Promise.reject(abortError());
+  signal?.addEventListener('abort', forwardAbort, { once: true });
+  const timer = globalThis.setTimeout(() => {
+    controller.abort();
+    rejectGuard?.(new Error('Assistant status probe timed out'));
+  }, UNKNOWN_STATUS_PROBE_TIMEOUT_MS);
+  return Promise.race([AIProvider.status(controller.signal), guard]).finally(() => {
+    globalThis.clearTimeout(timer);
+    signal?.removeEventListener('abort', forwardAbort);
+  });
 }
 
 export function retryAtAfterStatusFailure(now: number): number {
@@ -60,21 +77,33 @@ function canAttemptAi(state: AssistantClientState, now: number): boolean {
   return state.configured === true && state.nextAiAttemptAt <= now;
 }
 
-async function probeUnknownStatus(signal: AbortSignal): Promise<AssistantStatus> {
+async function probeAssistantStatus(signal: AbortSignal): Promise<AssistantStatus> {
+  const status = await getAssistantModeStatus(signal);
+  if (signal.aborted) throw abortError();
+  return status;
+}
+
+async function runLocalProvider(input: ChatbotOrchestratorInput) {
   const controller = new AbortController();
   const forwardAbort = () => controller.abort();
-  const timer = globalThis.setTimeout(() => controller.abort(), UNKNOWN_STATUS_PROBE_TIMEOUT_MS);
-  signal.addEventListener('abort', forwardAbort, { once: true });
+  if (input.signal.aborted) throw abortError();
+  input.signal.addEventListener('abort', forwardAbort, { once: true });
+  let rejectGuard: ((reason?: unknown) => void) | undefined;
+  const guard = new Promise<never>((_, reject) => { rejectGuard = reject; });
+  const timer = globalThis.setTimeout(() => {
+    controller.abort();
+    rejectGuard?.(new Error('Local assistant response timed out'));
+  }, LOCAL_INTERACTIVE_TIMEOUT_MS);
   try {
-    const status = await getAssistantModeStatus(controller.signal);
-    if (signal.aborted) throw abortError();
-    return status;
+    const result = await Promise.race([LocalProvider.chat(providerInput(input, controller.signal)), guard]);
+    if (input.signal.aborted) throw abortError();
+    return result;
   } catch (error) {
-    if (signal.aborted) throw abortError();
+    if (input.signal.aborted) throw abortError();
     throw error;
   } finally {
     globalThis.clearTimeout(timer);
-    signal.removeEventListener('abort', forwardAbort);
+    input.signal.removeEventListener('abort', forwardAbort);
   }
 }
 
@@ -110,12 +139,12 @@ export async function runChatbotOrchestrator(input: ChatbotOrchestratorInput): P
   let state = input.assistantState;
   let aiResult: AIProviderResult | null = null;
 
-  // A failed initial status request leaves configuration unknown. Re-probe
-  // only on a later user message after the cooldown; this allows recovery on
-  // the same page without a timer or a background request loop.
-  if (state.configured === null && state.nextAiAttemptAt <= Date.now()) {
+  // Unknown or unavailable configuration is re-probed only on a later user
+  // message after the cooldown; this allows recovery on the same page without
+  // a timer or a background request loop.
+  if (state.configured !== true && state.nextAiAttemptAt <= Date.now()) {
     try {
-      const status = await probeUnknownStatus(input.signal);
+      const status = await probeAssistantStatus(input.signal);
       const now = Date.now();
       state = {
         ...state,
@@ -131,7 +160,6 @@ export async function runChatbotOrchestrator(input: ChatbotOrchestratorInput): P
       state = {
         ...state,
         assistantMode: 'LOCAL_FALLBACK',
-        configured: null,
         lastStatusCheck: now,
         nextAiAttemptAt: retryAtAfterStatusFailure(now),
       };
@@ -142,14 +170,14 @@ export async function runChatbotOrchestrator(input: ChatbotOrchestratorInput): P
     const aiController = new AbortController();
     const abortAi = () => aiController.abort();
     input.signal.addEventListener('abort', abortAi, { once: true });
-    const aiTimeout = window.setTimeout(() => aiController.abort(), AI_INTERACTIVE_TIMEOUT_MS);
+    const aiTimeout = globalThis.setTimeout(() => aiController.abort(), AI_INTERACTIVE_TIMEOUT_MS);
     try {
       aiResult = await AIProvider.chat(providerInput(input, aiController.signal));
     } catch {
       if (input.signal.aborted) throw abortError();
       state = { ...state, assistantMode: 'LOCAL_FALLBACK', nextAiAttemptAt: retryAtAfterFailure(state, Date.now()) };
     } finally {
-      window.clearTimeout(aiTimeout);
+      globalThis.clearTimeout(aiTimeout);
       input.signal.removeEventListener('abort', abortAi);
     }
     if (input.signal.aborted) throw abortError();
@@ -166,6 +194,6 @@ export async function runChatbotOrchestrator(input: ChatbotOrchestratorInput): P
   state = aiResult
     ? { ...state, assistantMode: 'LOCAL_FALLBACK', nextAiAttemptAt: retryAtAfterFailure(state, Date.now()) }
     : { ...state, assistantMode: 'LOCAL_FALLBACK' };
-  const localResult = await LocalProvider.chat(providerInput(input, input.signal));
+  const localResult = await runLocalProvider(input);
   return { mode: 'LOCAL_FALLBACK', reply: localResult.reply, assistantState: state };
 }
