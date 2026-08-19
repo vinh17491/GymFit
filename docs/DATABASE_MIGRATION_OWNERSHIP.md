@@ -93,12 +93,23 @@ columns.
 | `0109` | `ShopOrderSettlements`, `SettlementStatusHistory`, `SettlementAdjustments`, `SettlementAdjustmentHistory`, `SettlementBatches`, `SettlementBatchItems` | ShopOrder commission/settlement fields and constraints |
 | `0110` | `MarketplaceComplaints`, `ComplaintEventHistory`, `ComplaintReplacements`, `ReplacementStatusHistory` | refund, notification and inventory safety constraints |
 | `0111` | `ProductReviews`, `ShopReviews`, `ReviewModerationHistory` | review-related indexes/constraints |
+| `0112` | `ReferralCodes`, `ReferralTransactions` | referral runtime constraints/indexes where required; click/reward tables remain legacy-only |
+| `0113` | `Coupons`, `CouponUsages` | coupon runtime constraints/indexes where required |
+| `0114` | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | loyalty runtime constraints/indexes where required |
+| `0115` | `Tickets`, `TicketMessages` | support runtime constraints/indexes where required; attachments remain legacy-only |
+| `0116` | `Payments`, `Invoices` | membership billing constraints/indexes; invoice generation remains application-owned |
+| `0117` | `AuditLogs`, `BackupLogs`, `CRMNotes`, `CRMTasks` | operations runtime constraints/indexes |
+| `0118` | `AnalyticsDaily` | analytics daily projection constraints/indexes |
+| `0119` | `AnalyticsRetention` | analytics retention projection constraints/indexes |
 
 ## Collision result
 
 `db/schema.sql` remains a destructive legacy/history artifact and is not part of
 the canonical bootstrap path. The foundation bootstrap does not create
-migration-owned tables or post-foundation Marketplace columns. Migration files
-remain unchanged. Any legacy database that already contains an object without a
-matching ledger entry still requires strict metadata verification before an
-adoption decision; this registry does not authorize automatic adoption.
+migration-owned tables or post-foundation Marketplace columns. The ordered
+canonical chain currently ends at `0119`. Migration files remain unchanged
+after they are applied. Any legacy database that already contains an object
+without a matching ledger entry still requires strict metadata verification
+before an adoption decision; this registry does not authorize automatic
+adoption. `/health/ready` is not a substitute for migration execution: it
+reports ready only after the ledger and checksums match the deployed chain.

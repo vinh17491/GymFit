@@ -41,8 +41,9 @@ Updated: 2026-08-19 (Asia/Saigon)
 
 - Repository inventory, source-of-truth review and database migration analysis
   are recorded in the current database documentation.
-- The migration chain contains `0001`–`0017` and `0100`–`0111`; migration files
-  remain forward-only and applied/canonical content is treated as immutable.
+- The migration chain contains `0001`–`0017`, `0100`–`0111` and `0112`–`0119`;
+  migration files remain forward-only and applied/canonical content is treated
+  as immutable.
 - `db/schema.sql` is explicitly marked as a destructive legacy snapshot/dev
   seed artifact, not canonical provisioning.
 - Migration ownership and fail-closed ledger checks are documented. A table's
@@ -130,6 +131,10 @@ Updated: 2026-08-19 (Asia/Saigon)
   initial Assistant status can recover on a later bounded user message, with
   no polling loop; authenticated history is identity-scoped and private
   intents remain redacted.
+- Pass 3 final static review and permitted checks are source-complete through
+  phase 204: backend build/lint, frontend typecheck/build, encoding scan,
+  `git diff --check` and targeted secret scan passed. Lint retains 461 legacy
+  `no-explicit-any` warnings and no errors.
 
 ## Current checkpoint
 
@@ -151,8 +156,10 @@ checks. The final manual QA package is in
 `docs/analysis/PASS2_FINAL_MANUAL_QA_CHECKLIST.md`; live browser, provider and
 database checks remain manual. No database was connected to or mutated.
 
-Pass 3 ownership closure is source-complete through phase 189, with migrations
+Pass 3 ownership closure, readiness/lifecycle, chatbot recovery/privacy and
+final static review are source-complete through phase 204, with migrations
 `0112` through `0119` and route/schema coverage recorded in the Pass 3 analysis
-documents. Readiness now requires SQL connectivity plus a complete
-checksum-matching migration ledger; phases 190-204 remain in progress until
-final review and permitted static checks are recorded.
+documents. Readiness requires SQL connectivity plus a complete
+checksum-matching migration ledger. Live DB, browser, provider and deployment
+verification remain `DATABASE_MANUAL_CHECK_REQUIRED` or
+`MANUAL_CHECK_REQUIRED` as applicable.

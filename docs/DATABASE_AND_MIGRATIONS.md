@@ -35,8 +35,11 @@ The normal empty-database forward path is:
 2. Configure and verify the `DB_*` target identity.
 3. Run `npm run db:bootstrap` from `backend/`.
 4. Run `npm run db:migrate:status` and review the read-only result.
-5. Run `npm run db:migrate` through the normal runner.
+5. Run `npm run db:migrate` through the normal runner; the repository head is
+   currently `0119`.
 6. Re-check `dbo.SchemaMigrations`, checksums and schema invariants.
+7. Start the backend only after reviewing the migration result; normal server
+   startup does not bootstrap or migrate the database automatically.
 
 Phase 01–05 analysis results in `BASELINE_NOT_REQUIRED` for this stabilization:
 the current ordered chain explicitly consumes the foundation contract, so
@@ -82,7 +85,18 @@ the blocker rather than selecting a database by assumption.
 | `0010_coach_profiles.sql` | Additive Coach public profile and booking-enabled fields | Present in repository; live state unverified |
 | `0100`–`0111` | Seller/Marketplace modules | Present in repository; live state unverified |
 
-No live `SchemaMigrations` result is asserted by this task. Earlier acceptance
+| `0112_referral_runtime_schema.sql` | Referral code and registration-transaction runtime contract | Present in repository; live state unverified |
+| `0113_coupon_runtime_schema.sql` | Coupon and coupon-use runtime contract | Present in repository; live state unverified |
+| `0114_loyalty_runtime_schema.sql` | Points, point transactions, rewards and redemptions runtime contract | Present in repository; live state unverified |
+| `0115_support_runtime_schema.sql` | Tickets and message runtime contract; attachments remain legacy-only | Present in repository; live state unverified |
+| `0116_membership_billing_runtime.sql` | Membership payments and invoices; no marketplace gateway behavior | Present in repository; live state unverified |
+| `0117_operations_runtime.sql` | Audit, backup-log and CRM note/task runtime contract | Present in repository; live state unverified |
+| `0118_analytics_daily_runtime.sql` | Daily analytics stored projection contract | Present in repository; live state unverified |
+| `0119_analytics_retention_runtime.sql` | Retention cohort stored projection contract | Present in repository; live state unverified |
+
+`/health/ready` and `/api/health` require SQL connectivity plus a complete,
+checksum-matching `SchemaMigrations` ledger through the deployed head. No live
+`SchemaMigrations` result is asserted by this task. Earlier acceptance
 and browser statements belong to historical task evidence and require a new
 authorized verification before being treated as current. Fresh-install source
 is aligned through the guarded foundation contract, but the first live run
