@@ -12,7 +12,7 @@ inside one mount may be narrower.
 | `/api/coupons` | `coupon.routes` / coupon controller | Member validate; Admin management | Coupons, CouponUsages | CouponPage / admin menu |
 | `/api/loyalty` | `loyalty.routes` / loyalty controller | Member; Admin adjustment; authenticated catalog | Points, PointTransactions, RewardsCatalog, RewardRedemptions; transaction-owned redemption | LoyaltyPage |
 | `/api/audit` | `audit.routes` / audit controller | Admin | AuditLogs, Users | AuditPage |
-| `/api/analytics` | `analytics.routes` / analytics controller | Admin | AnalyticsDaily, AnalyticsRetention, Payments, WorkoutSessions | AnalyticsPage / admin analytics |
+| `/api/analytics` | `analytics.routes` / analytics controller | Admin | AnalyticsDaily, AnalyticsRetention, Payments, MemberWorkoutSessions | AnalyticsPage / admin analytics |
 | `/api/crm` | `crm.routes` / CRM controller | Admin, Coach | CRMCustomers, CRMNotes, CRMTasks, Users | CRMPage |
 | `/api/tickets` | `ticket.routes` / ticket controller | Member, Coach, Admin | Tickets, TicketMessages, Users | TicketPage |
 | `/api/invoices` | `invoice.routes` / invoice controller | Member, Admin | Invoices, Payments, Users | InvoicePage |
@@ -58,7 +58,7 @@ inside one mount may be narrower.
 | `/api/admin/brand-requests` | admin brand request routes/service | Admin | BrandRequests, status history, Products, AuditLogs | Admin brand requests |
 | `/api/seller/products` | seller product routes/service | Seller | Products, variants/options, images, ProductTags, Inventory, Shops, AuditLogs | Seller products |
 | `/api/seller/orders` | seller order routes/service | Seller | ShopOrders, Orders, OrderItems, refunds/vouchers/notifications | Seller orders |
-| `/api/media` | media routes/service | public status; Admin processing | ExerciseMedia, filesystem/media source | Admin exercise/media surfaces |
+| `/api/media` | media routes/service | public status; Admin processing | Products, Brands, filesystem/media source | Admin product/media surfaces |
 | `/api/assistant` | assistant routes/service | guest chat/status; optional authenticated chat | no database tool dependency; circuit/provider state in process | ChatbotWidget |
 
 ## Inventory boundary

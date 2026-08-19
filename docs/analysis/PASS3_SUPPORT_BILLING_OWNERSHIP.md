@@ -41,9 +41,9 @@ Marketplace order payment is `MARKETPLACE_ORDER_PAYMENT`:
 - marketplace checkout must not acquire a foreign key or runtime dependency
   on legacy membership `Payments`.
 
-These are separate domains even when both represent money. The next billing
-phases may add a minimal forward-only owner for `Payments` and `Invoices`, but
-must preserve the current simulated payment/confirmation contract and must not
+These are separate domains even when both represent money. Phase 170 adds the
+minimal forward-only owner for `Payments` and `Invoices` in migration `0116`;
+it preserves the current simulated payment/confirmation contract and does not
 implement a gateway.
 
 `DATABASE_MANUAL_CHECK_REQUIRED`: support and billing migrations still require

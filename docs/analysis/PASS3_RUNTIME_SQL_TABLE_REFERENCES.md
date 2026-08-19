@@ -11,9 +11,11 @@ The inventory is an ownership map, not a claim that the current installation
 already contains every object. `FOUNDATION_CANONICAL` and
 `MIGRATION_CANONICAL` mean the object has a current installation owner.
 `LEGACY_REQUIRED` means a live caller exists but only the legacy snapshot owns
-the object. `LEGACY_DUPLICATE_MODEL` is reserved for active legacy workout
-objects that overlap the newer coach/member model. `UNCLEAR_OWNER` means the
-source contract is not sufficiently recoverable to write a safe migration.
+the object; it must remain paired with an explicit unresolved business or
+duplicate-model classification. `LEGACY_DUPLICATE_MODEL` is reserved for
+active legacy workout objects that overlap the newer coach/member model.
+`UNCLEAR_OWNER` means the source contract is not sufficiently recoverable to
+write a safe migration.
 
 ## Current canonical runtime objects
 
@@ -55,6 +57,10 @@ or indexes, but the bootstrap remains the root owner.
 | `0113` | `Coupons`, `CouponUsages` |
 | `0114` | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` |
 | `0115` | `Tickets`, `TicketMessages` |
+| `0116` | `Payments`, `Invoices` |
+| `0117` | `AuditLogs`, `BackupLogs`, `CRMNotes`, `CRMTasks` |
+| `0118` | `AnalyticsDaily` |
+| `0119` | `AnalyticsRetention` |
 
 ## Canonicalized active objects
 
@@ -68,24 +74,21 @@ column/constraint evidence; it is not required for a canonical installation.
 | `Coupons`, `CouponUsages` | `0113_coupon_runtime_schema.sql` | validation/admin/stats only; no new checkout usage integration |
 | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | `0114_loyalty_runtime_schema.sql` | redemption is one controlled TypeScript SQL transaction; no new stored procedure |
 | `Tickets`, `TicketMessages` | `0115_support_runtime_schema.sql` | member/coach/admin role scopes and internal-message filtering remain source-owned |
+| `Payments`, `Invoices` | `0116_membership_billing_runtime.sql` | membership billing only; application owns invoice generation |
+| `AuditLogs`, `BackupLogs`, `CRMNotes`, `CRMTasks` | `0117_operations_runtime.sql` | operations owner; backup filesystem behavior remains unchanged |
+| `AnalyticsDaily` | `0118_analytics_daily_runtime.sql` | stored export projection; no seeded rows or invented writer |
+| `AnalyticsRetention` | `0119_analytics_retention_runtime.sql` | stored cohort projection; no seeded rows |
 
-## Remaining active objects without a current owner
+## Ownership closure and remaining unresolved active objects
 
 | Object | Runtime callers or SQL domain | Legacy evidence | Classification | Next ownership work |
 | --- | --- | --- | --- | --- |
-| `Payments` | membership payment, invoice, revenue and analytics controllers | `db/schema.sql` | `LEGACY_REQUIRED` | create a separate membership billing owner; do not merge with Marketplace Orders payment |
-| `Invoices` | invoice list/create/read/mark-sent | `db/schema.sql` | `LEGACY_REQUIRED` | billing migration; retain current payment-to-invoice relationship |
-| `AnalyticsDaily` | admin analytics range endpoint | `db/schema.sql` | `LEGACY_REQUIRED` pending model review | decide whether this is stored reporting data or a derived projection before migration |
-| `AnalyticsRetention` | admin retention endpoint | `db/schema.sql` | `LEGACY_REQUIRED` pending model review | decide retention grain and refresh ownership before migration |
-| `AuditLogs` | auth, seller/admin workflows and audit route | `db/schema.sql` | `LEGACY_REQUIRED` | operations/audit migration; keep audit writes inside existing business transactions |
-| `BackupLogs` | admin backup controller | `db/schema.sql` | `LEGACY_REQUIRED` | operations migration; filesystem backup behavior remains unchanged |
-| `CRMNotes` | CRM detail/read and note creation | `db/schema.sql` | `LEGACY_REQUIRED` | CRM extension migration under the foundation `CRMCustomers` root |
-| `CRMTasks` | CRM detail/read and task creation | `db/schema.sql` | `LEGACY_REQUIRED` | CRM extension migration under the foundation `CRMCustomers` root |
-| `ProductTags` | admin/seller product read/delete paths | `db/schema.sql` | `LEGACY_REQUIRED` with `UNCLEAR_OWNER` for taxonomy semantics | recover whether tags are still product metadata or a superseded catalog concept before creating a table |
-| `ExerciseMedia` | media processing service and exercise media payloads | no matching table in the legacy snapshot scan; no foundation/migration owner | `UNCLEAR_OWNER` | inspect historical schema/source contract; do not create guessed columns |
-| `Workouts` | public videos, coach workspace and admin workout/coach summaries | `db/schema.sql` | `LEGACY_REQUIRED` + `LEGACY_DUPLICATE_MODEL` | retain while active; decide whether/when to repoint to WorkoutPrograms without changing coach-visible behavior |
-| `WorkoutSessions` | analytics, coach workspace and admin workout/coach summaries | `db/schema.sql` | `LEGACY_REQUIRED` + `LEGACY_DUPLICATE_MODEL` | retain while active; compare with MemberWorkoutSessions before any repoint |
-| `WorkoutExercises` | coach workspace legacy session detail | `db/schema.sql` | `LEGACY_REQUIRED` + `LEGACY_DUPLICATE_MODEL` | retain while active; compare with WorkoutProgramExercises and session snapshots |
+| `Payments`, `Invoices`, `AuditLogs`, `BackupLogs`, `CRMNotes`, `CRMTasks`, `AnalyticsDaily`, `AnalyticsRetention` | closed in migrations `0116`–`0119` | historical snapshot only | `MIGRATION_CANONICAL` | see the canonicalized active-object table above |
+| `ProductTags` | admin/seller product delete paths | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` | no safe taxonomy read/write owner; affected routes remain `schema_ready: NO` |
+| `ExerciseMedia` | unmounted legacy helper only | none | `DEAD_LEGACY` | archive review; mounted media route uses product filesystem media |
+| `Workouts` | public videos, coach workspace and admin workout/coach summaries | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | retain while active; decide whether/when to repoint to WorkoutPrograms without changing coach-visible behavior |
+| `WorkoutSessions` | coach workspace and admin workout/coach summaries | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | analytics uses MemberWorkoutSessions; retain other active reads until a repoint decision |
+| `WorkoutExercises` | coach workspace legacy session detail | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | retain while active; compare with WorkoutProgramExercises and session snapshots |
 
 ## Legacy-only candidates with no active runtime caller found
 

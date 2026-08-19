@@ -88,20 +88,21 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | `RewardRedemptions` | TABLE | loyalty controller | `/loyalty` | - | `0114_loyalty_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 balance and stock | `KEEP_AND_MIGRATE`; one serializable transaction covers the full redemption |
 | `Tickets` | TABLE | ticket controller | `/tickets` | - | `0115_support_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 support | `KEEP_AND_MIGRATE`; preserve member/coach/admin scopes |
 | `TicketMessages` | TABLE | ticket controller | `/tickets` | - | `0115_support_runtime_schema.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 support privacy | `KEEP_AND_MIGRATE`; preserve admin-only internal visibility |
-| `Payments` | TABLE | plans/membership, invoices, revenue, analytics | membership account, invoices, admin revenue/analytics | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P0 billing | create separate membership billing owner; do not merge with marketplace payment |
-| `Invoices` | TABLE | invoice controller | `/invoices` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 billing | preserve payment link and current invoice number contract |
-| `AnalyticsDaily` | TABLE | analytics controller | `/admin/analytics` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P2 reporting | decide stored projection vs derived report before migration |
-| `AnalyticsRetention` | TABLE | analytics controller | `/admin/analytics` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P2 reporting | document cohort/refresh contract before migration |
-| `AuditLogs` | TABLE | auth, seller/admin workflows, audit controller | `/admin/audit` plus mutation flows | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 auditability | add operations owner; keep writes transactional |
-| `BackupLogs` | TABLE | backup controller | `/admin/backup` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P2 operations | add operations owner; preserve filesystem path behavior |
-| `CRMNotes` | TABLE | CRM controller | `/crm` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 customer privacy | add child migration under CRMCustomers |
-| `CRMTasks` | TABLE | CRM controller | `/crm` | - | - | `db/schema.sql` | `LEGACY_REQUIRED` | P1 customer privacy | add child migration under CRMCustomers |
-| `ProductTags` | TABLE | admin/seller product services | admin/seller product pages | - | - | `db/schema.sql` | `UNCLEAR_OWNER` | P1 catalog | recover taxonomy ownership before creating or repointing |
-| `ExerciseMedia` | TABLE | media service; exercise/program media payloads | exercise/program images; no dedicated management route | - | - | - | `UNCLEAR_OWNER` | P1 media | recover historical schema/source contract; do not guess a table |
-| `Workouts` | TABLE | videos, coach workspace, admin workout/coach summaries | `/videos`, coach/admin workout surfaces | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | retain until explicit repoint decision; label any unresolved semantics `BUSINESS_RULE_REQUIRES_CONFIRMATION` |
-| `WorkoutSessions` | TABLE | analytics, coach workspace, admin workout/coach summaries | `/admin/analytics`, coach/admin workout surfaces | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | compare with MemberWorkoutSessions before any migration or repoint |
-| `WorkoutExercises` | TABLE | coach workspace legacy session detail | coach member session detail | - | - | `db/schema.sql` | `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | compare with WorkoutProgramExercises and snapshots; no wholesale copy |
+| `Payments` | TABLE | plans/membership, invoices, revenue, analytics | membership account, invoices, admin revenue/analytics | - | `0116_membership_billing_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P0 billing | membership billing only; never merge with marketplace payment |
+| `Invoices` | TABLE | invoice controller | `/invoices` | - | `0116_membership_billing_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 billing | preserve payment link and application-owned invoice generation |
+| `AnalyticsDaily` | TABLE | analytics export controller | `/admin/analytics` | - | `0118_analytics_daily_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P2 reporting | stored projection; no fake rows or invented writer |
+| `AnalyticsRetention` | TABLE | analytics retention controller | `/admin/analytics` | - | `0119_analytics_retention_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P2 reporting | stored cohort projection; no fake rows |
+| `AuditLogs` | TABLE | auth, seller/admin workflows, audit controller | `/admin/audit` plus mutation flows | - | `0117_operations_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 auditability | keep writes transactional |
+| `BackupLogs` | TABLE | backup controller | `/admin/backup` | - | `0117_operations_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P2 operations | preserve filesystem backup behavior |
+| `CRMNotes` | TABLE | CRM controller | `/crm` | - | `0117_operations_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 customer privacy | additive child of CRMCustomers |
+| `CRMTasks` | TABLE | CRM controller | `/crm` | - | `0117_operations_runtime.sql` | `db/schema.sql` | `MIGRATION_CANONICAL` | P1 customer privacy | additive child of CRMCustomers |
+| `ProductTags` | TABLE | admin/seller product delete paths | admin/seller product pages | - | - | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` | P1 catalog | no safe taxonomy owner or write/read contract; affected routes remain NO |
+| `ExerciseMedia` | TABLE | unmounted legacy helper only | no mounted consumer | - | - | - | `DEAD_LEGACY` | P2 media | archive review; mounted product media uses Products/filesystem |
+| `Workouts` | TABLE | videos, coach workspace, admin workout/coach summaries | `/videos`, coach/admin workout surfaces | - | - | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | retain until explicit repoint decision; affected routes remain NO |
+| `WorkoutSessions` | TABLE | coach workspace, admin workout/coach summaries | coach/admin workout surfaces | - | - | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | analytics was repointed to MemberWorkoutSessions; retain other active reads |
+| `WorkoutExercises` | TABLE | coach workspace legacy session detail | coach member session detail | - | - | `db/schema.sql` | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL` | P1 active duplicate | retain until snapshot/repoint semantics are confirmed |
 | `sp_SpendPoints` | PROCEDURE | baseline loyalty redemption caller; no current caller after phase 159 | `/loyalty` | - | - | `db/schema.sql` | `DEAD_LEGACY` | P2 legacy compatibility | `ARCHIVE_UNUSED`; TypeScript transaction is the sole spend authority |
+| `sp_GenerateInvoice` | PROCEDURE | no active caller; invoice controller owns generation | `/invoices` | - | - | `db/schema.sql` | `DEAD_LEGACY` | P2 legacy compatibility | `ARCHIVE_UNUSED`; application invoice path is sole authority |
 
 ## Matrix decisions and gates
 
@@ -109,14 +110,15 @@ uncertain business semantics are `UNCLEAR_OWNER` or
    into `foundation.sql`.
 2. Applied migrations `0001` through `0111` remain immutable. New owners are
    additive migrations after `0111` and must be domain-specific.
-3. Referral, coupon, loyalty and support objects are active runtime
-   dependencies with forward-only ownership; membership billing remains an
-   active runtime dependency awaiting its dedicated billing migration.
+3. Referral, coupon, loyalty, support, membership billing, operations and
+   analytics objects are active runtime dependencies with forward-only owners.
 4. `Workouts`/`WorkoutSessions`/`WorkoutExercises` are active duplicate-model
    dependencies. They cannot be deleted or silently replaced by the newer
    program/session model.
-5. `ExerciseMedia` and `ProductTags` remain `UNCLEAR_OWNER` until the source
-   contract is sufficient to define safe columns, keys and foreign keys.
+5. `ProductTags` remains `BUSINESS_RULE_REQUIRES_CONFIRMATION` because the
+   current mounted source only deletes it and provides no safe taxonomy
+   contract. `ExerciseMedia` is `DEAD_LEGACY` because its helper is unmounted;
+   the mounted media route is product media.
 6. A live SQL Server check is required after each relevant migration:
    `DATABASE_MANUAL_CHECK_REQUIRED`. This static matrix does not connect to,
    mutate or certify a database.
@@ -126,13 +128,15 @@ uncertain business semantics are `UNCLEAR_OWNER` or
 | Orphan or duplicate family | Priority | Decision |
 | --- | --- | --- |
 | `ReferralCodes`, `ReferralTransactions` | P0 | `KEEP_AND_MIGRATE` in `0112`; active registration and referral UI depend on them |
-| `Payments`, `Invoices` | P0 for membership payment; P1 for invoice UI | `KEEP_AND_MIGRATE` as a separate membership billing domain; never merge with marketplace order payment |
+| `Payments`, `Invoices` | P0 for membership payment; P1 for invoice UI | `KEEP_AND_MIGRATE` in `0116` as a separate membership billing domain; never merge with marketplace order payment |
 | `Coupons`, `CouponUsages` | P1 | `KEEP_AND_MIGRATE` using only the current route contract |
 | `Points`, `PointTransactions`, `RewardsCatalog`, `RewardRedemptions` | P1 | `KEEP_AND_MIGRATE` in `0114`; redemption uses one serializable TypeScript transaction |
 | `Tickets`, `TicketMessages` | P1 | `KEEP_AND_MIGRATE` in `0115` with role-scope and message ordering preserved |
-| `CRMNotes`, `CRMTasks` | P1 | `KEEP_AND_MIGRATE` as CRMCustomers child tables |
-| `ProductTags`, `ExerciseMedia` | P1 | `REQUIRES_CONFIRMATION` until the source/schema contract is recovered |
-| `Workouts`, `WorkoutSessions`, `WorkoutExercises` | P1 | `REQUIRES_CONFIRMATION`; retain active legacy reads while comparing with canonical program/session snapshots |
-| `AuditLogs`, `BackupLogs` | P2 | `KEEP_AND_MIGRATE` under operations ownership; keep backup filesystem behavior |
-| `AnalyticsDaily`, `AnalyticsRetention` | P2 | `REQUIRES_CONFIRMATION` until stored-projection versus derived-report ownership is explicit |
+| `CRMNotes`, `CRMTasks` | P1 | `KEEP_AND_MIGRATE` in `0117` as CRMCustomers child tables |
+| `ProductTags` | P1 | `BUSINESS_RULE_REQUIRES_CONFIRMATION`; only delete paths are active and taxonomy semantics are absent |
+| `ExerciseMedia` | P2 | `DEAD_LEGACY`; helper is unmounted and no mounted route depends on it |
+| `Workouts`, `WorkoutSessions`, `WorkoutExercises` | P1 | `BUSINESS_RULE_REQUIRES_CONFIRMATION` / `LEGACY_DUPLICATE_MODEL`; retain active legacy reads while comparing with canonical program/session snapshots |
+| `AuditLogs`, `BackupLogs` | P2 | `KEEP_AND_MIGRATE` in `0117` under operations ownership; keep backup filesystem behavior |
+| `AnalyticsDaily` | P2 | `KEEP_AND_MIGRATE` in `0118` as stored export projection; no rows seeded |
+| `AnalyticsRetention` | P2 | `KEEP_AND_MIGRATE` in `0119` as stored cohort projection; no rows seeded |
 | `AffiliatePayouts`, `Affiliates`, `ReferralClicks`, `ReferralRewards`, `NutritionEntries`, `NutritionPlans`, `Promotions`, `TicketAttachments` | P3 | `ARCHIVE_UNUSED` review only; no table recreation or deletion in this pass |

@@ -70,6 +70,14 @@ const MIGRATION_TABLE_OWNERS: Record<string, string> = {
   RewardRedemptions: '0114',
   Tickets: '0115',
   TicketMessages: '0115',
+  Payments: '0116',
+  Invoices: '0116',
+  AuditLogs: '0117',
+  BackupLogs: '0117',
+  CRMNotes: '0117',
+  CRMTasks: '0117',
+  AnalyticsDaily: '0118',
+  AnalyticsRetention: '0119',
 };
 
 interface MigrationFile {

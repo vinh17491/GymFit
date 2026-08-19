@@ -5,8 +5,8 @@ import { sendSuccess } from '../../utils/response';
 export async function getDashboard(_req: Request, _res: Response, next: NextFunction) {
   try {
     const [dau, mau, revenue, members, churn] = await Promise.all([
-      query("SELECT COUNT(DISTINCT user_id) as cnt FROM WorkoutSessions WHERE CAST(started_at AS DATE)=CAST(GETDATE() AS DATE)"),
-      query("SELECT COUNT(DISTINCT user_id) as cnt FROM WorkoutSessions WHERE started_at>=DATEADD(month,-1,GETDATE())"),
+      query("SELECT COUNT(DISTINCT member_id) as cnt FROM MemberWorkoutSessions WHERE CAST(started_at AS DATE)=CAST(GETDATE() AS DATE)"),
+      query("SELECT COUNT(DISTINCT member_id) as cnt FROM MemberWorkoutSessions WHERE started_at>=DATEADD(month,-1,GETDATE())"),
       query("SELECT ISNULL(SUM(amount),0) as total FROM Payments WHERE status='completed' AND CAST(created_at AS DATE)=CAST(GETDATE() AS DATE)"),
       query("SELECT COUNT(*) as total FROM Memberships WHERE status='active'"),
       query("SELECT CAST(COUNT(CASE WHEN status='cancelled' THEN 1 END) AS FLOAT)/NULLIF(COUNT(*),0)*100 as rate FROM Memberships WHERE created_at>=DATEADD(month,-1,GETDATE())"),
