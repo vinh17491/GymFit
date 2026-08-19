@@ -56,10 +56,10 @@ export async function schedules(input: { page: number; limit: number; coachId?: 
 
 function sessionCte() {
   return `WITH session_rows AS (
-    SELECT ms.id,ms.member_id,a.coach_id,a.program_id,ms.assignment_id,ms.status,ms.started_at,ms.ended_at,
-           (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id),
-           (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id AND sl.completed=1),
-           p.name,N'MEMBER'
+    SELECT ms.id,ms.member_id,a.coach_id,a.program_id,ms.assignment_id,ms.status,ms.started_at,ms.ended_at AS completed_at,
+           (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id) AS set_count,
+           (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id AND sl.completed=1) AS completed_set_count,
+           p.name AS workout_name,CAST(N'MEMBER' AS NVARCHAR(10)) AS source
     FROM dbo.MemberWorkoutSessions ms JOIN dbo.CoachProgramAssignments a ON a.id=ms.assignment_id
     JOIN dbo.WorkoutPrograms p ON p.id=a.program_id
   )`;
