@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Play, Clock, Eye, Search, Filter, Lock, Star, ArrowRight, Loader2, AlertTriangle, RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import { Play, Clock, Search, ArrowRight, Loader2, AlertTriangle, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getVideos, Video } from '../../services/videos';
 
 const categories = ['All', 'Strength', 'Cardio', 'Yoga', 'HIIT', 'Stretching', 'CrossFit'];
 
-function formatDuration(minutes: number): string {
+function formatDuration(minutes: number | null): string {
+  if (minutes === null) return 'Duration unavailable';
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatViews(count: number): string {
-  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-  return String(count);
 }
 
 export default function VideosPreviewPage() {
@@ -63,7 +58,7 @@ export default function VideosPreviewPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-12 text-center">
           <h1 className="text-5xl font-bold text-white mb-4">Workout Video Library</h1>
           <p className="text-[#94a3b8] text-lg max-w-2xl mx-auto">
-            Preview free workout videos. Sign up for full access to our complete library of professional training sessions.
+            Preview canonical exercise media. Sign up for full access to our complete library of professional training sessions.
           </p>
         </motion.div>
 
@@ -136,26 +131,20 @@ export default function VideosPreviewPage() {
                     <div className="absolute inset-0 bg-black/40"></div>
                     <div className="text-center z-10 relative">
                       <button 
-                        onClick={() => setPlayingVideo(featured.videoUrl)}
+                        onClick={() => { if (featured.videoUrl) setPlayingVideo(featured.videoUrl); }}
                         className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-[#2563eb]/20 cursor-pointer hover:bg-[#2563eb]/30 transition-colors"
                       >
                         <Play size={36} className="text-[#2563eb] ml-1" />
                       </button>
                       <h3 className="text-2xl font-bold text-white mb-2">{featured.title}</h3>
-                      <p className="text-[#94a3b8]">By {featured.instructor_name} &bull; {formatDuration(featured.duration_minutes)} &bull; {featured.difficulty}</p>
+                      <p className="text-[#94a3b8]">By {featured.instructor_name ?? 'Instructor not assigned'} &bull; {formatDuration(featured.duration_minutes)} &bull; {featured.difficulty ?? 'Difficulty unavailable'}</p>
                     </div>
                   </div>
                   <div className="p-6 flex items-center justify-between">
                     <div className="flex items-center gap-4 text-sm text-[#94a3b8]">
                       <span className="flex items-center gap-1"><Clock size={16} />{formatDuration(featured.duration_minutes)}</span>
                     </div>
-                    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${
-                      featured.isFree
-                        ? 'bg-[#22c55e]/20 text-[#22c55e]'
-                        : 'bg-[#94a3b8]/20 text-[#94a3b8]'
-                    }`}>
-                      {featured.isFree ? <><Play size={12} /> Free Preview</> : <><Lock size={12} /> Premium</>}
-                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/20 px-3 py-1 text-xs font-medium text-[#22c55e]"><Play size={12} /> Exercise preview</span>
                   </div>
                 </div>
               </motion.div>
@@ -170,7 +159,7 @@ export default function VideosPreviewPage() {
                   transition={{ delay: i * 0.05 }}
                   whileHover={{ scale: 1.02, y: -4 }}
                   className="group rounded-xl border border-[#1e293b] bg-[#0f172a] overflow-hidden transition-all hover:border-[#2563eb]/50 cursor-pointer"
-                  onClick={() => setPlayingVideo(video.videoUrl)}
+                  onClick={() => { if (video.videoUrl) setPlayingVideo(video.videoUrl); }}
                 >
                   <div className="relative aspect-video bg-gradient-to-br from-[#1e293b] to-[#0a0f1a]">
                     {video.thumbnailUrl ? (
@@ -182,15 +171,7 @@ export default function VideosPreviewPage() {
                       </div>
                     </div>
                     <div className="absolute top-3 right-3">
-                      {video.isFree ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/20 px-2 py-1 text-xs font-medium text-[#22c55e]">
-                          Free Preview
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#94a3b8]/20 px-2 py-1 text-xs font-medium text-[#94a3b8]">
-                          <Lock size={12} /> Premium
-                        </span>
-                      )}
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e]/20 px-2 py-1 text-xs font-medium text-[#22c55e]">Exercise preview</span>
                     </div>
                     <div className="absolute bottom-3 left-3">
                       <span className="rounded bg-black/60 px-2 py-1 text-xs text-white">{formatDuration(video.duration_minutes)}</span>
@@ -199,9 +180,9 @@ export default function VideosPreviewPage() {
                   
                   <div className="p-4">
                     <h3 className="mb-2 font-semibold text-white group-hover:text-[#60a5fa] transition-colors">{video.title}</h3>
-                    <p className="mb-3 text-sm text-[#64748b]">By {video.instructor_name}</p>
+                     <p className="mb-3 text-sm text-[#64748b]">By {video.instructor_name ?? 'Instructor not assigned'}</p>
                     <div className="flex items-center justify-between text-xs text-[#94a3b8]">
-                      <span>{video.difficulty}</span>
+                       <span>{video.difficulty ?? 'Difficulty unavailable'}</span>
                       <span>{formatDuration(video.duration_minutes)}</span>
                     </div>
                   </div>

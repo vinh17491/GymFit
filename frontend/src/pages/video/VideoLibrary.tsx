@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Play, Clock, ChevronRight, TrendingUp, Star, Lock, Users, ArrowRight, AlertTriangle, RefreshCw, Volume2, VolumeX } from 'lucide-react';
+import { Search, Play, Clock, ChevronRight, TrendingUp, Star, Users, ArrowRight, AlertTriangle, RefreshCw, Volume2, VolumeX } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Badge from '../../components/ui/badge';
 import Skeleton from '../../components/ui/skeleton';
@@ -7,13 +7,8 @@ import { getVideos, type Video } from '../../services/videos';
 
 const categories = ['All', 'Strength', 'Cardio', 'Yoga', 'HIIT', 'Recovery', 'Nutrition'];
 
-function formatDuration(minutes: number): string {
-  return `${minutes} min`;
-}
-
-function formatViews(count: number): string {
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-  return String(count);
+function formatDuration(minutes: number | null): string {
+  return minutes === null ? 'Duration unavailable' : `${minutes} min`;
 }
 
 export default function VideoLibrary() {
@@ -49,9 +44,9 @@ export default function VideoLibrary() {
 
   const featuredVideo = videos[0] || null;
   const continueWatching = videos.slice(1, 5);
-  const gridVideos = isLoggedIn ? videos : videos.filter(v => v.isFree);
+  const gridVideos = videos;
 
-  const VideoCard = ({ video, showLock = false }: { video: Video; showLock?: boolean }) => (
+  const VideoCard = ({ video }: { video: Video }) => (
     <motion.div
       key={video.id}
       initial={{ opacity: 0, y: 20 }}
@@ -59,7 +54,7 @@ export default function VideoLibrary() {
       transition={{ duration: 0.3 }}
       whileHover={{ scale: 1.02, y: -5 }}
       className="group cursor-pointer relative overflow-hidden"
-      onClick={() => setPlayingVideo(video.videoUrl)}
+      onClick={() => { if (video.videoUrl) setPlayingVideo(video.videoUrl); }}
     >
       <div className="aspect-video rounded-lg mb-3 relative overflow-hidden bg-[#0f172a] border border-[#1e293b]">
         {video.thumbnailUrl ? (
@@ -74,32 +69,26 @@ export default function VideoLibrary() {
           <div className="flex items-center gap-1 rounded bg-black/70 px-2 py-1 text-xs font-medium text-white">
             <Clock size={12} /> {formatDuration(video.duration_minutes)}
           </div>
-          {showLock ? (
-            <div className="flex items-center gap-1 rounded bg-red-600/80 px-2 py-1 text-xs font-medium text-white">
-              <Lock size={12} /> Premium
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 rounded bg-green-600/80 px-2 py-1 text-xs font-medium text-white">
-              <Play size={12} /> Free
-            </div>
-          )}
+          <div className="flex items-center gap-1 rounded bg-green-600/80 px-2 py-1 text-xs font-medium text-white">
+            <Play size={12} /> Preview
+          </div>
         </div>
         <div className="absolute top-3 left-3">
-          <Badge variant="blue" className="text-xs">{video.category}</Badge>
+          <Badge variant="blue" className="text-xs">{video.category ?? 'Uncategorized'}</Badge>
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <h3 className="font-semibold text-white mb-1 truncate">{video.title}</h3>
-            <p className="text-xs text-[#94a3b8] mb-2">by {video.instructor_name}</p>
+            <p className="text-xs text-[#94a3b8] mb-2">by {video.instructor_name ?? 'Instructor not assigned'}</p>
             <div className="flex items-center gap-3 text-xs text-[#94a3b8]">
-              <span className="flex items-center gap-1"><Star size={12} className="text-[#fbbf24]" />{video.difficulty}</span>
+              <span className="flex items-center gap-1"><Star size={12} className="text-[#fbbf24]" />{video.difficulty ?? 'Difficulty unavailable'}</span>
             </div>
           </div>
         </div>
       </div>
       <h3 className="font-medium text-sm truncate text-white group-hover:text-[#60a5fa] transition-colors">{video.title}</h3>
       <div className="flex items-center justify-between mt-1">
-        <p className="text-xs text-[#94a3b8]">{video.instructor_name}</p>
+        <p className="text-xs text-[#94a3b8]">{video.instructor_name ?? 'Instructor not assigned'}</p>
         <span className="text-[10px] text-[#64748b]">{formatDuration(video.duration_minutes)}</span>
       </div>
     </motion.div>
@@ -121,7 +110,7 @@ export default function VideoLibrary() {
       transition={{ delay: index * 0.1 }}
       whileHover={{ scale: 1.05, y: -5 }}
       className="group cursor-pointer relative overflow-hidden"
-      onClick={() => setPlayingVideo(video.videoUrl)}
+      onClick={() => { if (video.videoUrl) setPlayingVideo(video.videoUrl); }}
     >
       <div className="aspect-video rounded-lg mb-3 relative overflow-hidden border-2 border-[#2563eb] shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-br from-[#2563eb]/30 to-[#0ea5e9]/30" />
@@ -145,7 +134,7 @@ export default function VideoLibrary() {
         </div>
       </div>
       <h3 className="font-medium text-sm truncate text-white group-hover:text-[#60a5fa] transition-colors mb-1">{video.title}</h3>
-      <p className="text-xs text-[#94a3b8]">{video.instructor_name}</p>
+      <p className="text-xs text-[#94a3b8]">{video.instructor_name ?? 'Instructor not assigned'}</p>
     </motion.div>
   );
 
@@ -220,13 +209,13 @@ export default function VideoLibrary() {
                 <div className="flex-1 p-8 md:p-10 relative">
                   <Badge variant="green" className="mb-4">Featured Content</Badge>
                   <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">{featuredVideo.title}</h2>
-                  <p className="text-[#60a5fa] text-lg font-semibold mb-2">with {featuredVideo.instructor_name}</p>
+                  <p className="text-[#60a5fa] text-lg font-semibold mb-2">with {featuredVideo.instructor_name ?? 'Instructor not assigned'}</p>
                   <div className="flex items-center gap-6 text-[#94a3b8] mb-6">
                     <span className="flex items-center gap-2"><Clock size={16} /> {formatDuration(featuredVideo.duration_minutes)}</span>
-                    <span className="flex items-center gap-2"><Star size={16} className="text-[#fbbf24]" /> {featuredVideo.difficulty}</span>
+                    <span className="flex items-center gap-2"><Star size={16} className="text-[#fbbf24]" /> {featuredVideo.difficulty ?? 'Difficulty unavailable'}</span>
                   </div>
                   <button 
-                    onClick={() => setPlayingVideo(featuredVideo.videoUrl)}
+                    onClick={() => { if (featuredVideo.videoUrl) setPlayingVideo(featuredVideo.videoUrl); }}
                     className="inline-flex items-center gap-2 rounded-lg bg-[#2563eb] px-8 py-4 font-semibold text-white transition-all hover:bg-[#1d4ed8] hover:scale-105"
                   >
                     <Play size={20} /> Watch Now
@@ -273,7 +262,7 @@ export default function VideoLibrary() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {gridVideos.map(video => (
-                  <VideoCard key={video.id} video={video} showLock={!isLoggedIn && !video.isFree} />
+                  <VideoCard key={video.id} video={video} />
                 ))}
               </div>
             )}

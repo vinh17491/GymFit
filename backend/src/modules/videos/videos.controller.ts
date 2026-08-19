@@ -7,29 +7,30 @@ export async function getVideos(req: Request, res: Response, next: NextFunction)
   try {
     const { category, search, difficulty, page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
-    let where = 'WHERE w.is_active = 1';
+    let where = 'WHERE e.is_active = 1';
     const params: Record<string, unknown> = {};
 
     if (category) {
-      where += ' AND w.plan_type = @category';
+      where += ' AND e.muscle_group = @category';
       params.category = category;
     }
-    if (difficulty) { where += ' AND w.difficulty = @difficulty'; params.difficulty = difficulty; }
-    if (search) { where += ' AND (w.name LIKE @search OR w.description LIKE @search)'; params.search = `%${search}%`; }
+    if (difficulty) { where += ' AND e.difficulty = @difficulty'; params.difficulty = difficulty; }
+    if (search) { where += ' AND (e.name LIKE @search OR e.description LIKE @search OR e.instructions LIKE @search)'; params.search = `%${search}%`; }
 
     const result = await query(
-      `SELECT w.id, w.name as title, w.description, w.plan_type as category, w.difficulty, w.duration_minutes, w.coach_id as instructor_id, w.is_active, w.created_at,
-              NULL as video_url, NULL as thumbnail_url, NULL as instructor_name
-       FROM Workouts w
-       LEFT JOIN Users u ON w.coach_id = u.id
+      `SELECT e.id,e.name AS title,e.description,e.muscle_group AS category,e.difficulty,
+              CAST(NULL AS INT) AS duration_minutes,CAST(NULL AS INT) AS instructor_id,
+              e.is_active,e.created_at,e.video_url,e.thumbnail_url,
+              CAST(NULL AS NVARCHAR(100)) AS instructor_name
+       FROM dbo.Exercises e
        ${where}
-       ORDER BY w.created_at DESC
+       ORDER BY e.created_at DESC,e.id DESC
        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`,
       { ...params, offset, limit: Number(limit) }
     );
 
     const countResult = await query(
-      `SELECT COUNT(*) as total FROM Workouts w ${where}`,
+      `SELECT COUNT(*) AS total FROM dbo.Exercises e ${where}`,
       params
     );
 
@@ -49,10 +50,12 @@ export async function getVideoById(req: Request, res: Response, next: NextFuncti
   try {
     const { id } = req.params;
     const result = await query(
-      `SELECT w.id, w.name as title, w.description, w.plan_type as category, w.difficulty, w.duration_minutes, w.coach_id as instructor_id, w.is_active, w.created_at,
-              NULL as video_url, NULL as thumbnail_url, NULL as instructor_name
-       FROM Workouts w LEFT JOIN Users u ON w.coach_id = u.id
-       WHERE w.id = @id`,
+      `SELECT e.id,e.name AS title,e.description,e.muscle_group AS category,e.difficulty,
+              CAST(NULL AS INT) AS duration_minutes,CAST(NULL AS INT) AS instructor_id,
+              e.is_active,e.created_at,e.video_url,e.thumbnail_url,
+              CAST(NULL AS NVARCHAR(100)) AS instructor_name
+       FROM dbo.Exercises e
+       WHERE e.id=@id`,
       { id }
     );
     if (result.recordset.length === 0) throw new AppError(404, 'Video not found');
@@ -60,50 +63,13 @@ export async function getVideoById(req: Request, res: Response, next: NextFuncti
   } catch (err) { next(err); }
 }
 
-export async function createVideo(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { name, description, plan_type, duration_minutes, difficulty } = req.body;
-    const coach_id=req.user!.role==='admin' ? (req.body.coach_id||null) : req.user!.userId;
-    if(coach_id){const owner=await query("SELECT id FROM Users WHERE id=@id AND role='coach' AND is_active=1",{id:coach_id});if(!owner.recordset[0])throw new AppError(400,'Invalid coach owner');}
-    const result = await query(
-      `INSERT INTO Workouts (name, description, plan_type, duration_minutes, difficulty, coach_id, is_active, created_at)
-       OUTPUT INSERTED.*
-       VALUES (@name, @description, @plan_type, @duration_minutes, @difficulty, @coach_id, 1, GETDATE())`,
-      { name, description, plan_type, duration_minutes, difficulty: difficulty || 'beginner', coach_id }
-    );
-    sendSuccess(res, result.recordset[0], 'Video created', 201);
-  } catch (err) { next(err); }
-}
-
-export async function updateVideo(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { id } = req.params;
-    const { name, description, plan_type, duration_minutes, difficulty, is_active } = req.body;
-    const coach_id=req.user!.role==='admin' ? (req.body.coach_id||null) : req.user!.userId;
-    if(coach_id){const owner=await query("SELECT id FROM Users WHERE id=@owner AND role='coach' AND is_active=1",{owner:coach_id});if(!owner.recordset[0])throw new AppError(400,'Invalid coach owner');}
-    const ownership=req.user!.role==='coach'?' AND coach_id=@actor':'';
-    const result = await query(
-      `UPDATE Workouts SET name=@name, description=@description, plan_type=@plan_type, duration_minutes=@duration_minutes, difficulty=@difficulty, coach_id=@coach_id, is_active=@is_active
-       OUTPUT INSERTED.* WHERE id=@id${ownership}`,
-      { id, name, description, plan_type, duration_minutes, difficulty, coach_id, is_active:is_active??true,actor:req.user!.userId }
-    );
-    if (result.recordset.length === 0) throw new AppError(404, 'Video not found');
-    sendSuccess(res, result.recordset[0], 'Video updated');
-  } catch (err) { next(err); }
-}
-
-export async function deleteVideo(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { id } = req.params;
-    const result = await query('DELETE FROM Workouts WHERE id=@id', { id });
-    if (result.rowsAffected[0] === 0) throw new AppError(404, 'Video not found');
-    sendSuccess(res, null, 'Video deleted');
-  } catch (err) { next(err); }
+export function retireVideoMutation(_req: Request, _res: Response, next: NextFunction) {
+  next(new AppError(409, 'Video mutations are retired; manage canonical exercise media through the exercise admin API', 'VIDEO_MUTATIONS_RETIRED'));
 }
 
 export async function getVideoCategories(_req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await query('SELECT DISTINCT plan_type FROM Workouts WHERE is_active = 1 AND plan_type IS NOT NULL');
-    sendSuccess(res, result.recordset.map((r: { plan_type: string }) => r.plan_type));
+    const result = await query('SELECT DISTINCT muscle_group FROM dbo.Exercises WHERE is_active=1 AND muscle_group IS NOT NULL ORDER BY muscle_group');
+    sendSuccess(res, result.recordset.map((r: { muscle_group: string }) => r.muscle_group));
   } catch (err) { next(err); }
 }

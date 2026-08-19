@@ -7,6 +7,7 @@ import type { Video } from '../../services/videos';
 export default function VideoPreview() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [muted, setMuted] = useState(true);
   const [hoverVideo, setHoverVideo] = useState<string | null>(null);
@@ -14,43 +15,12 @@ export default function VideoPreview() {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
+        setError(false);
         const data = await getVideos({ limit: 6 });
         setVideos(data);
-      } catch (error) {
-        console.error('Failed to load videos:', error);
-        // Fallback to test video URLs if API fails
-        setVideos([
-          {
-            id: 1,
-            title: 'Full Body Strength Training',
-            description: 'Complete full body workout with weights and bodyweight exercises',
-            category: 'Strength',
-            duration_minutes: 45,
-            difficulty: 'Intermediate',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=600&h=400&fit=crop',
-            videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            instructor_id: 2,
-            instructor_name: 'GYMFIT Coaching Team',
-            isFree: true,
-            isActive: true,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            title: 'HIIT Cardio Blast',
-            description: 'High intensity interval training for maximum calorie burn',
-            category: 'Cardio',
-            duration_minutes: 30,
-            difficulty: 'Advanced',
-            thumbnailUrl: 'https://images.unsplash.com/photo-1549576490-b0b4831ef60a?w=600&h=400&fit=crop',
-            videoUrl: 'https://www.w3schools.com/html/movie.mp4',
-            instructor_id: 2,
-            instructor_name: 'GYMFIT Coaching Team',
-            isFree: true,
-            isActive: true,
-            created_at: new Date().toISOString()
-          }
-        ]);
+      } catch {
+        setError(true);
+        setVideos([]);
       } finally {
         setLoading(false);
       }
@@ -68,7 +38,7 @@ export default function VideoPreview() {
       transition={{ duration: 0.6 }}
       whileHover={{ y: -8, scale: 1.02 }}
       className="group cursor-pointer"
-      onClick={() => setSelectedVideo(video.videoUrl)}
+      onClick={() => { if (video.videoUrl) setSelectedVideo(video.videoUrl); }}
       onMouseEnter={() => setHoverVideo(video.id.toString())}
       onMouseLeave={() => setHoverVideo(null)}
     >
@@ -99,7 +69,7 @@ export default function VideoPreview() {
         
         {/* Duration badge */}
         <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium text-white">
-          {video.duration_minutes} min
+          {video.duration_minutes === null ? 'Duration unavailable' : `${video.duration_minutes} min`}
         </div>
         
         {/* Category badge */}
@@ -115,13 +85,12 @@ export default function VideoPreview() {
       </h3>
       
       <div className="flex items-center justify-between text-sm text-[#94A3B8]">
-        <span>by {video.instructor_name}</span>
-        <span>{video.id * 1000} views</span>
+        <span>by {video.instructor_name ?? 'Instructor not assigned'}</span>
       </div>
       
       <div className="mt-2 flex items-center gap-2 text-xs text-[#94A3B8]">
-        <span className="flex items-center gap-1">
-          <Clock size={12} /> {video.difficulty}
+          <span className="flex items-center gap-1">
+            <Clock size={12} /> {video.difficulty ?? 'Difficulty unavailable'}
         </span>
       </div>
     </motion.div>
@@ -165,6 +134,8 @@ export default function VideoPreview() {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="rounded-2xl border border-[#1e293b] bg-[#0a1628] p-8 text-center text-[#94A3B8]">Video library is temporarily unavailable.</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {videos.map((video, i) => (
