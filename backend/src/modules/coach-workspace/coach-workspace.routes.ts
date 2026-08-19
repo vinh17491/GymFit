@@ -22,8 +22,8 @@ const memberContext = z.object({
 }).strict();
 const assignmentId = z.object({ assignmentId: z.coerce.number().int().positive() }).strict();
 const scheduleId = z.object({ scheduleId: z.coerce.number().int().positive() }).strict();
-const sourceSessionId = z.object({ memberId: z.coerce.number().int().positive(), source: z.enum(['legacy', 'member']), sessionId: z.coerce.number().int().positive() }).strict();
-const legacySessionId = z.object({ memberId: z.coerce.number().int().positive(), sessionId: z.coerce.number().int().positive() }).strict();
+const sourceSessionId = z.object({ memberId: z.coerce.number().int().positive(), source: z.literal('member'), sessionId: z.coerce.number().int().positive() }).strict();
+const memberSessionId = z.object({ memberId: z.coerce.number().int().positive(), sessionId: z.coerce.number().int().positive() }).strict();
 const list = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(50).default(20), q: z.string().trim().max(100).optional() }).strict();
 const exerciseList = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(50).default(20), q: z.string().trim().max(100).optional(), muscleGroup: z.string().trim().max(100).optional(), difficulty: z.string().trim().max(40).optional(), equipment: z.string().trim().max(100).optional(), sort: z.enum(['name_asc','name_desc','newest']).default('name_asc') }).strict();
 const program = z.object({ name: z.string().trim().min(1).max(200), description: z.string().trim().max(10000).optional(), goal: z.enum(['GENERAL_FITNESS','WEIGHT_LOSS','MUSCLE_GAIN','STRENGTH','ENDURANCE','MOBILITY']), difficulty: z.enum(['BEGINNER','INTERMEDIATE','ADVANCED']), durationWeeks: z.number().int().min(1).max(104), daysPerWeek: z.number().int().min(1).max(7) }).strict();
@@ -127,6 +127,6 @@ router.post('/schedules/:scheduleId/reschedule', validate(scheduleId, 'params'),
 router.post('/schedules/:scheduleId/cancel', validate(scheduleId, 'params'), validate(transition), controller.cancelSchedule);
 router.get('/members/:memberId/sessions', validate(memberId, 'params'), validate(list, 'query'), controller.listSessions);
 router.get('/members/:memberId/sessions/:source/:sessionId', validate(sourceSessionId, 'params'), controller.getSession);
-router.get('/members/:memberId/sessions/:sessionId', validate(legacySessionId, 'params'), controller.getSession);
+router.get('/members/:memberId/sessions/:sessionId', validate(memberSessionId, 'params'), controller.getSession);
 router.get('/members/:memberId/progress', validate(memberId, 'params'), controller.getProgress);
 export default router;

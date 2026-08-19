@@ -53,5 +53,5 @@ export const generateSchedules = async (id:number, body:Record<string,unknown>) 
 export const reschedule = async (id:number, scheduledDate:string) => data<CoachSchedule>(await api.post(`${coach}/schedules/${id}/reschedule`, { scheduledDate }));
 export const cancelSchedule = async (id:number) => data<CoachSchedule>(await api.post(`${coach}/schedules/${id}/cancel`, {}));
 export const listSessions = async (memberId:number, params:Record<string,unknown>, options?:RequestOptions) => page<CoachSessionHistoryItem>(await api.get(`${coach}/members/${memberId}/sessions`, { params, ...getConfig(options) }));
-export const getSession = async (memberId:number, source:'legacy'|'member'|undefined, sessionId:number) => data<CoachSessionDetail>(await api.get(`${coach}/members/${memberId}/sessions${source ? `/${source}` : ''}/${sessionId}`));
+export const getSession = async (memberId:number, source:'member'|undefined, sessionId:number) => data<CoachSessionDetail>(await api.get(`${coach}/members/${memberId}/sessions${source ? `/${source}` : ''}/${sessionId}`));
 export const getProgress = async (memberId:number) => data<CoachProgress>(await api.get(`${coach}/members/${memberId}/progress`));
