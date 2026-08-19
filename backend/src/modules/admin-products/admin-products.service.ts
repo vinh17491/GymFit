@@ -181,7 +181,8 @@ export const adminProductsService = {
     try {
       await tx.request().input('id', id).query(`DELETE FROM dbo.VariantOptionValues WHERE variant_id IN(SELECT id FROM dbo.ProductVariants WHERE product_id=@id);
         DELETE FROM dbo.ProductOptionValues WHERE product_option_id IN(SELECT id FROM dbo.ProductOptions WHERE product_id=@id);
-        DELETE FROM dbo.ProductOptions WHERE product_id=@id; DELETE FROM dbo.ProductTags WHERE product_id=@id;
+         DELETE FROM dbo.ProductOptions WHERE product_id=@id;
+         IF OBJECT_ID(N'dbo.ProductTags',N'U') IS NOT NULL DELETE dbo.ProductTags WHERE product_id=@id;
         DELETE FROM dbo.ProductImages WHERE product_id=@id; DELETE FROM dbo.Inventory WHERE variant_id IN(SELECT id FROM dbo.ProductVariants WHERE product_id=@id);
         DELETE FROM dbo.ProductVariants WHERE product_id=@id; DELETE FROM dbo.Products WHERE id=@id;`);
       await tx.commit(); await Promise.all(localImages.map(removeLocalFile)); return { id, product_name: product.product_name };

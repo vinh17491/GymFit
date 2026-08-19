@@ -159,7 +159,9 @@ export const sellerProductsService={
       await txAudit(tx,userId,'seller_product.deleted','Product',productId,{name:current.product_name,moderationStatus:current.moderation_status},null);
       await tx.request().input('deleteId',sql.Int,productId).query(`DELETE dbo.VariantOptionValues WHERE variant_id IN(SELECT id FROM dbo.ProductVariants WHERE product_id=@deleteId);
         DELETE dbo.ProductOptionValues WHERE product_option_id IN(SELECT id FROM dbo.ProductOptions WHERE product_id=@deleteId);
-        DELETE dbo.ProductOptions WHERE product_id=@deleteId;DELETE dbo.ProductTags WHERE product_id=@deleteId;DELETE dbo.ProductImages WHERE product_id=@deleteId;
+        DELETE dbo.ProductOptions WHERE product_id=@deleteId;
+        IF OBJECT_ID(N'dbo.ProductTags',N'U') IS NOT NULL DELETE dbo.ProductTags WHERE product_id=@deleteId;
+        DELETE dbo.ProductImages WHERE product_id=@deleteId;
         DELETE dbo.Inventory WHERE variant_id IN(SELECT id FROM dbo.ProductVariants WHERE product_id=@deleteId);DELETE dbo.ProductVariants WHERE product_id=@deleteId;DELETE dbo.Products WHERE id=@deleteId;`);
       await tx.commit();await Promise.all(images.map(removeLocalFile));return{id:productId};
     }catch(error){try{await tx.rollback();}catch{}throw error;}
