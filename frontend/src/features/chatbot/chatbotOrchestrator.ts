@@ -25,6 +25,8 @@ export const initialAssistantState: AssistantClientState = {
   nextAiAttemptAt: 0,
 };
 
+const UNKNOWN_STATUS_PROBE_TIMEOUT_MS = 3_000;
+
 export function retryAtFromStatus(status: AssistantStatus, now: number): number {
   if (!status.configured) return 0;
   const cooldownMs = Math.max(status.circuit.cooldownMs, AI_RETRY_COOLDOWN_MS);
@@ -58,6 +60,24 @@ function canAttemptAi(state: AssistantClientState, now: number): boolean {
   return state.configured === true && state.nextAiAttemptAt <= now;
 }
 
+async function probeUnknownStatus(signal: AbortSignal): Promise<AssistantStatus> {
+  const controller = new AbortController();
+  const forwardAbort = () => controller.abort();
+  const timer = globalThis.setTimeout(() => controller.abort(), UNKNOWN_STATUS_PROBE_TIMEOUT_MS);
+  signal.addEventListener('abort', forwardAbort, { once: true });
+  try {
+    const status = await getAssistantModeStatus(controller.signal);
+    if (signal.aborted) throw abortError();
+    return status;
+  } catch (error) {
+    if (signal.aborted) throw abortError();
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timer);
+    signal.removeEventListener('abort', forwardAbort);
+  }
+}
+
 export interface ChatbotOrchestratorInput {
   text: string;
   role: ChatbotRole;
@@ -89,6 +109,34 @@ function providerInput(input: ChatbotOrchestratorInput, signal: AbortSignal) {
 export async function runChatbotOrchestrator(input: ChatbotOrchestratorInput): Promise<ChatbotOrchestratorResult> {
   let state = input.assistantState;
   let aiResult: AIProviderResult | null = null;
+
+  // A failed initial status request leaves configuration unknown. Re-probe
+  // only on a later user message after the cooldown; this allows recovery on
+  // the same page without a timer or a background request loop.
+  if (state.configured === null && state.nextAiAttemptAt <= Date.now()) {
+    try {
+      const status = await probeUnknownStatus(input.signal);
+      const now = Date.now();
+      state = {
+        ...state,
+        assistantMode: status.mode,
+        configured: status.configured,
+        circuit: status.circuit,
+        lastStatusCheck: now,
+        nextAiAttemptAt: retryAtFromStatus(status, now),
+      };
+    } catch {
+      if (input.signal.aborted) throw abortError();
+      const now = Date.now();
+      state = {
+        ...state,
+        assistantMode: 'LOCAL_FALLBACK',
+        configured: null,
+        lastStatusCheck: now,
+        nextAiAttemptAt: retryAtAfterStatusFailure(now),
+      };
+    }
+  }
 
   if (canAttemptAi(state, Date.now())) {
     const aiController = new AbortController();

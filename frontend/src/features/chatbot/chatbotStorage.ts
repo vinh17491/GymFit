@@ -10,8 +10,13 @@ const sensitivePattern = /(password|mật khẩu|mat khau|token|api\s*key|secret
 
 interface StoredChatbotState {
   version: 1;
+  identityKey?: string;
   messages: ChatbotMessage[];
   context: ChatbotContext;
+}
+
+function storageKey(identityKey: string): string {
+  return identityKey === 'guest' ? STORAGE_KEY : `${STORAGE_KEY}:${encodeURIComponent(identityKey)}`;
 }
 
 function storage(): Storage | null {
@@ -67,21 +72,22 @@ function safeMessage(message: ChatbotMessage): ChatbotMessage {
   };
 }
 
-export function loadChatbotState(): { messages: ChatbotMessage[]; context: ChatbotContext } {
+export function loadChatbotState(identityKey = 'guest'): { messages: ChatbotMessage[]; context: ChatbotContext } {
   const target = storage();
   if (!target) return { messages: [], context: emptyChatbotContext() };
   try {
-    const parsed = JSON.parse(target.getItem(STORAGE_KEY) ?? '') as Partial<StoredChatbotState>;
+    const parsed = JSON.parse(target.getItem(storageKey(identityKey)) ?? '') as Partial<StoredChatbotState>;
     if (parsed.version !== STORAGE_VERSION || !Array.isArray(parsed.messages)) throw new Error('invalid chatbot storage');
+    if (identityKey !== 'guest' && parsed.identityKey !== identityKey) throw new Error('chatbot identity mismatch');
     const messages = parsed.messages.filter(item => item && (item.role === 'user' || item.role === 'assistant')).slice(-MAX_MESSAGES).map(safeMessage);
     return { messages, context: parsed.context ? safeContext(parsed.context) : emptyChatbotContext() };
   } catch {
-    target.removeItem(STORAGE_KEY);
+    target.removeItem(storageKey(identityKey));
     return { messages: [], context: emptyChatbotContext() };
   }
 }
 
-export function saveChatbotState(messages: ChatbotMessage[], context: ChatbotContext): void {
+export function saveChatbotState(messages: ChatbotMessage[], context: ChatbotContext, identityKey = 'guest'): void {
   const target = storage();
   if (!target) return;
   const persistable = messages.filter((message, index) => {
@@ -89,12 +95,12 @@ export function saveChatbotState(messages: ChatbotMessage[], context: ChatbotCon
     const next = messages[index + 1];
     return !(message.role === 'user' && next?.reply && PRIVATE_INTENTS.has(next.reply.intentId));
   });
-  const state: StoredChatbotState = { version: STORAGE_VERSION, messages: persistable.slice(-MAX_MESSAGES).map(safeMessage), context: safeContext(context) };
-  try { target.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* sessionStorage may be unavailable or full */ }
+  const state: StoredChatbotState = { version: STORAGE_VERSION, identityKey, messages: persistable.slice(-MAX_MESSAGES).map(safeMessage), context: safeContext(context) };
+  try { target.setItem(storageKey(identityKey), JSON.stringify(state)); } catch { /* sessionStorage may be unavailable or full */ }
 }
 
-export function clearChatbotState(): void {
-  storage()?.removeItem(STORAGE_KEY);
+export function clearChatbotState(identityKey = 'guest'): void {
+  storage()?.removeItem(storageKey(identityKey));
 }
 
 export { STORAGE_KEY, MAX_MESSAGES };
