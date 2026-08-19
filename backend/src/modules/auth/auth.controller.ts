@@ -34,12 +34,13 @@ export async function register(req:Request,res:Response,next:NextFunction) {
     transaction=new sql.Transaction(await getPool());await transaction.begin();
     const result=await new sql.Request(transaction).input('email',sql.NVarChar(255),email).input('password',sql.NVarChar(255),hashed).input('name',sql.NVarChar(100),name.trim()).input('phone',sql.NVarChar(20),phone?.trim()||null).input('refCode',sql.NVarChar(10),refCode).query(`INSERT dbo.Users(email,password,name,phone,role,referral_code,is_active,email_verified,token_version) OUTPUT INSERTED.id,INSERTED.email,INSERTED.name,INSERTED.phone,INSERTED.role,INSERTED.referral_code,INSERTED.avatar_url,INSERTED.is_active,INSERTED.token_version VALUES(@email,@password,@name,@phone,'member',@refCode,1,0,0)`);
     const user=sessionUser(result.recordset[0]);
+    await new sql.Request(transaction).input('referralUserId',sql.Int,user.id).input('referralCode',sql.NVarChar(20),refCode).query(`INSERT dbo.ReferralCodes(user_id,code,status,created_at) VALUES(@referralUserId,@referralCode,N'active',SYSUTCDATETIME())`);
     const requestedReferralCode=typeof referral_code==='string'?referral_code.trim():'';
     if(requestedReferralCode){
-      const referrer=await new sql.Request(transaction).input('code',sql.NVarChar(20),requestedReferralCode).query(`SELECT TOP (1) u.id
+      const referrer=await new sql.Request(transaction).input('code',sql.NVarChar(20),requestedReferralCode).input('newId',sql.Int,user.id).query(`SELECT TOP (1) u.id
         FROM dbo.Users u
         LEFT JOIN dbo.ReferralCodes rc ON rc.user_id=u.id AND rc.code=@code AND rc.status=N'active'
-        WHERE u.is_active=1 AND (u.referral_code=@code OR rc.id IS NOT NULL)
+        WHERE u.is_active=1 AND u.id<>@newId AND (u.referral_code=@code OR rc.id IS NOT NULL)
         ORDER BY CASE WHEN rc.id IS NOT NULL THEN 0 ELSE 1 END,u.id`);
       if(referrer.recordset[0])await new sql.Request(transaction).input('refId',sql.Int,referrer.recordset[0].id).input('newId',sql.Int,user.id).query(`INSERT dbo.ReferralTransactions(referrer_id,referred_id,commission_amount,transaction_type,created_at) VALUES(@refId,@newId,0,'registration',GETDATE()); UPDATE dbo.Users SET referred_by=@refId WHERE id=@newId`);
     }
