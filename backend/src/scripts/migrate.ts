@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import type { ConnectionPool, Transaction } from 'mssql';
 import { closePool, getPool, sql } from '../config/database';
+import { getMigrationCompatibilityContract, validateMigrationCompatibility } from './migration-compatibility';
 
 const MIGRATION_PATTERN = /^(\d{4})_(.+)\.sql$/;
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../../db/migrations');
@@ -254,7 +255,12 @@ async function validateMigrationTableLedger(pool: ConnectionPool, appliedByVersi
   for (const row of result.recordset) {
     const owner = MIGRATION_TABLE_OWNERS[row.name];
     if (owner && !appliedByVersion.has(owner)) {
-      throw new Error(`SCHEMA_ADOPTION_REQUIRED: dbo.${row.name} exists but migration ${owner} is not recorded in dbo.SchemaMigrations`);
+      const contract = getMigrationCompatibilityContract(row.name, owner);
+      if (!contract) {
+        throw new Error(`SCHEMA_ADOPTION_REQUIRED: dbo.${row.name} exists but migration ${owner} is not recorded in dbo.SchemaMigrations and no approved compatibility contract exists`);
+      }
+      await validateMigrationCompatibility(pool, contract);
+      console.log(`Verified legacy-compatible dbo.${row.name} for pending migration ${owner}; the real migration will execute and record its ledger row.`);
     }
   }
 }
