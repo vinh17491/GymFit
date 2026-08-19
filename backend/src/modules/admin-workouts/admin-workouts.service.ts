@@ -56,11 +56,6 @@ export async function schedules(input: { page: number; limit: number; coachId?: 
 
 function sessionCte() {
   return `WITH session_rows AS (
-    SELECT ws.id,ws.user_id AS member_id,w.coach_id,CAST(NULL AS INT) AS program_id,CAST(NULL AS INT) AS assignment_id,
-           UPPER(ws.status) AS status,ws.started_at,ws.completed_at,CAST(NULL AS INT) AS set_count,CAST(NULL AS INT) AS completed_set_count,
-           w.name AS workout_name,N'LEGACY' AS source
-    FROM dbo.WorkoutSessions ws JOIN dbo.Workouts w ON w.id=ws.workout_id
-    UNION ALL
     SELECT ms.id,ms.member_id,a.coach_id,a.program_id,ms.assignment_id,ms.status,ms.started_at,ms.ended_at,
            (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id),
            (SELECT COUNT(*) FROM dbo.MemberWorkoutSetLogs sl JOIN dbo.MemberWorkoutSessionExercises se ON se.id=sl.session_exercise_id WHERE se.session_id=ms.id AND sl.completed=1),

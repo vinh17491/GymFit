@@ -18,10 +18,8 @@ function coachListQuery(where: string) {
            (SELECT COUNT(*) FROM dbo.CRMCustomers c JOIN dbo.Users m ON m.id=c.user_id
             WHERE c.assigned_coach_id=u.id AND m.role=N'member' AND m.is_active=1) AS member_count,
            (SELECT COUNT(*) FROM dbo.WorkoutPrograms p WHERE p.owner_coach_id=u.id) AS program_count,
-           ((SELECT COUNT(*) FROM dbo.WorkoutSessions ws JOIN dbo.Workouts w ON w.id=ws.workout_id
-             WHERE w.coach_id=u.id AND ws.started_at>=DATEADD(day,-30,SYSUTCDATETIME()))+
-            (SELECT COUNT(*) FROM dbo.MemberWorkoutSessions ms JOIN dbo.CoachProgramAssignments a ON a.id=ms.assignment_id
-             WHERE a.coach_id=u.id AND ms.started_at>=DATEADD(day,-30,SYSUTCDATETIME()))) AS recent_session_count
+           (SELECT COUNT(*) FROM dbo.MemberWorkoutSessions ms JOIN dbo.CoachProgramAssignments a ON a.id=ms.assignment_id
+            WHERE a.coach_id=u.id AND ms.started_at>=DATEADD(day,-30,SYSUTCDATETIME())) AS recent_session_count
     FROM dbo.Users u
     WHERE u.role=N'coach' ${where}`;
 }
@@ -53,13 +51,8 @@ export async function getSummary() {
     query(`SELECT COUNT(*) AS count FROM dbo.CoachProgramAssignments
            WHERE status=N'ACTIVE' AND end_date>=CONVERT(date,SYSUTCDATETIME())
              AND end_date<DATEADD(day,31,CONVERT(date,SYSUTCDATETIME()))`),
-    query(`SELECT COUNT(*) AS count FROM (
-             SELECT ws.id FROM dbo.WorkoutSessions ws JOIN dbo.Workouts w ON w.id=ws.workout_id
-             WHERE UPPER(ws.status)=N'COMPLETED' AND ws.completed_at>=DATEADD(day,-7,SYSUTCDATETIME())
-             UNION ALL
-             SELECT ms.id FROM dbo.MemberWorkoutSessions ms
-             WHERE ms.status=N'COMPLETED' AND ms.ended_at>=DATEADD(day,-7,SYSUTCDATETIME())
-           ) recent`),
+    query(`SELECT COUNT(*) AS count FROM dbo.MemberWorkoutSessions ms
+           WHERE ms.status=N'COMPLETED' AND ms.ended_at>=DATEADD(day,-7,SYSUTCDATETIME())`),
   ]);
   const row = totals.recordset[0] ?? {};
   return {
