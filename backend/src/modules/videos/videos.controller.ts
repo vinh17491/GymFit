@@ -2,11 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { query } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
 import { sendSuccess } from '../../utils/response';
+import type { VideoListQuery } from './videos.schemas';
 
 export async function getVideos(req: Request, res: Response, next: NextFunction) {
   try {
-    const { category, search, difficulty, page = 1, limit = 20 } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { category, search, difficulty, page, limit } = req.query as unknown as VideoListQuery;
+    const safePage = Number.isSafeInteger(page) ? Math.max(1, page) : 1;
+    const safeLimit = Number.isSafeInteger(limit) ? Math.min(50, Math.max(1, limit)) : 20;
+    const offset = (safePage - 1) * safeLimit;
     let where = 'WHERE e.is_active = 1';
     const params: Record<string, unknown> = {};
 
@@ -26,7 +29,7 @@ export async function getVideos(req: Request, res: Response, next: NextFunction)
        ${where}
        ORDER BY e.created_at DESC,e.id DESC
        OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`,
-      { ...params, offset, limit: Number(limit) }
+      { ...params, offset, limit: safeLimit }
     );
 
     const countResult = await query(
@@ -37,10 +40,10 @@ export async function getVideos(req: Request, res: Response, next: NextFunction)
     sendSuccess(res, {
       videos: result.recordset,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: safePage,
+        limit: safeLimit,
         total: countResult.recordset[0].total,
-        totalPages: Math.ceil(countResult.recordset[0].total / Number(limit))
+        totalPages: Math.ceil(countResult.recordset[0].total / safeLimit)
       }
     });
   } catch (err) { next(err); }

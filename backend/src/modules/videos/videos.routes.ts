@@ -5,11 +5,12 @@ import { authorize } from '../../middleware/auth';
 import { UserRole } from '../../types';
 import { validate } from '../../middleware/validate';
 import { z } from 'zod';
+import { videoListQuerySchema } from './videos.schemas';
 
 const router = Router();
 
 // Public routes - no authentication required
-router.get('/public', getVideos);
+router.get('/public', validate(videoListQuerySchema, 'query'), getVideos);
 
 // Admin/coach routes - require authentication and authorization
 const id=z.object({id:z.coerce.number().int().positive()});
@@ -19,7 +20,7 @@ router.delete('/:id', authenticate, authorize(UserRole.ADMIN), validate(id,'para
 
 // All other routes require admin/coach permissions
 router.get('/categories', authenticate, authorize(UserRole.ADMIN, UserRole.COACH), getVideoCategories);
-router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.COACH), getVideos);
+router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.COACH), validate(videoListQuerySchema, 'query'), getVideos);
 router.get('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.COACH), validate(id,'params'), getVideoById);
 
 export default router;

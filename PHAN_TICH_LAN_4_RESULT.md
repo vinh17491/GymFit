@@ -5,7 +5,7 @@
 - Nhánh: `phan-tich-lan-4`
 - Nhánh gốc: `phan-tich-lan-3`
 - Base commit: `f5ed4d4825aa7104f1e4b8f5157ad9ce88d83074`
-- HEAD cuối: xác nhận bằng `git rev-parse HEAD` tại thời điểm bàn giao.
+- HEAD cuối: `8fd1e069500ef547c0211a98577eb1c29f7bb3b0`.
 - Remote: `origin/phan-tich-lan-4`
 - Migration head: `0119_analytics_retention_runtime.sql`
 - Migration `0001`–`0119`: không chỉnh sửa.
